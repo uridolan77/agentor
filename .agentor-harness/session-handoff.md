@@ -1,60 +1,64 @@
-# Session handoff — Phase 20 PR96-PR100
+# Session handoff — Phase 19 PR95.5
 
 ## Completed
 
-Phase 20 — Durable operational runtime.
+PR95.5 — Phase 19 authorization hardening.
 
-### PR96 — Durable run queue abstraction
-- Added `IDurableRunQueue` and `RunQueueRecord` (`DurableRunQueueStatus`) in Application.
-- Added `EfRunQueueStore` for EF-backed durable queue persistence.
-- Added `InMemoryDurableRunQueueStore` for non-EF mode fallback.
-- Wired queue persistence into `InMemoryRunQueue` (enqueue + snapshot + inline processing through durable claims).
+### Alias endpoint authorization parity
+- Added permission checks to Phase 13 aliases in `src/Agentor.Api/Phase13ProductEndpoints.cs`:
+  - `GET /api/v1/runs/{runId}/audit-packet` requires `AgentorPermission.AuditRead`.
+  - `POST /api/v1/reviews/{runId}/decisions` requires `AgentorPermission.GovernanceReviewWrite`.
+- Added authorization check to review inbox:
+  - `GET /api/v1/reviews/pending` requires `AgentorPermission.GovernanceReviewRead`.
 
-### PR97 — Hosted run worker
-- Replaced previous worker with `RunQueueHostedService` (in `RunQueueBackgroundWorker.cs` file).
-- Added `RunWorkerOptions` (`Agentor:RunWorker`) with `Enabled=false` default, poll interval, lease TTL.
-- Hosted worker claims durable queue items and respects `IRunExecutionLeaseStore` contention.
+### JWT role hardening
+- Updated `src/Agentor.Api/Security/HeaderOrFakeActorAccessor.cs`:
+  - Missing Jwt role claim now throws `InvalidOperationException`.
+  - Unrecognized Jwt role claim now throws `InvalidOperationException`.
+  - Removed permissive fallback to `HumanOperator`.
 
-### PR98 — Hosted outbox dispatcher
-- Added `OutboxHostedService` and `OutboxDispatchOptions` (`Agentor:OutboxDispatch`) with disabled-by-default behavior.
-- Added `NoOpOutboxSink` default sink registration for safe startup.
-- Adjusted `OutboxDispatcher` lifetime to scoped.
+### Authorization model update
+- Added `GovernanceReviewRead` permission to `AgentorPermission`.
+- Updated `RoleBasedAuthorizationDecisionService` so `Service` can perform read-only review inbox access (`GovernanceReviewRead`) while write actions remain denied.
 
-### PR99 — Atomic outbox claim and contention hardening
-- Updated `EfOutboxStore.TryMarkDispatchingAsync` to use atomic conditional `ExecuteUpdateAsync`.
-- Added contention simulation test to ensure only one competing dispatcher can transition pending→dispatching.
+### Documentation updates
+- Updated `docs/security/auth-boundary.md`:
+  - Alias endpoints listed as protected.
+  - Jwt mode principal-consumption vs JwtBearer validation middleware distinction made explicit.
+  - Strict role-claim behavior documented.
+- Updated `docs/security/deployment-threat-notes.md`:
+  - Added alias endpoint bypass prevention note.
+  - Added Jwt role hardening note.
 
-### PR100 — Operational status endpoints
-- Added read-only endpoints in `OpsEndpoints`:
-  - `GET /api/v1/ops/queue`
-  - `GET /api/v1/ops/outbox`
-  - `GET /api/v1/ops/leases`
-- Added contracts: `OpsQueueItemDto`, `OpsOutboxItemDto`, `OpsLeaseItemDto`.
-- Added API integration test verifying endpoint responses and no-secret output.
+### Tests
+- Updated `tests/Agentor.Api.Tests/EndpointAuthorizationApiTests.cs`:
+  - Service actor forbidden on `POST /api/v1/reviews/{runId}/decisions`.
+  - Service actor allowed on `GET /api/v1/runs/{runId}/audit-packet` under `AuditRead` policy.
+  - Service actor allowed on `GET /api/v1/reviews/pending` under `GovernanceReviewRead` policy.
+  - Unauthorized path coverage when actor accessor throws.
+- Updated `tests/Agentor.Api.Tests/HeaderOrFakeActorAccessorTests.cs`:
+  - Missing Jwt role claim throws.
+  - Invalid Jwt role claim throws.
+- Updated `tests/Agentor.Api.Tests/RoleBasedAuthorizationDecisionServiceTests.cs`:
+  - Service actor allowed for `GovernanceReviewRead`.
 
-### Tests and verification
-- New/updated tests:
-  - `EfRunQueueStoreTests`
-  - `RunQueueHostedServiceTests`
-  - `OutboxHostedServiceTests`
-  - `Phase12EfRoundTripTests` (outbox contention)
-  - `IntegrationEndpointsTests` (ops endpoints)
-- Full verification:
-  - `dotnet restore Agentor.sln` succeeded
-  - `dotnet build Agentor.sln --no-restore` succeeded
-  - `dotnet test Agentor.sln --no-build` succeeded (**357 passed, 0 failed**)
-  - API smoke evidence: `dotnet test tests/Agentor.Api.Tests/Agentor.Api.Tests.csproj --no-build` (**75 passed, 0 failed**)
-  - `verify-harness` succeeded (`ExpectedPhase=20`, `ExpectedHarnessPass=PR100`)
-  - `verify-repo-clean` succeeded
+## Verification
+
+- `dotnet restore Agentor.sln` succeeded
+- `dotnet build Agentor.sln --no-restore` succeeded
+- `dotnet test Agentor.sln --no-build` succeeded
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 19 -ExpectedHarnessPass PR95.5` succeeded
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
 ## What is next
 
-- Phase 21 or next explicitly scheduled phase.
+- Phase 20 or next explicitly scheduled phase.
 
 ## What was explicitly not started
 
-- Phase 21+ implementation work.
-- SCOPE-001 (policy scope enforcement by Tenant/Workspace/Project) remains deferred.
+- New Phase 20 implementation work in this pass.
+- SCOPE-001 enforcement (Tenant/Workspace/Project policy-scope filtering).
+- New external integrations or provider-specific identity onboarding.
 
 ## Remaining risks / deferred
 

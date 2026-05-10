@@ -40,4 +40,15 @@ public sealed class RoleBasedAuthorizationDecisionServiceTests
 
         Assert.True(decision.Allowed);
     }
+
+    [Fact]
+    public void Authorize_Allows_Service_ForGovernanceReviewRead()
+    {
+        var sut = new RoleBasedAuthorizationDecisionService();
+        var actor = new ActorContext(ActorId, "svc", ActorRole.Service);
+
+        var decision = sut.Authorize(actor, AgentorPermission.GovernanceReviewRead);
+
+        Assert.True(decision.Allowed);
+    }
 }

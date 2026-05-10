@@ -1,10 +1,11 @@
 {
-    "phase":  20,
-    "title":  "Phase 20 durable operational runtime (PR96-PR100)",
-    "harnessPass":  "PR100",
+    "phase":  19,
+    "title":  "Phase 19 production identity and authorization boundary (PR91-PR95) + PR95.5 authorization hardening",
+    "harnessPass":  "PR95.5",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
+                  "PR95.5 (2026-05-10): Phase 19 authorization hardening — protected Phase 13 alias endpoints (GET /runs/{runId}/audit-packet requires AuditRead; POST /reviews/{runId}/decisions requires GovernanceReviewWrite); guarded GET /reviews/pending with GovernanceReviewRead; Jwt actor role claim now strict (missing or unrecognized role causes unauthorized via actor resolution failure); docs updated to state Jwt mode consumes an already-authenticated principal and does not configure bearer validation middleware itself. Full verification: restore/build/test and harness scripts passed.",
                   "Phase 20 PR96-PR100 (2026-05-10): Durable operational runtime — IDurableRunQueue + RunQueueRecord abstraction; EfRunQueueStore + InMemoryDurableRunQueueStore implementations; RunQueueHostedService + RunWorkerOptions (disabled by default, lease-aware processing); OutboxHostedService + OutboxDispatchOptions (disabled by default, batch dispatch + retry/poison behavior); EfOutboxStore.TryMarkDispatchingAsync atomic conditional update; read-only ops endpoints GET /api/v1/ops/queue|outbox|leases with no secret fields. Full verification: 357 tests passing; verify-harness and verify-repo-clean passed.",
                   "Phase 19 PR91-PR95 (2026-05-10): Production identity and authorization boundary — Agentor:Auth mode configuration (Fake|Header|Jwt) with startup validation and safe defaults; configurable JWT actor-id/display-name/role claim mapping; authorization primitives (AgentorPermission, AuthorizationDecision, IAuthorizationDecisionService); role-based default authorization policy; endpoint permission enforcement for governance review, audit export, policy bundle read/write, and profile activation; security docs auth-boundary + deployment-threat-notes. Full verification: 346 tests passing; verify-harness and verify-repo-clean passed. SCOPE-001 remains deferred.",
                   "Phase 18 PR86-PR90 (2026-05-10): Multi-step human review resume semantics — PlanResumeCursor domain record (PlanId, BlockedAtPlanStepId, BlockedAtSourceStepId, BlockedAtToolKey, RemainingSteps, CompletedStepHistory, SuspendedAt); PendingPlanStep + PlanStepResumeSnapshot; ReviewResumeState; AgentRun.RecordPlanResumeCursor + ClearResumeCursor; TraceEventKind.PlanResumeCursorRecorded/Cleared/MultiStepPlanResumed; SequentialAgentPlanExecutor records cursor when RequiresReview occurs with remaining plan steps; ApplyHumanReviewDecisionHandler resumes remaining steps after approval (ResumeRemainingPlanStepsAsync + ExecutePendingResumeStepAsync with full failure-policy handling + RequiresReview chaining); GovernanceResumeApiTests (6 API tests covering all 4 decision kinds); Phase18FixtureTests (3 tests including PR53-005 named evidence); 2 eval fixtures (schema 5); registry.json updated to 4 entries. Grand total: 331 tests passing. PR53-005 closed.",
@@ -1491,6 +1492,34 @@
                                 "description":  "Deferred-items manifest now lists only SCOPE-001 as active and records PR53-005 closure evidence.",
                                 "passes":  true,
                                 "evidence":  "docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md; .agentor-harness/session-handoff.md; .agentor-harness/current-pr.md"
+                            },
+                            {
+                                "id":  "PR95.5-001",
+                                "pr":  95.5,
+                                "description":  "Phase 13 alias endpoints enforce the same authorization checks as canonical governance routes.",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Api/Phase13ProductEndpoints.cs; EndpointAuthorizationApiTests.ReviewDecisionAlias_WithServiceActor_ReturnsForbidden; EndpointAuthorizationApiTests.AuditPacketAlias_WithServiceActor_ReturnsOk"
+                            },
+                            {
+                                "id":  "PR95.5-002",
+                                "pr":  95.5,
+                                "description":  "Jwt role fallback is hardened: missing or unrecognized role claim no longer defaults to HumanOperator.",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Api/Security/HeaderOrFakeActorAccessor.cs; HeaderOrFakeActorAccessorTests.Current_JwtMode_Throws_WhenRoleClaimMissing; HeaderOrFakeActorAccessorTests.Current_JwtMode_Throws_WhenRoleClaimInvalid"
+                            },
+                            {
+                                "id":  "PR95.5-003",
+                                "pr":  95.5,
+                                "description":  "Review inbox alias endpoint is authorization-protected with read permission.",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Api/Phase13ProductEndpoints.cs (GET /reviews/pending requires GovernanceReviewRead); EndpointAuthorizationApiTests.ReviewsPending_WithServiceActor_ReturnsOk"
+                            },
+                            {
+                                "id":  "PR95.5-004",
+                                "pr":  95.5,
+                                "description":  "Security docs explicitly distinguish Jwt principal consumption from JwtBearer token validation middleware setup.",
+                                "passes":  true,
+                                "evidence":  "docs/security/auth-boundary.md; docs/security/deployment-threat-notes.md"
                             },
                             {
                                 "id":  "PR96-001",

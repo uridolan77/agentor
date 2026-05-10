@@ -1,7 +1,7 @@
 # Current PR — harness marker
 
-Completed: Phase 20 PR96-PR100 — Durable operational runtime: IDurableRunQueue + RunQueueRecord + EfRunQueueStore, RunQueueHostedService + RunWorkerOptions (disabled by default, lease-aware processing), OutboxHostedService + OutboxDispatchOptions (disabled by default), atomic EfOutboxStore TryMarkDispatching claim update, and read-only ops endpoints (`GET /api/v1/ops/queue`, `GET /api/v1/ops/outbox`, `GET /api/v1/ops/leases`). Full verification: 357 tests passing; verify-harness and verify-repo-clean passed.
+Completed: Phase 19 PR91-PR95 + PR95.5 — Authorization hardening: alias endpoints now enforce permissions (`GET /runs/{id}/audit-packet`, `POST /reviews/{id}/decisions`), review inbox endpoint guarded with read permission, strict JWT role claim handling (missing/invalid role rejected), docs clarified that Jwt mode consumes an already-authenticated principal and does not configure JwtBearer validation itself, and focused alias/JWT hardening tests added. Full verification: restore/build/test succeeded; verify-harness and verify-repo-clean passed.
 
-Next: Phase 21 or next explicitly scheduled phase.
+Next: Phase 20 or next explicitly scheduled phase.
 
 Do not start the next phase during closeout.

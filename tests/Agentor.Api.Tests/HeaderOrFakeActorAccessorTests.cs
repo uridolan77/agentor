@@ -56,7 +56,8 @@ public sealed class HeaderOrFakeActorAccessorTests
             User = new ClaimsPrincipal(new ClaimsIdentity(
             [
                 new Claim(ClaimTypes.NameIdentifier, expected.ToString("D")),
-                new Claim(ClaimTypes.Name, "reviewer")
+                new Claim(ClaimTypes.Name, "reviewer"),
+                new Claim(ClaimTypes.Role, "HumanOperator")
             ],
             authenticationType: "test-jwt"))
         };
@@ -66,6 +67,49 @@ public sealed class HeaderOrFakeActorAccessorTests
 
         Assert.Equal(expected, sut.Current.ActorId);
         Assert.Equal("jwt:reviewer", sut.Current.DisplayName);
+    }
+
+    [Fact]
+    public void Current_JwtMode_Throws_WhenRoleClaimMissing()
+    {
+        var expected = Guid.Parse("66666666-6666-4666-8666-666666666666");
+        var http = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.NameIdentifier, expected.ToString("D")),
+                new Claim(ClaimTypes.Name, "reviewer")
+            ],
+            authenticationType: "test-jwt"))
+        };
+
+        var accessor = new HttpContextAccessor { HttpContext = http };
+        ICurrentActorAccessor sut = CreateSut(accessor, AgentorAuthMode.Jwt);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => _ = sut.Current);
+        Assert.Contains("requires a role claim", ex.Message);
+    }
+
+    [Fact]
+    public void Current_JwtMode_Throws_WhenRoleClaimInvalid()
+    {
+        var expected = Guid.Parse("77777777-7777-4777-8777-777777777777");
+        var http = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.NameIdentifier, expected.ToString("D")),
+                new Claim(ClaimTypes.Name, "reviewer"),
+                new Claim(ClaimTypes.Role, "RootAdmin")
+            ],
+            authenticationType: "test-jwt"))
+        };
+
+        var accessor = new HttpContextAccessor { HttpContext = http };
+        ICurrentActorAccessor sut = CreateSut(accessor, AgentorAuthMode.Jwt);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => _ = sut.Current);
+        Assert.Contains("is not recognized", ex.Message);
     }
 
     [Fact]

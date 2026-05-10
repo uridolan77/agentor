@@ -1,4 +1,5 @@
 using Agentor.Api.Mapping;
+using Agentor.Api.Security;
 using Agentor.Application.Commands;
 using Agentor.Application.Management;
 using Agentor.Application.Queries;
@@ -255,9 +256,21 @@ internal static class Phase13ProductEndpoints
         v1.MapGet("/runs/{runId:guid}/audit-packet", async (
                 Guid runId,
                 GetRunAuditExportQueryHandler handler,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext,
                 CancellationToken cancellationToken) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.AuditRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var result = await handler.HandleAsync(runId, cancellationToken);
                 if (result is null)
                 {
@@ -289,9 +302,24 @@ internal static class Phase13ProductEndpoints
         v1.MapGet("/reviews/pending", async (
                 int? skip,
                 int? take,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext,
                 ListPendingHumanReviewsQueryHandler handler,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await handler.HandleAsync(skip ?? 0, take ?? 50, cancellationToken)))
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.GovernanceReviewRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                return Results.Ok(await handler.HandleAsync(skip ?? 0, take ?? 50, cancellationToken));
+            })
             .WithName("ListPendingHumanReviews")
             .WithTags("Reviews")
             .WithSummary("Lists runs in RequiresReview (inbox).");
@@ -300,9 +328,21 @@ internal static class Phase13ProductEndpoints
                 Guid runId,
                 ApplyHumanReviewRequestDto request,
                 ApplyHumanReviewDecisionHandler handler,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext,
                 CancellationToken cancellationToken) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.GovernanceReviewWrite);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
                 try
                 {

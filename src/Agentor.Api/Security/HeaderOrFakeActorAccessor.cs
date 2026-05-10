@@ -69,9 +69,17 @@ public sealed class HeaderOrFakeActorAccessor(
             ?? "jwt-principal";
 
         var roleText = user.FindFirstValue(authOptions.Value.JwtRoleClaimType);
-        var role = Enum.TryParse<ActorRole>(roleText, ignoreCase: true, out var parsed)
-            ? parsed
-            : ActorRole.HumanOperator;
+        if (string.IsNullOrWhiteSpace(roleText))
+        {
+            throw new InvalidOperationException(
+                $"JWT auth mode requires a role claim '{authOptions.Value.JwtRoleClaimType}'.");
+        }
+
+        if (!Enum.TryParse<ActorRole>(roleText, ignoreCase: true, out var role))
+        {
+            throw new InvalidOperationException(
+                $"JWT auth mode role claim '{authOptions.Value.JwtRoleClaimType}' value '{roleText}' is not recognized.");
+        }
 
         return new ActorContext(actorId, $"jwt:{displayName}", role);
     }

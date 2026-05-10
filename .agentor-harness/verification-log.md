@@ -1,5 +1,28 @@
 # Verification log
 
+## Phase 19 PR95.5 (2026-05-10)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 19 -ExpectedHarnessPass PR95.5
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **364 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=19`, `ExpectedHarnessPass=PR95.5`)
+- verify-repo-clean: passed
+
+Notes:
+
+- PR95.5 focused on alias endpoint authorization parity + strict Jwt role handling.
+- API test project after hardening: **82 passed, 0 failed**.
+
 ## Phase 20 PR96-PR100 (2026-05-10)
 
 ```powershell

@@ -34,7 +34,14 @@ Configured under `Agentor:Auth`:
 - Requires an authenticated principal.
 - Actor id is read from configured claim types and must parse to a non-empty GUID.
 - Display name and role claim mappings are configurable.
+- Missing or unrecognized role claim causes actor resolution to fail (unauthorized response on protected endpoints).
 - No provider-specific SDK is required.
+
+Important runtime note:
+
+- Current repository Jwt mode consumes an already-authenticated `HttpContext.User`.
+- Repository startup does not automatically configure bearer token validation middleware (`AddAuthentication`/`AddJwtBearer`/`UseAuthentication`).
+- Token validation is expected from upstream gateway/middleware unless explicitly added in a later pass.
 
 ## Permission model
 
@@ -66,6 +73,9 @@ Current enforced endpoints include:
 - `GET /api/v1/policy-bundles/{id}` -> `PolicyBundleRead`
 - `POST /api/v1/policy-bundles` -> `PolicyBundleWrite`
 - `POST /api/v1/policy-profiles/{id}/activate` -> `PolicyBundleWrite`
+- `GET /api/v1/runs/{runId}/audit-packet` -> `AuditRead`
+- `POST /api/v1/reviews/{runId}/decisions` -> `GovernanceReviewWrite`
+- `GET /api/v1/reviews/pending` -> `GovernanceReviewRead`
 
 ## Scope note (SCOPE-001)
 

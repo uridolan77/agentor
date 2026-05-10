@@ -17,14 +17,19 @@ This note captures operational risks and deployment controls for Agentor auth mo
 3. Invalid JWT claim mapping
 
 - Risk: actor id or role cannot be resolved correctly, leading to access confusion.
-- Control: configure claim mappings explicitly and treat unresolved actor id as unauthorized.
+- Control: configure claim mappings explicitly and treat unresolved actor id or role as unauthorized.
 
-4. Over-privileged service actors
+4. Alias endpoint authorization bypass
+
+- Risk: alias endpoints can bypass canonical endpoint permission checks if not guarded consistently.
+- Control: apply the same endpoint authorization checks to canonical and alias routes (`/agent-runs/*` and `/runs|/reviews` aliases).
+
+5. Over-privileged service actors
 
 - Risk: machine identities may perform governance mutations.
 - Control: default role mapping keeps `Service` as read-only in `RoleBasedAuthorizationDecisionService`.
 
-5. Audit data exposure
+6. Audit data exposure
 
 - Risk: unauthorized actors retrieving audit exports.
 - Control: `GET /audit-export` now requires `AuditRead` permission.
@@ -35,7 +40,7 @@ This note captures operational risks and deployment controls for Agentor auth mo
 2. Keep `Fake` mode disabled in production unless under explicit break-glass procedure.
 3. If using `Header` mode, terminate trust at a single ingress and strip inbound identity headers from external clients.
 4. Pin and review claim mappings as part of release validation.
-5. Include authz endpoint tests in CI gates.
+5. Include authz endpoint tests for both canonical and alias routes in CI gates.
 
 ## Out of scope
 

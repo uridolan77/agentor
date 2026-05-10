@@ -14,7 +14,9 @@ public sealed class RoleBasedAuthorizationDecisionService : IAuthorizationDecisi
         var allowed = actor.Role switch
         {
             ActorRole.HumanOperator => true,
-            ActorRole.Service => permission is AgentorPermission.PolicyBundleRead or AgentorPermission.AuditRead,
+            ActorRole.Service => permission is AgentorPermission.PolicyBundleRead
+                or AgentorPermission.AuditRead
+                or AgentorPermission.GovernanceReviewRead,
             _ => false
         };
 

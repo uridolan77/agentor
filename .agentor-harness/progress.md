@@ -1,5 +1,28 @@
 # Agentor harness progress
 
+## Phase 19 PR95.5 (2026-05-10)
+
+Completed **Phase 19 authorization hardening**:
+
+- Protected alias endpoints with explicit authorization checks in `Phase13ProductEndpoints`:
+	- `GET /runs/{runId}/audit-packet` requires `AuditRead`
+	- `POST /reviews/{runId}/decisions` requires `GovernanceReviewWrite`
+- Added authorization to review inbox endpoint:
+	- `GET /reviews/pending` requires `GovernanceReviewRead`
+- Hardened Jwt role handling in `HeaderOrFakeActorAccessor`:
+	- missing role claim -> actor resolution failure
+	- unrecognized role claim -> actor resolution failure
+	- no fallback to `HumanOperator`
+- Added/updated tests:
+	- alias endpoint auth coverage in `EndpointAuthorizationApiTests`
+	- strict Jwt role tests in `HeaderOrFakeActorAccessorTests`
+	- read permission role test in `RoleBasedAuthorizationDecisionServiceTests`
+- Updated security docs with explicit Jwt principal-consumption caveat and alias-bypass prevention notes.
+
+Active deferred items (`passes: false`): `SCOPE-001` only.
+
+Scope guard: no Phase 20 work started in this pass.
+
 ## Phase 20 PR96-PR100 (2026-05-10)
 
 Completed **Phase 20 durable operational runtime**:

@@ -3,6 +3,7 @@ namespace Agentor.Application.Abstractions;
 public enum AgentorPermission
 {
     GovernanceReviewWrite,
+    GovernanceReviewRead,
     PolicyBundleWrite,
     PolicyBundleRead,
     AuditRead
