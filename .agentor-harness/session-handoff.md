@@ -2,21 +2,15 @@
 
 ## Completed (this pass)
 
-- Phase 13 PR61-PR65 product and operator HTTP surface (management endpoints, run aliases, operator dashboard DTO, review inbox aliases) as already implemented in Phase13ProductEndpoints.cs and supporting application/infrastructure types.
-- PR65.5 harness reconciliation: feature-list.json set to phase **13** / **PR65.5**; new Phase 13 acceptance rows with named evidence; current-pr.md, progress.md, verification-log.md, this file updated.
-- API tests: extended Phase13ProductSurfaceApiTests with GET /reviews/pending contract check and POST /reviews/{id}/decisions returning 409 for a completed run.
-- Documentation: boundary-safe walkthroughs under docs/api/, docs/operator/, docs/developer/, docs/examples/ for Phase 13 (explicit non-canonization vs Athanor).
+- **Phase 14 PR66-PR70** advanced evaluation implementation is present in the tree: `src/Agentor.Application/Evaluation/` (registry, harness parse, profiles/materializer, quality rules, metrics, report generator) with **Application.Tests** coverage under `tests/Agentor.Application.Tests/Evaluation/` and JSON fixtures under `tests/Agentor.Application.Tests/fixtures/eval/`.
+- **PR70.5 harness closeout**: `feature-list.json` set to phase **14** / harnessPass **PR70.5**; `current-pr.md`, `progress.md`, this file, `verification-log.md`, and `docs/developer/phase14-evaluation.md` updated; `scripts/verify-harness.ps1` passed for expected phase/pass.
+- Full solution verification: `dotnet restore` / `dotnet build` / `dotnet test` on **Agentor.sln** (counts recorded in `verification-log.md`).
 
-## Verification
+## Next (not started here)
 
-- Ran full solution restore/build/test from repo root; counts recorded in verification-log.md.
-- Ran powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 13 -ExpectedHarnessPass PR65.5.
-
-## Not started
-
-- Phase 14 (PHASE_14_ADVANCED_EVALUATION.md) and any later phases.
+- **Phase 15** and later PRs from `docs/planning/pr41-pr75/` only when explicitly scoped.
 
 ## Risks / false acceptance
 
-- Default POST /api/v1/agent-runs uses the low-risk PR1 fake tool under typical MaxAutoApproveRisk, so end-to-end HTTP approval of a RequiresReview run is not covered in Phase13ProductSurfaceApiTests. PR64 acceptance cites domain and application tests for approve/resume and deny-after-approve paths plus API wiring tests above.
-- ListPendingHumanReviewsQueryHandler loads each run again for reason (documented performance note if inbox grows).
+- Prior-phase `acceptanceItems` with `passes: false` remain unchanged in `feature-list.json` (for example legacy API / integration rows). Only the **new Phase 14 rows** are marked passing with evidence tied to the new evaluation tests and sources.
+- `RunEvaluationHarness` behavior was not expanded in this closeout beyond existing harness tests; registry format complements rather than replacing every legacy fixture path until a later migration pass if desired.

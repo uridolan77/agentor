@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    { "id": "bad", "predicate": "NotARealPredicate", "arguments": [] }
+  ]
+}

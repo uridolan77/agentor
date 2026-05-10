@@ -1,4 +1,4 @@
-﻿# Current PR - harness marker
+# Current PR - harness marker
 
 Completed: **Phase 10 PR46-PR50** - integration modes (Fake / Http / Disabled), HTTP adapters for Athanor (`IKnowledgeStateClient`), Conexus (`IModelGatewayClient`), MCP (`IMcpRegistryClient`), and external agents (`IExternalAgentProtocolClient`), named `HttpClient` wiring, liveness `/health`, readiness `/ready`, and `GET /api/v1/integrations/status`.
 
@@ -18,4 +18,8 @@ Completed: **Phase 13 PR61-PR65** - Product and operator surface under `/api/v1`
 
 Completed: **PR65.5** - Phase 13 harness reconciliation: `feature-list.json` phase **13** / harnessPass **PR65.5**; Phase 13 acceptance rows; `Phase13ProductSurfaceApiTests` extended for reviews pending and review decision conflict; docs `docs/api/phase13-product-surface.md`, `docs/operator/dashboard-and-inbox.md`, `docs/developer/phase13-workflows.md`, `docs/examples/phase13-workflows.md`; verification log refresh.
 
-Next: **Phase 14** - Advanced evaluation (`docs/planning/pr41-pr75/PHASE_14_ADVANCED_EVALUATION.md`) - do not implement until that scope is opened.
+Completed: **Phase 14 PR66-PR70** - Advanced evaluation: `EvaluationFixtureRegistry` (schema 4), harness fixture JSON parse, `CoordinationEvaluationProfile` + `HarnessProfileMaterializer`, `QualityRuleSetEvaluator` (JSON, built-in predicates), `CoordinationEvaluationMetrics`, `EvaluationReportGenerator` (Markdown/JSON/CSV, CI folder); tests under `tests/Agentor.Application.Tests/Evaluation/`; fixtures under `tests/Agentor.Application.Tests/fixtures/eval/`.
+
+Completed: **PR70.5** - Phase 14 harness reconciliation: `feature-list.json` phase **14** / harnessPass **PR70.5**; Phase 14 acceptance rows; `docs/developer/phase14-evaluation.md`; verification log refresh.
+
+Next: **Phase 15** when opened per `docs/planning/pr41-pr75/` (do not implement until that scope is explicitly requested).

@@ -1,4 +1,26 @@
-﻿# Agentor harness - verification log
+# Agentor harness - verification log
+
+## Phase 14 + PR70.5 verification (2026-05-10)
+
+Commands (repository root):
+
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results: restore OK; build OK; test OK.
+
+Counts: **Domain 38**, **Application 89**, **Infrastructure 59**, **Api 53** (total **239**).
+
+Scope: Phase 14 advanced evaluation harness closeout (PR70.5): `feature-list.json` phase **14**, harnessPass **PR70.5**; evaluation tests under `tests/Agentor.Application.Tests/Evaluation/`; developer note `docs/developer/phase14-evaluation.md`. Phase 15 not started.
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 14 -ExpectedHarnessPass PR70.5
+```
+
+Result: Harness verification passed.
 
 ## Phase 13 + PR65.5 verification (2026-05-10)
 

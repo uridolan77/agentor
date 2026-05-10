@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "rules": [
+    { "id": "status-completed", "predicate": "RunStatusEquals", "arguments": [ "Completed" ] },
+    { "id": "min-traces", "predicate": "MinTraceEventCount", "arguments": [ "8" ] },
+    { "id": "has-run-completed-trace", "predicate": "TraceContainsKind", "arguments": [ "RunCompleted" ] },
+    { "id": "no-policy-denials", "predicate": "MaxPolicyDeniedDecisions", "arguments": [ "0" ] }
+  ]
+}

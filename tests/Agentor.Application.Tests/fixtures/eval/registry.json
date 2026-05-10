@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 4,
+  "kind": "EvaluationFixtureRegistry",
+  "encoding": "utf-8",
+  "entries": [
+    {
+      "id": "one-step-fake-tool",
+      "fileName": "evaluation-harness-one-step-tool.json",
+      "description": "Single PR1 fake-tool step; RunEvaluationHarness schema 2."
+    },
+    {
+      "id": "external-agent-one-call",
+      "fileName": "external-agent-one-call.json",
+      "description": "Single external-agent.invoke step; schema 3."
+    }
+  ]
+}
