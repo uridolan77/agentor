@@ -15,3 +15,26 @@ public sealed record IntegrationsStatusResponseDto(
 public sealed record EnqueueAgentRunQueuedResponseDto(Guid WorkItemId, string StatusPath);
 
 public sealed record QueuedAgentRunStatusResponseDto(string Status, Guid? AgentRunId, string? Error);
+
+public sealed record OpsQueueItemDto(
+    Guid WorkItemId,
+    string Status,
+    DateTimeOffset EnqueuedAtUtc,
+    Guid? AgentRunId,
+    string? ClaimedBy,
+    DateTimeOffset? LeaseExpiresAtUtc,
+    string? Error);
+
+public sealed record OpsOutboxItemDto(
+    Guid Id,
+    string Kind,
+    string Status,
+    int AttemptCount,
+    DateTimeOffset CreatedAtUtc,
+    string? LastError);
+
+public sealed record OpsLeaseItemDto(
+    Guid ResourceId,
+    string LeaseHolder,
+    DateTimeOffset ExpiresAtUtc,
+    DateTimeOffset CreatedAtUtc);

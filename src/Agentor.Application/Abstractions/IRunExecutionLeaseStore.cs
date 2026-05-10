@@ -7,6 +7,12 @@ public enum LeaseAcquireOutcome
     Contested,
 }
 
+public sealed record ExecutionLeaseSnapshot(
+    Guid ResourceId,
+    string LeaseHolder,
+    DateTimeOffset ExpiresAtUtc,
+    DateTimeOffset CreatedAtUtc);
+
 public interface IRunExecutionLeaseStore
 {
     Task<LeaseAcquireOutcome> TryAcquireAsync(
@@ -24,4 +30,6 @@ public interface IRunExecutionLeaseStore
         CancellationToken cancellationToken);
 
     Task ReleaseAsync(Guid resourceId, string leaseHolder, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ExecutionLeaseSnapshot>> ListLeasesAsync(int take, CancellationToken cancellationToken);
 }

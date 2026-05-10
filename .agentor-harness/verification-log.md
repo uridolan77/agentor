@@ -1,5 +1,40 @@
 # Verification log
 
+## Phase 20 PR96-PR100 (2026-05-10)
+
+```powershell
+dotnet --info | Tee-Object artifacts/verification/dotnet-info.txt
+dotnet restore Agentor.sln | Tee-Object artifacts/verification/dotnet-restore.txt
+dotnet build Agentor.sln --no-restore | Tee-Object artifacts/verification/dotnet-build.txt
+dotnet test Agentor.sln --no-build | Tee-Object artifacts/verification/dotnet-test.txt
+dotnet test tests/Agentor.Api.Tests/Agentor.Api.Tests.csproj --no-build | Tee-Object artifacts/verification/api-smoke.txt
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 20 -ExpectedHarnessPass PR100
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- dotnet info: succeeded
+- Restore: succeeded
+- Build: succeeded (0 warnings, 0 errors)
+- Tests: **357 passed, 0 failed**
+- API smoke evidence: **75 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=20`, `ExpectedHarnessPass=PR100`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 72 / Total 72
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 128 / Total 128
+- Agentor.Infrastructure.Tests: Passed 69 / Total 69
+- Agentor.Api.Tests: Passed 75 / Total 75
+
+Scope:
+
+- completed: PR96-PR100 durable operational runtime (durable queue + hosted worker + hosted outbox + atomic outbox claim + ops endpoints)
+- not started: Phase 21+
+
 ## Phase 19 PR91-PR95 (2026-05-10)
 
 ```powershell

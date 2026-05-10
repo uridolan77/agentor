@@ -8,6 +8,8 @@ public interface IOutboxStore
 
     Task<IReadOnlyList<OutboxMessage>> ListPendingForDispatchAsync(int take, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<OutboxMessage>> ListLatestAsync(int take, CancellationToken cancellationToken);
+
     /// <summary>Idempotent transition Pending → Dispatching for dispatch ownership.</summary>
     Task<bool> TryMarkDispatchingAsync(Guid id, CancellationToken cancellationToken);
 

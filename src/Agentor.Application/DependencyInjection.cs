@@ -28,7 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ListPendingHumanReviewsQueryHandler>();
         services.AddScoped<OperatorDashboardQueryHandler>();
 
-        services.AddSingleton<OutboxDispatcher>();
+        services.AddScoped<OutboxDispatcher>();
 
         services.AddScoped<GetLatestAthanorSnapshotForRunQueryHandler>();
         services.AddScoped<LookupAthanorCanonicalForRunQueryHandler>();

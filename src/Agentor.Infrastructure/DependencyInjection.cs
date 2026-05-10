@@ -12,6 +12,7 @@ using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
 using Agentor.Infrastructure.Persistence;
 using Agentor.Infrastructure.Policy;
+using Agentor.Infrastructure.Reliability;
 using Agentor.Infrastructure.RunQueue;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -36,8 +37,12 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(TransportResilienceOptions.SectionName));
         services.AddOptions<RunQueueOptions>()
             .Bind(configuration.GetSection(RunQueueOptions.SectionName));
+        services.AddOptions<RunWorkerOptions>()
+            .Bind(configuration.GetSection(RunWorkerOptions.SectionName));
         services.AddOptions<OutboxDispatcherOptions>()
             .Bind(configuration.GetSection(OutboxDispatcherOptions.SectionName));
+        services.AddOptions<OutboxDispatchOptions>()
+            .Bind(configuration.GetSection(OutboxDispatchOptions.SectionName));
 
         services.AddSingleton<TransportResilienceRegistry>();
         RegisterIntegrationHttpClients(services);
@@ -132,13 +137,16 @@ public static class DependencyInjection
         services.AddSingleton<InMemoryPolicyProfileRepository>();
         services.AddSingleton<IPolicyProfileRepository>(sp => sp.GetRequiredService<InMemoryPolicyProfileRepository>());
 
-        services.AddSingleton<InMemoryRunQueue>();
-        services.AddSingleton<IRunQueue>(sp => sp.GetRequiredService<InMemoryRunQueue>());
-        services.AddHostedService<RunQueueBackgroundWorker>();
+        services.AddSingleton<IDurableRunQueue, InMemoryDurableRunQueueStore>();
+        services.AddScoped<InMemoryRunQueue>();
+        services.AddScoped<IRunQueue>(sp => sp.GetRequiredService<InMemoryRunQueue>());
+        services.AddHostedService<RunQueueHostedService>();
 
         services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
         services.AddSingleton<IRunExecutionLeaseStore, InMemoryExecutionLeaseStore>();
         services.AddSingleton<IDistributedOperationLedger, InMemoryDistributedOperationLedger>();
+        services.AddSingleton<IOutboxSink, NoOpOutboxSink>();
+        services.AddHostedService<OutboxHostedService>();
 
         return services;
     }
@@ -209,6 +217,11 @@ public static class DependencyInjection
             services.Remove(d);
         }
 
+        foreach (var d in services.Where(x => x.ServiceType == typeof(IDurableRunQueue)).ToList())
+        {
+            services.Remove(d);
+        }
+
         foreach (var d in services.Where(x => x.ServiceType == typeof(IRunExecutionLeaseStore)).ToList())
         {
             services.Remove(d);
@@ -222,6 +235,7 @@ public static class DependencyInjection
         services.AddScoped<IOutboxStore, EfOutboxStore>();
         services.AddScoped<IRunExecutionLeaseStore, EfExecutionLeaseStore>();
         services.AddScoped<IDistributedOperationLedger, EfDistributedOperationLedger>();
+        services.AddScoped<IDurableRunQueue, EfRunQueueStore>();
 
         return services;
     }

@@ -29,6 +29,18 @@ public sealed class InMemoryOutboxStore : IOutboxStore
         }
     }
 
+    public Task<IReadOnlyList<OutboxMessage>> ListLatestAsync(int take, CancellationToken cancellationToken)
+    {
+        lock (_orderLock)
+        {
+            var list = _messages.Values
+                .OrderByDescending(m => m.CreatedAt)
+                .Take(Math.Clamp(take, 1, 500))
+                .ToList();
+            return Task.FromResult<IReadOnlyList<OutboxMessage>>(list);
+        }
+    }
+
     public Task<bool> TryMarkDispatchingAsync(Guid id, CancellationToken cancellationToken)
     {
         lock (_orderLock)

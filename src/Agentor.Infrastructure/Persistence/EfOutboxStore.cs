@@ -33,22 +33,28 @@ public sealed class EfOutboxStore : IOutboxStore
         return rows.Select(FromRecord).ToList();
     }
 
+    public async Task<IReadOnlyList<OutboxMessage>> ListLatestAsync(int take, CancellationToken cancellationToken)
+    {
+        var rows = await _db.OutboxMessages.AsNoTracking()
+            .OrderByDescending(r => r.CreatedAt)
+            .Take(Math.Clamp(take, 1, 500))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows.Select(FromRecord).ToList();
+    }
+
     public async Task<bool> TryMarkDispatchingAsync(Guid id, CancellationToken cancellationToken)
     {
-        var row = await _db.OutboxMessages.FirstOrDefaultAsync(r => r.Id == id, cancellationToken).ConfigureAwait(false);
-        if (row is null)
-        {
-            return false;
-        }
+        var pending = OutboxStatus.Pending.ToString();
+        var dispatching = OutboxStatus.Dispatching.ToString();
 
-        if (row.Status != OutboxStatus.Pending.ToString())
-        {
-            return false;
-        }
+        var affected = await _db.OutboxMessages
+            .Where(r => r.Id == id && r.Status == pending)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(r => r.Status, dispatching), cancellationToken)
+            .ConfigureAwait(false);
 
-        row.Status = OutboxStatus.Dispatching.ToString();
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return true;
+        return affected == 1;
     }
 
     public async Task MarkOutcomeAsync(Guid id, OutboxStatus status, string? detail, CancellationToken cancellationToken)

@@ -1,5 +1,37 @@
 # Agentor harness progress
 
+## Phase 20 PR96-PR100 (2026-05-10)
+
+Completed **Phase 20 durable operational runtime**:
+
+- **PR96**: Added durable queue abstraction and records: `IDurableRunQueue`, `RunQueueRecord`, `DurableRunQueueStatus`; implemented `EfRunQueueStore` and `InMemoryDurableRunQueueStore`.
+- **PR97**: Added hosted run worker `RunQueueHostedService` with `RunWorkerOptions` (`Agentor:RunWorker`) and lease-aware processing via `IRunExecutionLeaseStore`.
+- **PR98**: Added hosted outbox dispatcher `OutboxHostedService` with `OutboxDispatchOptions` (`Agentor:OutboxDispatch`) and default `NoOpOutboxSink`.
+- **PR99**: Tightened EF outbox dispatch claiming with atomic conditional update (`ExecuteUpdateAsync` pending→dispatching) and contention coverage.
+- **PR100**: Added read-only operational endpoints:
+	- `GET /api/v1/ops/queue`
+	- `GET /api/v1/ops/outbox`
+	- `GET /api/v1/ops/leases`
+
+Added tests:
+
+- `EfRunQueueStoreTests` (enqueue persistence, claim, restart durability)
+- `RunQueueHostedServiceTests` (disabled by default, enabled processing, lease contention)
+- `OutboxHostedServiceTests` (disabled by default, enabled dispatch, retry/poison)
+- `Phase12EfRoundTripTests` contention case for atomic outbox claim
+- `IntegrationEndpointsTests` ops endpoint coverage and no-secrets assertion
+
+Verification:
+
+- `dotnet restore Agentor.sln` succeeded
+- `dotnet build Agentor.sln --no-restore` succeeded
+- `dotnet test Agentor.sln --no-build` succeeded (**357 passed, 0 failed**)
+- `dotnet test tests/Agentor.Api.Tests/Agentor.Api.Tests.csproj --no-build` succeeded (**75 passed, 0 failed**) captured as API smoke evidence
+- `verify-harness` passed (`ExpectedPhase=20`, `ExpectedHarnessPass=PR100`)
+- `verify-repo-clean` passed
+
+Active deferred items (`passes: false`): `SCOPE-001` only.
+
 ## Phase 19 PR91-PR95 (2026-05-10)
 
 Completed **Phase 19 production identity and authorization boundary**:

@@ -95,4 +95,19 @@ public sealed class EfExecutionLeaseStore : IRunExecutionLeaseStore
         _db.ExecutionLeases.Remove(row);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    public async Task<IReadOnlyList<ExecutionLeaseSnapshot>> ListLeasesAsync(int take, CancellationToken cancellationToken)
+    {
+        var rows = await _db.ExecutionLeases.AsNoTracking()
+            .OrderByDescending(r => r.ExpiresAtUtc)
+            .Take(Math.Clamp(take, 1, 500))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows.Select(r => new ExecutionLeaseSnapshot(
+            r.ResourceId,
+            r.LeaseHolder,
+            r.ExpiresAtUtc,
+            r.CreatedAtUtc)).ToList();
+    }
 }

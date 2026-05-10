@@ -2,6 +2,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Agentor.Application.Abstractions;
+using Agentor.Application.Commands;
+using Agentor.Application.RunQueue;
+using Agentor.Contracts;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -136,6 +140,84 @@ public sealed class IntegrationEndpointsTests
 
         var response = await client.GetAsync("/ready");
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpsEndpoints_ReturnReadOnlyStatusWithoutSecrets()
+    {
+        await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.ConfigureAppConfiguration((_, cfg) =>
+            {
+                cfg.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Agentor:RunQueue:ExecutionMode"] = "DurableBackground",
+                    ["Agentor:RunWorker:Enabled"] = "false",
+                    ["Agentor:OutboxDispatch:Enabled"] = "false",
+                });
+            });
+        });
+
+        using var scope = factory.Services.CreateScope();
+        var queue = scope.ServiceProvider.GetRequiredService<IDurableRunQueue>();
+        var outbox = scope.ServiceProvider.GetRequiredService<IOutboxStore>();
+        var leases = scope.ServiceProvider.GetRequiredService<IRunExecutionLeaseStore>();
+
+        var workItemId = Guid.NewGuid();
+        await queue.EnqueueAsync(
+            new RunWorkItem(workItemId, new StartAgentRunCommand("Ops Agent", "Queue visibility test.")),
+            DateTimeOffset.UtcNow,
+            CancellationToken.None);
+
+        await outbox.AppendAsync(
+            new Agentor.Application.Reliability.OutboxMessage(
+                Guid.NewGuid(),
+                Agentor.Application.Reliability.OutboxMessageKind.Mcp,
+                "{}",
+                Agentor.Application.Reliability.OutboxStatus.Pending,
+                0,
+                DateTimeOffset.UtcNow,
+                null),
+            CancellationToken.None);
+
+        await leases.TryAcquireAsync(
+            Guid.NewGuid(),
+            "ops-test-holder",
+            TimeSpan.FromMinutes(1),
+            DateTimeOffset.UtcNow,
+            CancellationToken.None);
+
+        using var client = factory.CreateClient();
+
+        var queueResponse = await client.GetAsync("/api/v1/ops/queue");
+        var outboxResponse = await client.GetAsync("/api/v1/ops/outbox");
+        var leasesResponse = await client.GetAsync("/api/v1/ops/leases");
+
+        queueResponse.EnsureSuccessStatusCode();
+        outboxResponse.EnsureSuccessStatusCode();
+        leasesResponse.EnsureSuccessStatusCode();
+
+        var queueRaw = await queueResponse.Content.ReadAsStringAsync();
+        var outboxRaw = await outboxResponse.Content.ReadAsStringAsync();
+        var leasesRaw = await leasesResponse.Content.ReadAsStringAsync();
+
+        var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var queueItems = JsonSerializer.Deserialize<List<OpsQueueItemDto>>(queueRaw, jsonOptions);
+        var outboxItems = JsonSerializer.Deserialize<List<OpsOutboxItemDto>>(outboxRaw, jsonOptions);
+        var leaseItems = JsonSerializer.Deserialize<List<OpsLeaseItemDto>>(leasesRaw, jsonOptions);
+
+        Assert.NotNull(queueItems);
+        Assert.Contains(queueItems!, x => x.WorkItemId == workItemId);
+        Assert.NotNull(outboxItems);
+        Assert.NotEmpty(outboxItems!);
+        Assert.NotNull(leaseItems);
+        Assert.NotEmpty(leaseItems!);
+
+        var raw = string.Concat(queueRaw, outboxRaw, leasesRaw).ToLowerInvariant();
+        Assert.DoesNotContain("password", raw);
+        Assert.DoesNotContain("secret", raw);
+        Assert.DoesNotContain("authorization", raw);
+        Assert.DoesNotContain("apikey", raw);
     }
 
     private sealed class FixedStatusHttpClientFactory(HttpStatusCode statusCode) : IHttpClientFactory

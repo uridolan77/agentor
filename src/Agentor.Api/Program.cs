@@ -79,6 +79,7 @@ app.MapSystemEndpoints();
 var v1 = app.MapGroup("/api/v1");
 v1.MapAgentRunEndpoints();
 v1.MapRunQueueEndpoints();
+v1.MapOpsEndpoints();
 v1.MapAthanorEndpoints();
 v1.MapGovernanceEndpoints();
 v1.MapPolicyBundleEndpoints();

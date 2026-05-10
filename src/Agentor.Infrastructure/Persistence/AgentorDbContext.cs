@@ -18,6 +18,8 @@ public sealed class AgentorDbContext : DbContext
 
     public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
 
+    public DbSet<RunQueueItemRecord> RunQueueItems => Set<RunQueueItemRecord>();
+
     public DbSet<ExecutionLeaseRecord> ExecutionLeases => Set<ExecutionLeaseRecord>();
 
     public DbSet<DistributedOperationRecord> DistributedOperations => Set<DistributedOperationRecord>();
@@ -140,6 +142,29 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(r => r.AttemptCount).HasColumnName("attempt_count");
             entity.Property(r => r.CreatedAt).HasColumnName("created_at");
             entity.Property(r => r.LastError).HasColumnName("last_error").HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<RunQueueItemRecord>(entity =>
+        {
+            entity.ToTable("run_queue_items");
+            entity.HasKey(r => r.WorkItemId);
+            entity.Property(r => r.WorkItemId).HasColumnName("work_item_id");
+            entity.Property(r => r.AgentName).HasColumnName("agent_name").IsRequired().HasMaxLength(500);
+            entity.Property(r => r.Objective).HasColumnName("objective").IsRequired().HasMaxLength(2000);
+            entity.Property(r => r.TraceId).HasColumnName("trace_id").HasMaxLength(128);
+            entity.Property(r => r.TenantId).HasColumnName("tenant_id");
+            entity.Property(r => r.WorkspaceId).HasColumnName("workspace_id");
+            entity.Property(r => r.ProjectId).HasColumnName("project_id");
+            entity.Property(r => r.KnowledgeScopeId).HasColumnName("knowledge_scope_id");
+            entity.Property(r => r.Status).HasColumnName("status").IsRequired().HasMaxLength(64);
+            entity.Property(r => r.EnqueuedAtUtc).HasColumnName("enqueued_at_utc");
+            entity.Property(r => r.ClaimedBy).HasColumnName("claimed_by").HasMaxLength(256);
+            entity.Property(r => r.LeaseExpiresAtUtc).HasColumnName("lease_expires_at_utc");
+            entity.Property(r => r.AgentRunId).HasColumnName("agent_run_id");
+            entity.Property(r => r.Error).HasColumnName("error").HasMaxLength(2000);
+            entity.Property(r => r.UpdatedAtUtc).HasColumnName("updated_at_utc");
+
+            entity.HasIndex(r => new { r.Status, r.EnqueuedAtUtc });
         });
 
         modelBuilder.Entity<ExecutionLeaseRecord>(entity =>

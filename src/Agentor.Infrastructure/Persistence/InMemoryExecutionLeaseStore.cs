@@ -85,4 +85,17 @@ public sealed class InMemoryExecutionLeaseStore : IRunExecutionLeaseStore
 
         return Task.CompletedTask;
     }
+
+    public Task<IReadOnlyList<ExecutionLeaseSnapshot>> ListLeasesAsync(int take, CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            var list = _leases.Values
+                .OrderByDescending(x => x.ExpiresAtUtc)
+                .Take(Math.Clamp(take, 1, 500))
+                .Select(x => new ExecutionLeaseSnapshot(x.ResourceId, x.LeaseHolder, x.ExpiresAtUtc, x.CreatedAtUtc))
+                .ToList();
+            return Task.FromResult<IReadOnlyList<ExecutionLeaseSnapshot>>(list);
+        }
+    }
 }
