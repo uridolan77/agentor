@@ -31,4 +31,18 @@ public sealed class RunQueueItemRecord
     public string? Error { get; set; }
 
     public DateTimeOffset UpdatedAtUtc { get; set; }
+
+    /// <summary>Optional explicit execution mode name persisted for queue replay.</summary>
+    public string? ExecutionMode { get; set; }
+
+    public Guid? RecipeId { get; set; }
+
+    public Guid? PlanId { get; set; }
+
+    public string? ToolKey { get; set; }
+
+    public string? SkillKey { get; set; }
+
+    /// <summary>JSON object of string key/value pairs for tool input.</summary>
+    public string? ToolInputJson { get; set; }
 }

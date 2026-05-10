@@ -49,6 +49,19 @@ public sealed class ExceptionHandlingMiddleware
             var payload = JsonSerializer.Serialize(errorDto, _jsonOptions);
             await context.Response.WriteAsync(payload);
         }
+        catch (RunOrchestrationNotFoundException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+            context.Response.ContentType = "application/json";
+
+            var traceId = context.Response.Headers.TryGetValue(TraceIdHeaderName, out var tv)
+                ? tv.ToString()
+                : null;
+
+            var errorDto = new ApiErrorDto(ex.ReasonCode, ex.Message, traceId);
+            var payload = JsonSerializer.Serialize(errorDto, _jsonOptions);
+            await context.Response.WriteAsync(payload);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled Agentor API error.");
@@ -60,7 +73,10 @@ public sealed class ExceptionHandlingMiddleware
                 ? tv.ToString()
                 : null;
 
-            var errorDto = new ApiErrorDto("AgentorUnhandledError", ex.Message, traceId);
+            var errorDto = new ApiErrorDto(
+                "AgentorUnhandledError",
+                "An unexpected error occurred.",
+                traceId);
             var payload = JsonSerializer.Serialize(errorDto, _jsonOptions);
 
             await context.Response.WriteAsync(payload);

@@ -28,6 +28,7 @@ This document states **what the code and HTTP surface actually do today**, so op
 ## Durable run queue worker
 
 - **`RunQueueHostedService`** is registered as a **hosted singleton** but resolves **`IDurableRunQueue`**, **`IRunExecutionLeaseStore`**, and **`IAgentRunOrchestrator`** inside a **per-drain `IServiceScopeFactory` async scope**, so EF-backed scoped implementations share one **`DbContext`** for claim → execute → mark complete/failed. Drained items execute through **`StartAgentRunRouting`** + **`IAgentRunOrchestrator`** (not a separate fake-centered path). **`AddAgentorInfrastructure`** binds **`Agentor:PublicRuns`** so worker routing defaults match API configuration.
+- **EF `run_queue_items`** rows persist **governance scope** (`tenant_id`, `workspace_id`, `project_id`, `knowledge_scope_id`) and **public orchestration selectors** (`execution_mode`, `recipe_id`, `plan_id`, `tool_key`, `skill_key`, plus **`tool_input_json`** for string-keyed tool inputs) so queued work replays the same routing as inline **`POST /api/v1/agent-runs`** starts after dequeue (PR117.5).
 
 ## Where to read more
 

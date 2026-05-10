@@ -1,12 +1,12 @@
 # Verification log
 
-## Phase 26 PR117 (2026-05-11)
+## Phase 26 PR117 + PR117.5 (2026-05-11)
 
 ```powershell
 dotnet restore Agentor.sln
 dotnet build Agentor.sln --no-restore
 dotnet test Agentor.sln --no-build
-powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117.5
 powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
 ```
 
@@ -16,8 +16,8 @@ Results:
 
 - Restore: succeeded
 - Build: succeeded
-- Tests: **428 passed, 0 failed**
-- verify-harness: passed (`ExpectedPhase=26`, `ExpectedHarnessPass=PR117`)
+- Tests: **438 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=26`, `ExpectedHarnessPass=PR117.5`)
 - verify-repo-clean: passed
 
 Counts:
@@ -25,12 +25,12 @@ Counts:
 - Agentor.Domain.Tests: Passed 74 / Total 74
 - Agentor.Contracts.Tests: Passed 13 / Total 13
 - Agentor.Application.Tests: Passed 141 / Total 141
-- Agentor.Infrastructure.Tests: Passed 96 / Total 96
-- Agentor.Api.Tests: Passed 104 / Total 104
+- Agentor.Infrastructure.Tests: Passed 101 / Total 101
+- Agentor.Api.Tests: Passed 109 / Total 109
 
 Scope:
 
-- completed: Phase 26 PR117 scoped policy + SCOPE-001 closure + audit/docs/harness
+- completed: Phase 26 PR117 scoped policy + SCOPE-001 closure; PR117.5 EF queue payload + fingerprint scope + orchestration HTTP errors + docs
 - not started: Phase 27+
 
 ## Phase 25 PR116 (2026-05-11)

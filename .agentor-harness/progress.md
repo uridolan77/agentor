@@ -1,17 +1,18 @@
 # Agentor harness progress
 
-## Phase 26 PR117 (2026-05-11)
+## Phase 26 PR117 + PR117.5 (2026-05-11)
 
 **Status**: Complete.
 
 **Work**:
 
-- **Scoped policy**: **`PolicyRule`** identifiers + **`KnowledgeScope`**; **`PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope)`**; **`PolicyEvaluationRequest.Scope`**; **`RuntimePolicyEvaluator`**; **`AgentRun.ToPolicyScope()`** at orchestration/review sites; audit **`effectivePolicyScope`**; API/DTO fields; **`PolicyScopeEvaluationTests`**; **`SCOPE-001`** harness closure; docs.
+- **PR117 (scoped policy)**: **`PolicyRule`** identifiers + **`KnowledgeScope`**; **`PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope)`**; **`PolicyEvaluationRequest.Scope`**; **`RuntimePolicyEvaluator`**; **`AgentRun.ToPolicyScope()`** at orchestration/review sites; audit **`effectivePolicyScope`**; API/DTO fields; **`PolicyScopeEvaluationTests`**; **`SCOPE-001`** harness closure; docs.
+- **PR117.5 (orchestration + queue hardening)**: EF **`run_queue_items`** orchestration columns + **`EfRunQueueStore`** round-trip; PostgreSQL migration **`20260511183000_RunQueueOrchestrationPayload`** + model snapshot **`RunQueueItemRecord`**; **`RunQueueHostedServiceEfSqliteScopeTests`** (Conexus model, MCP echo, explicit LegacyFakeTool, RecipeId); **`EfRunQueueStoreTests`** selector round-trip; **`StartAgentRunFingerprint`** governance scope; **`RunOrchestrationNotFoundException`** + **`ExceptionHandlingMiddleware`** (404 + sanitized 500); **`AgentRunOrchestrator`** typed errors; API tests for idempotency scope conflicts + unknown plan/recipe/skill; **`docs/REPO_TRUTH.md`** + **`docs/developer/policy-bundles.md`** scoped-merge note.
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **428 passed, 0 failed**
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117`
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **438 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117.5`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
 **Scope guard**: Phase 27 not started.

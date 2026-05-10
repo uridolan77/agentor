@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Application.RunQueue;
+using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Persistence.Records;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +10,8 @@ namespace Agentor.Infrastructure.Persistence;
 
 public sealed class EfRunQueueStore : IDurableRunQueue
 {
+    private static readonly JsonSerializerOptions ToolInputJsonSerializerOptions = new();
+
     private readonly AgentorDbContext _db;
 
     public EfRunQueueStore(AgentorDbContext db)
@@ -27,6 +31,12 @@ public sealed class EfRunQueueStore : IDurableRunQueue
             WorkspaceId = item.Command.WorkspaceId,
             ProjectId = item.Command.ProjectId,
             KnowledgeScopeId = item.Command.KnowledgeScopeId,
+            ExecutionMode = item.Command.Mode?.ToString(),
+            RecipeId = item.Command.RecipeId,
+            PlanId = item.Command.PlanId,
+            ToolKey = item.Command.ToolKey,
+            SkillKey = item.Command.SkillKey,
+            ToolInputJson = SerializeToolInput(item.Command.ToolInput),
             Status = DurableRunQueueStatus.Pending.ToString(),
             EnqueuedAtUtc = now,
             UpdatedAtUtc = now,
@@ -211,6 +221,39 @@ public sealed class EfRunQueueStore : IDurableRunQueue
         return rows.Select(ToRecord).ToList();
     }
 
+    private static string? SerializeToolInput(IReadOnlyDictionary<string, string>? input)
+    {
+        if (input is null || input.Count == 0)
+        {
+            return null;
+        }
+
+        var ordered = input.OrderBy(kv => kv.Key, StringComparer.Ordinal)
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        return JsonSerializer.Serialize(ordered, ToolInputJsonSerializerOptions);
+    }
+
+    private static IReadOnlyDictionary<string, string>? DeserializeToolInput(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+        return dict is null || dict.Count == 0 ? null : dict;
+    }
+
+    private static RunExecutionMode? ParseExecutionMode(string? stored)
+    {
+        if (string.IsNullOrWhiteSpace(stored))
+        {
+            return null;
+        }
+
+        return Enum.TryParse<RunExecutionMode>(stored, ignoreCase: false, out var mode) ? mode : null;
+    }
+
     private static RunQueueRecord ToRecord(RunQueueItemRecord row) =>
         new(
             row.WorkItemId,
@@ -221,7 +264,13 @@ public sealed class EfRunQueueStore : IDurableRunQueue
                 row.TenantId,
                 row.WorkspaceId,
                 row.ProjectId,
-                row.KnowledgeScopeId),
+                row.KnowledgeScopeId,
+                Mode: ParseExecutionMode(row.ExecutionMode),
+                RecipeId: row.RecipeId,
+                PlanId: row.PlanId,
+                ToolKey: row.ToolKey,
+                SkillKey: row.SkillKey,
+                ToolInput: DeserializeToolInput(row.ToolInputJson)),
             Enum.Parse<DurableRunQueueStatus>(row.Status),
             row.EnqueuedAtUtc,
             row.ClaimedBy,

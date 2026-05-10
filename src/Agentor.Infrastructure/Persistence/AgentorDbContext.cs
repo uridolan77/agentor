@@ -163,6 +163,12 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(r => r.AgentRunId).HasColumnName("agent_run_id");
             entity.Property(r => r.Error).HasColumnName("error").HasMaxLength(2000);
             entity.Property(r => r.UpdatedAtUtc).HasColumnName("updated_at_utc");
+            entity.Property(r => r.ExecutionMode).HasColumnName("execution_mode").HasMaxLength(64);
+            entity.Property(r => r.RecipeId).HasColumnName("recipe_id");
+            entity.Property(r => r.PlanId).HasColumnName("plan_id");
+            entity.Property(r => r.ToolKey).HasColumnName("tool_key").HasMaxLength(200);
+            entity.Property(r => r.SkillKey).HasColumnName("skill_key").HasMaxLength(200);
+            entity.Property(r => r.ToolInputJson).HasColumnName("tool_input_json").HasColumnType("text");
 
             entity.HasIndex(r => new { r.Status, r.EnqueuedAtUtc });
         });

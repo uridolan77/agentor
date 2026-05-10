@@ -1,34 +1,33 @@
-# Session handoff — Phase 26 PR117 (policy scope enforcement)
+# Session handoff — Phase 26 PR117 + PR117.5
 
 ## Completed
 
-- **Domain**: **`PolicyRuleScope.KnowledgeScope`**; **`PolicyRule`** optional scope identifier fields with validation; **`AgentRun.ToPolicyScope()`**.
-- **Adapter**: **`PolicyBundleRulesAdapter.ToProfileRules(PolicyBundle, AgentRunScope)`** (+ overload without scope → empty run scope); MCP/external deny + model budget merges respect scope filtering and specificity/stricter thresholds.
-- **Evaluation**: **`PolicyEvaluationRequest`** adds **`AgentRunScope? Scope`**; **`RuntimePolicyEvaluator`** passes scope into adapter when resolving active bundle.
-- **Call sites**: **`SequentialAgentPlanExecutor`**, **`GovernedSingleToolRunDriver`**, **`ApplyHumanReviewDecisionHandler`** pass **`run.ToPolicyScope()`**.
-- **API/contracts**: **`CreatePolicyRuleDto`** / **`PolicyRuleDto`** scope id fields; **`PolicyBundleEndpoints`** + **`DtoMappings`**.
-- **Audit**: **`GetRunAuditExportQueryHandler`** root **`effectivePolicyScope`**; test **`HandleAsync_IncludesEffectivePolicyScopeObject`**.
-- **Tests**: **`PolicyScopeEvaluationTests`** (tenant/workspace/project/global isolation + adapter filter); **`PolicyBundleTests`** validation cases.
-- **Docs**: **`docs/REPO_TRUTH.md`**, **`docs/developer/policy-bundles.md`**, **`docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`** (no active `passes:false` rows).
-- **Harness**: **`SCOPE-001`** → **`passes: true`**; **PR117-001..003** acceptance rows; phase **26** / **PR117**.
+- **PR117 (scoped policy)** — unchanged baseline: **`PolicyRule`** scope identifiers + **`KnowledgeScope`**, **`PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope)`**, **`PolicyEvaluationRequest.Scope`**, **`RuntimePolicyEvaluator`**, **`AgentRun.ToPolicyScope()`** call sites, audit **`effectivePolicyScope`**, **`SCOPE-001`** closed in deferred-items harness.
+- **PR117.5 (orchestration + queue payload hardening)**:
+  - **EF queue**: **`RunQueueItemRecord`** + **`EfRunQueueStore`** persist **`ExecutionMode`**, **`RecipeId`**, **`PlanId`**, **`ToolKey`**, **`SkillKey`**, **`ToolInputJson`**; migration **`20260511183000_RunQueueOrchestrationPayload`** + **`AgentorDbContextModelSnapshot`** **`run_queue_items`** entity.
+  - **Fingerprint**: **`StartAgentRunFingerprint`** includes **`TenantId` / `WorkspaceId` / `ProjectId` / `KnowledgeScopeId`** (deterministic **`Guid`** **`D`** tokens).
+  - **HTTP errors**: **`RunOrchestrationNotFoundException`** → **404** with stable **`ReasonCode`**; **`RunOrchestrationValidationException`** remains **400**; generic **`Exception`** → **500** with fixed **`AgentorUnhandledError`** message (no raw exception text).
+  - **Orchestrator**: replaces former **`InvalidOperationException`** throws on expected validation/not-found paths with the typed exceptions above.
+  - **Tests**: **`EfRunQueueStoreTests.EnqueueAsync_RoundTripsOrchestrationSelectorsAndToolInput`**; **`RunQueueHostedServiceEfSqliteScopeTests`** (model, MCP echo, legacy explicit, recipe); **`ApiContractTests`** idempotency scope conflicts; **`AgentRunOrchestrationApiTests`** unknown plan/recipe/skill.
+  - **Docs**: **`docs/REPO_TRUTH.md`** durable-queue payload bullet; **`docs/developer/policy-bundles.md`** scoped-merge security note (specific Allow vs Global Deny).
 
 ## Verification
 
 - `dotnet restore Agentor.sln` succeeded
 - `dotnet build Agentor.sln --no-restore` succeeded
-- `dotnet test Agentor.sln --no-build` succeeded (**428 passed, 0 failed**)
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117` succeeded
+- `dotnet test Agentor.sln --no-build` succeeded (**438 passed, 0 failed**)
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117.5` succeeded
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
 ## What is next
 
-- **Phase 27** — EF persistence correctness / append-aware save / concurrency (per `docs/planning/pr76-125/Phase 23 - 31.md`), or next scheduled phase.
+- **Phase 27** — EF persistence correctness / append-aware aggregate save / concurrency (per planning doc), or next scheduled phase.
 
 ## What was explicitly not started
 
-- **Phase 27+** was **not** started.
+- **Phase 27+** broader persistence refactor was **not** started (PR117.5 only).
 
 ## Remaining risks / deferred
 
 - **EF aggregate save** remains delete/reinsert-style in places (**REPO_TRUTH** persistence bullet).
-- Historical harness notes under **`feature-list.json`** may still mention older “SCOPE-001 deferred” wording in archived phase bullets; current **`SCOPE-001`** acceptance row is **closed**.
+- **PR117.5** does not add an automated test that asserts the **500** response body text (covered by code review + harness acceptance **`PR117.5-005`** citing **`ExceptionHandlingMiddleware`**).

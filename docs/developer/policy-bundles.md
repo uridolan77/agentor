@@ -21,7 +21,7 @@ Each rule declares:
 | Field | Type | Purpose |
 |---|---|---|
 | `Kind` | `PolicyRuleKind` | ToolAccess \| ModelBudget \| McpToolAccess \| ExternalAgentAccess |
-| `Scope` | `PolicyRuleScope` | Global \| Tenant \| Workspace \| Project |
+| `Scope` | `PolicyRuleScope` | Global \| Tenant \| Workspace \| Project \| KnowledgeScope |
 | `Effect` | `PolicyRuleEffect` | Allow \| Deny \| RequiresReview |
 | `TargetKey` | `string?` | Tool key, MCP key, agent key, or budget dimension |
 | `ThresholdValue` | `string?` | Numeric threshold for budget rules (invariant-culture) |
@@ -57,6 +57,12 @@ When an active policy profile with a bundle is configured, `RuntimePolicyEvaluat
 9. **Allow** (RUNTIME_ALLOW)
 
 `RequiresReview` and `Deny` are always distinct outcomes. A `RequiresReview` decision can be resumed after human approval; a `Deny` cannot.
+
+## Scoped rule merging (Phase 26)
+
+When an active bundle is resolved for a run, `PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope)` keeps rules whose scope matches the run’s `TenantId` / `WorkspaceId` / `ProjectId` / `KnowledgeScopeId`, then merges overlapping tool-access rules by **specificity** (**KnowledgeScope → Project → Workspace → Tenant → Global**). At **equal** specificity, outcomes merge as **Deny > RequiresReview > Allow**.
+
+**Security note:** a **more-specific Allow** can therefore override a **Global Deny** for the same tool key—the narrower scope wins. Treat Global denies as deployment-wide defaults, not absolute blocks, unless higher-specificity rules are curated to match.
 
 ## Fallback path
 

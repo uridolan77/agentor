@@ -1,4 +1,6 @@
+using Agentor.Application.Commands;
 using Agentor.Application.RunQueue;
+using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -101,6 +103,48 @@ public sealed class EfRunQueueStoreTests
                 }
             }
         }
+    }
+
+    [Fact]
+    public async Task EnqueueAsync_RoundTripsOrchestrationSelectorsAndToolInput()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await using var ctx = await CreateSqliteContextAsync(connection);
+        var store = new EfRunQueueStore(ctx);
+
+        var recipeId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var toolInput = new Dictionary<string, string> { ["text"] = "hi" };
+
+        var workItem = new RunWorkItem(
+            Guid.NewGuid(),
+            new StartAgentRunCommand(
+                "Payload Agent",
+                "Round-trip selectors.",
+                "queue-payload-trace",
+                TenantId: Guid.NewGuid(),
+                WorkspaceId: Guid.NewGuid(),
+                ProjectId: Guid.NewGuid(),
+                KnowledgeScopeId: Guid.NewGuid(),
+                Mode: RunExecutionMode.ModelCall,
+                RecipeId: recipeId,
+                PlanId: planId,
+                ToolKey: "conexus.model-complete",
+                SkillKey: "unused-skill",
+                ToolInput: toolInput));
+
+        await store.EnqueueAsync(workItem, DateTimeOffset.UtcNow, CancellationToken.None);
+
+        var loaded = await store.GetAsync(workItem.WorkItemId, CancellationToken.None);
+        Assert.NotNull(loaded);
+        var cmd = loaded!.Command;
+        Assert.Equal(RunExecutionMode.ModelCall, cmd.Mode);
+        Assert.Equal(recipeId, cmd.RecipeId);
+        Assert.Equal(planId, cmd.PlanId);
+        Assert.Equal("conexus.model-complete", cmd.ToolKey);
+        Assert.Equal("unused-skill", cmd.SkillKey);
+        Assert.NotNull(cmd.ToolInput);
+        Assert.Equal("hi", cmd.ToolInput!["text"]);
     }
 
 }

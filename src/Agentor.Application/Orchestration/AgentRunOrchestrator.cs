@@ -50,7 +50,7 @@ public sealed class AgentRunOrchestrator : IAgentRunOrchestrator
             case RunExecutionMode.ExternalAgent:
                 if (string.IsNullOrWhiteSpace(request.ToolKey))
                 {
-                    throw new InvalidOperationException("toolKey is required for this execution mode.");
+                    throw new RunOrchestrationValidationException(["toolKey is required for this execution mode."]);
                 }
 
                 return await _singleTool.ExecuteAsync(
@@ -70,7 +70,7 @@ public sealed class AgentRunOrchestrator : IAgentRunOrchestrator
                 return await ExecuteSkillAsync(request, cancellationToken).ConfigureAwait(false);
 
             default:
-                throw new InvalidOperationException($"Unsupported execution mode '{request.Mode}'.");
+                throw new RunOrchestrationValidationException([$"Unsupported execution mode '{request.Mode}'."]);
         }
     }
 
@@ -78,19 +78,23 @@ public sealed class AgentRunOrchestrator : IAgentRunOrchestrator
     {
         if (request.PlanId is null)
         {
-            throw new InvalidOperationException("planId is required for plan execution.");
+            throw new RunOrchestrationValidationException(["planId is required for plan execution."]);
         }
 
         var template = _plans.Get(request.PlanId.Value);
         if (template is null)
         {
-            throw new InvalidOperationException($"Plan '{request.PlanId:D}' was not found.");
+            throw new RunOrchestrationNotFoundException(
+                "PlanNotFound",
+                $"Plan '{request.PlanId:D}' was not found.");
         }
 
         var recipe = _recipes.Get(template.RecipeId);
         if (recipe is null)
         {
-            throw new InvalidOperationException($"Recipe '{template.RecipeId:D}' for plan '{request.PlanId:D}' was not found.");
+            throw new RunOrchestrationNotFoundException(
+                "RecipeNotFound",
+                $"Recipe '{template.RecipeId:D}' for plan '{request.PlanId:D}' was not found.");
         }
 
         var plan = AgentPlan.Instantiate(recipe, Guid.NewGuid(), _clock.UtcNow, template.Topology);
@@ -101,13 +105,15 @@ public sealed class AgentRunOrchestrator : IAgentRunOrchestrator
     {
         if (request.RecipeId is null)
         {
-            throw new InvalidOperationException("recipeId is required for recipe execution.");
+            throw new RunOrchestrationValidationException(["recipeId is required for recipe execution."]);
         }
 
         var recipe = _recipes.Get(request.RecipeId.Value);
         if (recipe is null)
         {
-            throw new InvalidOperationException($"Recipe '{request.RecipeId:D}' was not found.");
+            throw new RunOrchestrationNotFoundException(
+                "RecipeNotFound",
+                $"Recipe '{request.RecipeId:D}' was not found.");
         }
 
         var plan = AgentPlan.Instantiate(recipe, Guid.NewGuid(), _clock.UtcNow);
@@ -118,7 +124,7 @@ public sealed class AgentRunOrchestrator : IAgentRunOrchestrator
     {
         if (string.IsNullOrWhiteSpace(request.SkillKey))
         {
-            throw new InvalidOperationException("skillKey is required for skill execution.");
+            throw new RunOrchestrationValidationException(["skillKey is required for skill execution."]);
         }
 
         var key = request.SkillKey.Trim();
@@ -129,7 +135,9 @@ public sealed class AgentRunOrchestrator : IAgentRunOrchestrator
 
         if (match is null)
         {
-            throw new InvalidOperationException($"Skill '{key}' is not registered.");
+            throw new RunOrchestrationNotFoundException(
+                "SkillNotRegistered",
+                $"Skill '{key}' is not registered.");
         }
 
         var step = new RecipeStepDefinition(
@@ -155,8 +163,8 @@ public sealed class AgentRunOrchestrator : IAgentRunOrchestrator
                 out var recipe,
                 out var validation))
         {
-            var msg = string.Join("; ", validation.Issues.Select(i => i.Message));
-            throw new InvalidOperationException($"Skill wrap recipe invalid: {msg}");
+            var msgs = validation.Issues.Select(i => i.Message).ToList();
+            throw new RunOrchestrationValidationException(msgs);
         }
 
         var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), _clock.UtcNow);

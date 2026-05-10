@@ -396,6 +396,92 @@ public sealed class AgentRunQueryEndpointsTests
     }
 
     [Fact]
+    public async Task PostAgentRuns_WithIdempotencyKey_DifferentProjectId_ReturnsConflict()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        const string key = "idem-scope-project-key";
+        var tenantId = Guid.NewGuid();
+        var workspaceId = Guid.NewGuid();
+        var projectId1 = Guid.NewGuid();
+        var projectId2 = Guid.NewGuid();
+        var knowledgeScopeId = Guid.NewGuid();
+
+        var body1 = new StartAgentRunRequestDto(
+            "Scoped agent",
+            "Same objective text.",
+            "same-scope-trace",
+            tenantId,
+            workspaceId,
+            projectId1,
+            knowledgeScopeId);
+
+        using (var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent-runs") { Content = JsonContent.Create(body1) })
+        {
+            req1.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+            var r1 = await client.SendAsync(req1);
+            Assert.Equal(HttpStatusCode.Accepted, r1.StatusCode);
+        }
+
+        var body2 = new StartAgentRunRequestDto(
+            "Scoped agent",
+            "Same objective text.",
+            "same-scope-trace",
+            tenantId,
+            workspaceId,
+            projectId2,
+            knowledgeScopeId);
+
+        using var req2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent-runs") { Content = JsonContent.Create(body2) };
+        req2.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+        var r2 = await client.SendAsync(req2);
+        Assert.Equal(HttpStatusCode.Conflict, r2.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostAgentRuns_WithIdempotencyKey_DifferentKnowledgeScopeId_ReturnsConflict()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        const string key = "idem-scope-ks-key";
+        var tenantId = Guid.NewGuid();
+        var workspaceId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var knowledgeScopeId1 = Guid.NewGuid();
+        var knowledgeScopeId2 = Guid.NewGuid();
+
+        var body1 = new StartAgentRunRequestDto(
+            "Scoped agent",
+            "Same objective text.",
+            "same-ks-trace",
+            tenantId,
+            workspaceId,
+            projectId,
+            knowledgeScopeId1);
+
+        using (var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent-runs") { Content = JsonContent.Create(body1) })
+        {
+            req1.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+            var r1 = await client.SendAsync(req1);
+            Assert.Equal(HttpStatusCode.Accepted, r1.StatusCode);
+        }
+
+        var body2 = new StartAgentRunRequestDto(
+            "Scoped agent",
+            "Same objective text.",
+            "same-ks-trace",
+            tenantId,
+            workspaceId,
+            projectId,
+            knowledgeScopeId2);
+
+        using var req2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent-runs") { Content = JsonContent.Create(body2) };
+        req2.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+        var r2 = await client.SendAsync(req2);
+        Assert.Equal(HttpStatusCode.Conflict, r2.StatusCode);
+    }
+
+    [Fact]
     public async Task PostAgentRuns_WithGovernanceScope_GetReturnsSameIdentifiers()
     {
         using var factory = new WebApplicationFactory<Program>();

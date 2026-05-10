@@ -20,6 +20,10 @@ public static class StartAgentRunFingerprint
         var recipeTok = dto.RecipeId?.ToString("D") ?? "";
         var toolTok = dto.ToolKey ?? "";
         var skillTok = dto.SkillKey ?? "";
+        var tenantTok = dto.TenantId?.ToString("D") ?? "";
+        var workspaceTok = dto.WorkspaceId?.ToString("D") ?? "";
+        var projectTok = dto.ProjectId?.ToString("D") ?? "";
+        var knowledgeScopeTok = dto.KnowledgeScopeId?.ToString("D") ?? "";
         var inputTok = "";
         if (dto.Input is { Count: > 0 } inp)
         {
@@ -44,6 +48,14 @@ public static class StartAgentRunFingerprint
             toolTok,
             Sep,
             skillTok,
+            Sep,
+            tenantTok,
+            Sep,
+            workspaceTok,
+            Sep,
+            projectTok,
+            Sep,
+            knowledgeScopeTok,
             Sep,
             inputTok);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonical));

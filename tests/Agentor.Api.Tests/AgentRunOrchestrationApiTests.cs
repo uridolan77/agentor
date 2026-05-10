@@ -96,6 +96,57 @@ public sealed class AgentRunOrchestrationApiTests : IClassFixture<WebApplication
     }
 
     [Fact]
+    public async Task PostAgentRuns_WithUnknownPlanId_ReturnsNotFound()
+    {
+        using var client = _factory.CreateClient();
+        var body = new StartAgentRunRequestDto(
+            "Plan agent",
+            "Missing plan.",
+            "orch-plan-missing",
+            PlanId: Guid.NewGuid());
+
+        var res = await client.PostAsJsonAsync("/api/v1/agent-runs", body, JsonOptions);
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+        var err = await res.Content.ReadFromJsonAsync<ApiErrorDto>(JsonOptions);
+        Assert.NotNull(err);
+        Assert.Equal("PlanNotFound", err!.Error);
+    }
+
+    [Fact]
+    public async Task PostAgentRuns_WithUnknownRecipeId_ReturnsNotFound()
+    {
+        using var client = _factory.CreateClient();
+        var body = new StartAgentRunRequestDto(
+            "Recipe agent",
+            "Missing recipe.",
+            "orch-recipe-missing",
+            RecipeId: Guid.NewGuid());
+
+        var res = await client.PostAsJsonAsync("/api/v1/agent-runs", body, JsonOptions);
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+        var err = await res.Content.ReadFromJsonAsync<ApiErrorDto>(JsonOptions);
+        Assert.NotNull(err);
+        Assert.Equal("RecipeNotFound", err!.Error);
+    }
+
+    [Fact]
+    public async Task PostAgentRuns_WithUnknownSkillKey_ReturnsNotFound()
+    {
+        using var client = _factory.CreateClient();
+        var body = new StartAgentRunRequestDto(
+            "Skill agent",
+            "Missing skill.",
+            "orch-skill-missing",
+            SkillKey: "definitely-not-a-registered-skill");
+
+        var res = await client.PostAsJsonAsync("/api/v1/agent-runs", body, JsonOptions);
+        Assert.Equal(HttpStatusCode.NotFound, res.StatusCode);
+        var err = await res.Content.ReadFromJsonAsync<ApiErrorDto>(JsonOptions);
+        Assert.NotNull(err);
+        Assert.Equal("SkillNotRegistered", err!.Error);
+    }
+
+    [Fact]
     public async Task PostAgentRuns_PolicyDeny_BlocksBeforeToolExecution()
     {
         await using var factory = new DenyConexusToolWebApplicationFactory();

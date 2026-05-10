@@ -1,10 +1,11 @@
 {
     "phase":  26,
-    "title":  "Phase 26 policy scope enforcement — SCOPE-001 closed (PR117)",
-    "harnessPass":  "PR117",
+    "title":  "Phase 26 — PR117 scoped policy + PR117.5 orchestration/queue hardening",
+    "harnessPass":  "PR117.5",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
+                  "PR117.5 (2026-05-11): Phase 26 second pass — EF run_queue_items persists execution_mode/recipe_id/plan_id/tool_key/skill_key/tool_input_json; EfRunQueueStore enqueue/ToRecord; PostgreSQL migration 20260511183000_RunQueueOrchestrationPayload + snapshot RunQueueItemRecord; RunQueueHostedServiceEfSqliteScopeTests (Conexus model, MCP echo, explicit LegacyFakeTool, recipe); EfRunQueueStoreTests orchestration round-trip; StartAgentRunFingerprint includes Tenant/Workspace/Project/KnowledgeScope; ApiContractTests idempotency conflicts on differing ProjectId/KnowledgeScopeId; RunOrchestrationNotFoundException + ExceptionHandlingMiddleware (404 + sanitized 500); AgentRunOrchestrator maps missing plan/recipe/skill to typed errors; AgentRunOrchestrationApiTests unknown plan/recipe/skill; docs REPO_TRUTH queue payload + policy-bundles scoped merge security note. Verification: dotnet test Agentor.sln — 438 passed; verify-harness ExpectedPhase 26 PR117.5; verify-repo-clean.",
                   "PR117 (2026-05-11): Phase 26 — PolicyRule scope identifiers + PolicyRuleScope.KnowledgeScope; PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope) filters + merges (specificity + Deny>RequiresReview>Allow); PolicyEvaluationRequest.Scope; RuntimePolicyEvaluator resolves bundle per run scope; SequentialAgentPlanExecutor/GovernedSingleToolRunDriver/ApplyHumanReviewDecisionHandler propagate AgentRun.ToPolicyScope(); audit export root effectivePolicyScope; CreatePolicyRuleDto/PolicyRuleDto scope id fields; PolicyScopeEvaluationTests + domain validation tests; docs REPO_TRUTH + policy-bundles.md; v1.0-RC-DEFERRED-ITEMS SCOPE-001 closed. Verification: dotnet test Agentor.sln — 428 passed; verify-harness ExpectedPhase 26 PR117; verify-repo-clean.",
                   "PR116 (2026-05-11): Phase 25 — RunQueueHostedService resolves IDurableRunQueue/IRunExecutionLeaseStore per TryProcessSingleAsync iteration via IServiceScopeFactory (EF scoped DbContext alignment); drain uses StartAgentRunRouting + IAgentRunOrchestrator + AgentorPublicRunOptions; AddAgentorInfrastructure binds Agentor:PublicRuns; RunQueueHostedServiceEfSqliteScopeTests (ValidateScopes=true); docs REPO_TRUTH durable queue worker; CI verify-harness ExpectedPhase 25 PR116. Verification: dotnet test Agentor.sln — 420 passed; verify-harness ExpectedPhase 25 PR116; verify-repo-clean.",
                   "PR115 (2026-05-11): Phase 24 — RunOrchestrationRequest + RunExecutionMode; LegacyFakeRunExecutor + GovernedSingleToolRunDriver; IAgentRunOrchestrator/AgentRunOrchestrator (plan/recipe/skill + single-tool paths); StartAgentRunHandler thin routing via StartAgentRunRouting + AgentorPublicRunOptions; POST /agent-runs DTO extended (planId, recipeId, toolKey, skillKey, mode, input); ExceptionHandlingMiddleware maps RunOrchestrationValidationException to 400; DI IAgentPlanExecutor/SequentialAgentPlanExecutor; AgentRunOrchestrationApiTests (Conexus, MCP echo, external invoke, deny, requires-review, explicit legacy); docs REPO_TRUTH + README; appsettings Agentor:PublicRuns. Verification: dotnet test Agentor.sln — 419 passed; verify-harness ExpectedPhase 24 PR115; verify-repo-clean.",
@@ -129,6 +130,41 @@
                                 "description":  "Audit export documents effectivePolicyScope; API/policy DTOs carry optional rule scope identifiers",
                                 "passes":  true,
                                 "evidence":  "GetRunAuditExportQueryHandler.BuildAuditRoot effectivePolicyScope; GetRunAuditExportQueryHandlerTests.HandleAsync_IncludesEffectivePolicyScopeObject; PolicyBundleDtos.cs; PolicyBundleEndpoints.cs"
+                            },
+                            {
+                                "id":  "PR117.5-001",
+                                "pr":  117.5,
+                                "description":  "EF durable queue rows persist Mode/RecipeId/PlanId/ToolKey/SkillKey/ToolInput JSON and round-trip through GetAsync",
+                                "passes":  true,
+                                "evidence":  "RunQueueItemRecord; EfRunQueueStore.cs; EfRunQueueStoreTests.EnqueueAsync_RoundTripsOrchestrationSelectorsAndToolInput; Migrations/20260511183000_RunQueueOrchestrationPayload.cs"
+                            },
+                            {
+                                "id":  "PR117.5-002",
+                                "pr":  117.5,
+                                "description":  "EF-hosted queue worker drains Conexus model tool, MCP echo, explicit LegacyFakeTool, and queued RecipeId paths to Completed",
+                                "passes":  true,
+                                "evidence":  "RunQueueHostedServiceEfSqliteScopeTests.TryProcessSingleAsync_EnqueuedConexusModelTool_Completes; TryProcessSingleAsync_EnqueuedMcpEcho_Completes; TryProcessSingleAsync_EnqueuedLegacyExplicit_Completes; TryProcessSingleAsync_EnqueuedRecipe_Completes"
+                            },
+                            {
+                                "id":  "PR117.5-003",
+                                "pr":  117.5,
+                                "description":  "StartAgentRunFingerprint includes governance scope so Idempotency-Key conflicts across differing ProjectId or KnowledgeScopeId",
+                                "passes":  true,
+                                "evidence":  "StartAgentRunFingerprint.cs; ApiContractTests.PostAgentRuns_WithIdempotencyKey_DifferentProjectId_ReturnsConflict; PostAgentRuns_WithIdempotencyKey_DifferentKnowledgeScopeId_ReturnsConflict"
+                            },
+                            {
+                                "id":  "PR117.5-004",
+                                "pr":  117.5,
+                                "description":  "Missing plan/recipe/skill orchestration failures return HTTP 404 with stable reason codes (not generic 500)",
+                                "passes":  true,
+                                "evidence":  "RunOrchestrationNotFoundException.cs; AgentRunOrchestrator.cs; ExceptionHandlingMiddleware.cs; AgentRunOrchestrationApiTests.PostAgentRuns_WithUnknownPlanId_ReturnsNotFound; PostAgentRuns_WithUnknownRecipeId_ReturnsNotFound; PostAgentRuns_WithUnknownSkillKey_ReturnsNotFound"
+                            },
+                            {
+                                "id":  "PR117.5-005",
+                                "pr":  117.5,
+                                "description":  "Unhandled API exceptions return generic AgentorUnhandledError message (no raw exception text)",
+                                "passes":  true,
+                                "evidence":  "ExceptionHandlingMiddleware.cs (catch Exception branch)"
                             },
                             {
                                 "id":  "PR111-003",

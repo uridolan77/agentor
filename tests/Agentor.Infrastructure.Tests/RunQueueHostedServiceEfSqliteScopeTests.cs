@@ -3,7 +3,10 @@ using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Application.Options;
 using Agentor.Application.RunQueue;
+using Agentor.Domain;
+using Agentor.Domain.Enums;
 using Agentor.Infrastructure;
+using Agentor.Infrastructure.Management;
 using Agentor.Infrastructure.Persistence;
 using Agentor.Infrastructure.RunQueue;
 using Microsoft.EntityFrameworkCore;
@@ -19,17 +22,98 @@ public sealed class RunQueueHostedServiceEfSqliteScopeTests
     [Fact]
     public async Task TryProcessSingleAsync_WithEfStoresAndValidateScopes_ClaimsExecutesAndCompletes()
     {
+        await DrainAndAssertCompletedAsync(new StartAgentRunCommand("Scoped EF worker", "Drain one item."));
+    }
+
+    [Fact]
+    public async Task TryProcessSingleAsync_EnqueuedConexusModelTool_Completes()
+    {
+        await DrainAndAssertCompletedAsync(new StartAgentRunCommand(
+            "Model worker",
+            "Queue-stored model tool.",
+            "efq-model",
+            ToolKey: WellKnownToolKeys.ConexusModelComplete));
+    }
+
+    [Fact]
+    public async Task TryProcessSingleAsync_EnqueuedMcpEcho_Completes()
+    {
+        var echoKey = McpToolKeys.Format("demo-server", "echo");
+        await DrainAndAssertCompletedAsync(new StartAgentRunCommand(
+            "MCP worker",
+            "Queue-stored MCP echo.",
+            "efq-mcp",
+            ToolKey: echoKey,
+            ToolInput: new Dictionary<string, string> { ["text"] = "queued-ping" }));
+    }
+
+    [Fact]
+    public async Task TryProcessSingleAsync_EnqueuedLegacyExplicit_Completes()
+    {
+        await DrainAndAssertCompletedAsync(
+            new StartAgentRunCommand(
+                "Legacy worker",
+                "Explicit legacy from queue.",
+                "efq-legacy",
+                Mode: RunExecutionMode.LegacyFakeTool),
+            configOverrides: new Dictionary<string, string?>
+            {
+                ["Agentor:PublicRuns:TreatMissingExecutionSelectorAsLegacyFakeTool"] = "false",
+            });
+    }
+
+    [Fact]
+    public async Task TryProcessSingleAsync_EnqueuedRecipe_Completes()
+    {
+        var recipeId = Guid.NewGuid();
+        await DrainAndAssertCompletedAsync(
+            new StartAgentRunCommand(
+                "Recipe worker",
+                "Queued recipe execution.",
+                "efq-recipe",
+                RecipeId: recipeId),
+            configureRoot: sp =>
+            {
+                var store = sp.GetRequiredService<InMemoryManagementRecipeStore>();
+                var ok = AgentRecipe.TryCreate(
+                    recipeId,
+                    "queued-recipe",
+                    AgentRecipeVersion.Parse("1.0"),
+                    CoordinationTopology.SequentialPipeline,
+                    [new RecipeStepDefinition("s1", 1, RecipeStepKind.Tool, WellKnownToolKeys.Pr1FakeTool)],
+                    profileRef: null,
+                    out var recipe,
+                    out _);
+                Assert.True(ok);
+                Assert.True(store.TryAdd(recipe!));
+            });
+    }
+
+    private static async Task DrainAndAssertCompletedAsync(
+        StartAgentRunCommand command,
+        IReadOnlyDictionary<string, string?>? configOverrides = null,
+        Action<IServiceProvider>? configureRoot = null)
+    {
         var dbFile = Path.GetTempFileName();
         try
         {
             var cs = $"Data Source={dbFile}";
 
-            var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+            var settings = new Dictionary<string, string?>
             {
                 ["Agentor:RunQueue:ExecutionMode"] = "DurableBackground",
                 ["Agentor:RunWorker:Enabled"] = "false",
                 ["Agentor:PublicRuns:TreatMissingExecutionSelectorAsLegacyFakeTool"] = "true",
-            }).Build();
+            };
+            if (configOverrides is not null)
+            {
+                foreach (var kv in configOverrides)
+                {
+                    settings[kv.Key] = kv.Value;
+                }
+            }
+
+            var config = new ConfigurationBuilder().AddInMemoryCollection(settings!).Build();
 
             var services = new ServiceCollection();
             services.AddAgentorApplication();
@@ -38,6 +122,8 @@ public sealed class RunQueueHostedServiceEfSqliteScopeTests
 
             await using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
 
+            configureRoot?.Invoke(provider);
+
             await using (var initScope = provider.CreateAsyncScope())
             {
                 var db = initScope.ServiceProvider.GetRequiredService<AgentorDbContext>();
@@ -45,7 +131,7 @@ public sealed class RunQueueHostedServiceEfSqliteScopeTests
             }
 
             var clock = provider.GetRequiredService<IClock>();
-            var workItem = new RunWorkItem(Guid.NewGuid(), new StartAgentRunCommand("Scoped EF worker", "Drain one item."));
+            var workItem = new RunWorkItem(Guid.NewGuid(), command);
 
             await using (var enqueueScope = provider.CreateAsyncScope())
             {
