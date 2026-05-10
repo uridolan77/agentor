@@ -1,10 +1,11 @@
 {
-    "phase":  20,
-    "title":  "Phase 20 durable operational runtime (PR96-PR100) + PR100.5 reconciliation hardening + PR100.6 atomic claim hardening",
-    "harnessPass":  "PR100.5",
+    "phase":  21,
+    "title":  "Phase 21 integration contract conformance (PR101–PR105)",
+    "harnessPass":  "PR105",
     "encoding":  "utf-8",
-    "lastVerified":  "2026-05-10",
+    "lastVerified":  "2026-05-11",
     "notes":  [
+                  "Phase 21 (2026-05-11): Integration HTTP contract test packs — Athanor (HttpKnowledgeStateClientTests + path canonize exclusion), Conexus (HttpModelGatewayClientTests + ModelGatewayToolExecutor declared budget pass-through + HttpModelGatewayClient EnsureSuccess), MCP (HttpMcpRegistryClientExtraTests + ToolRegistryMcpBindingTests + McpDescriptorDomainBoundaryTests), External agents (HttpExternalAgentProtocolClientExtraTests + ExternalAgentInvokeToolExecutorTests + ExternalAgentPolicyPreventsHttpInvocationTests). docs/integrations/compatibility-matrix.md. ModelCallTelemetryAggregator unchanged; evidence ModelCallTelemetryAggregatorTests. Full verification: 394 tests; verify-harness ExpectedPhase 21 PR105; verify-repo-clean.",
                   "PR100.5 (2026-05-10): Phase 20 reconciliation hardening — added OpsRead permission and enforced it on /api/v1/ops/queue|outbox|leases; Service role explicitly denied OpsRead; ops queue/outbox error fields now sanitized and truncated for secret-safety; EfRunQueueStore claims pending or expired-claimed work only; MarkCompleted/MarkFailed now ownership-checked with worker id in durable queue implementations; OutboxHostedService blocks NoOpOutboxSink outside Development/Test unless OutboxDispatch:AllowNoOpSinkOutsideDevelopment=true. Full verification: restore/build/test and harness scripts passed.",
                   "PR95.5 (2026-05-10): Phase 19 authorization hardening — protected Phase 13 alias endpoints (GET /runs/{runId}/audit-packet requires AuditRead; POST /reviews/{runId}/decisions requires GovernanceReviewWrite); guarded GET /reviews/pending with GovernanceReviewRead; Jwt actor role claim now strict (missing or unrecognized role causes unauthorized via actor resolution failure); docs updated to state Jwt mode consumes an already-authenticated principal and does not configure bearer validation middleware itself. Full verification: restore/build/test and harness scripts passed.",
                   "Phase 20 PR96-PR100 (2026-05-10): Durable operational runtime — IDurableRunQueue + RunQueueRecord abstraction; EfRunQueueStore + InMemoryDurableRunQueueStore implementations; RunQueueHostedService + RunWorkerOptions (disabled by default, lease-aware processing); OutboxHostedService + OutboxDispatchOptions (disabled by default, batch dispatch + retry/poison behavior); EfOutboxStore.TryMarkDispatchingAsync atomic conditional update; read-only ops endpoints GET /api/v1/ops/queue|outbox|leases with no secret fields. Full verification: 357 tests passing; verify-harness and verify-repo-clean passed.",
@@ -1619,6 +1620,76 @@
                                 "description":  "Operational endpoints are read-only and avoid secret material.",
                                 "passes":  true,
                                 "evidence":  "IntegrationEndpointsTests.OpsEndpoints_ReturnReadOnlyStatusWithoutSecrets"
+                            },
+                            {
+                                "id":  "PR101-001",
+                                "pr":  101,
+                                "description":  "Athanor HTTP adapter contract tests cover latest snapshot, canonical, evidence search, candidate submit, review queue, 404/null, and non-2xx error mapping.",
+                                "passes":  true,
+                                "evidence":  "HttpKnowledgeStateClientTests (GetLatestSnapshotAsync_ReturnsNull_On404; LookupCanonicalEntryAsync_ReturnsNull_On404; SearchEvidenceAsync_*; SubmitCandidateAsync_On5xx_*; QueueForReviewAsync_ReturnsDto_On200; Athanor_http_relative_paths_exclude_Canonize_segment)"
+                            },
+                            {
+                                "id":  "PR101-002",
+                                "pr":  101,
+                                "description":  "No Canonize route on Athanor HTTP contract paths (port remains read/candidate/review only).",
+                                "passes":  true,
+                                "evidence":  "HttpKnowledgeStateClientTests.Athanor_http_relative_paths_exclude_Canonize_segment; NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
+                            },
+                            {
+                                "id":  "PR102-001",
+                                "pr":  102,
+                                "description":  "Conexus HTTP adapter maps model completion, telemetry fields, declared budget JSON pass-through, non-2xx errors, and client timeout to canceled/timeout exceptions (no provider SDKs).",
+                                "passes":  true,
+                                "evidence":  "HttpModelGatewayClientTests; ModelGatewayToolExecutorDeclaredBudgetTests; src/Agentor.Infrastructure/Conexus/HttpModelGatewayClient.cs"
+                            },
+                            {
+                                "id":  "PR102-002",
+                                "pr":  102,
+                                "description":  "Model gateway tool telemetry still aggregates into RunManifest via Application.",
+                                "passes":  true,
+                                "evidence":  "ModelCallTelemetryAggregatorTests.Aggregate_SumsSuccessfulConexusModelCompleteToolOutputs; src/Agentor.Application/Manifest/ModelCallTelemetryAggregator.cs"
+                            },
+                            {
+                                "id":  "PR103-001",
+                                "pr":  103,
+                                "description":  "MCP HTTP adapter contract tests cover server list, tool discovery, invoke, invalid risk fallback, and HTTP error mapping.",
+                                "passes":  true,
+                                "evidence":  "HttpMcpRegistryClientExtraTests; src/Agentor.Infrastructure/Mcp/HttpMcpRegistryClient.cs"
+                            },
+                            {
+                                "id":  "PR103-002",
+                                "pr":  103,
+                                "description":  "MCP catalog descriptors remain outside Domain; tool registry MCP keys are deterministic.",
+                                "passes":  true,
+                                "evidence":  "McpDescriptorDomainBoundaryTests; ToolRegistryMcpBindingTests.McpToolKeys_Format_is_stable_for_contract_mapping"
+                            },
+                            {
+                                "id":  "PR104-001",
+                                "pr":  104,
+                                "description":  "External-agent HTTP client maps capabilities, invocation, non-canon flag from wire, and structured HTTP errors.",
+                                "passes":  true,
+                                "evidence":  "HttpExternalAgentProtocolClientExtraTests; src/Agentor.Infrastructure/ExternalAgents/HttpExternalAgentProtocolClient.cs"
+                            },
+                            {
+                                "id":  "PR104-002",
+                                "pr":  104,
+                                "description":  "External invoke tool output carries non-canon markers from gateway result.",
+                                "passes":  true,
+                                "evidence":  "ExternalAgentInvokeToolExecutorTests.ExecuteAsync_maps_isNonCanonEvidence_onto_tool_output"
+                            },
+                            {
+                                "id":  "PR104-003",
+                                "pr":  104,
+                                "description":  "Policy deny or requires-review prevents external-agent protocol client invocation (no HTTP/fake invoke on blocked path).",
+                                "passes":  true,
+                                "evidence":  "ExternalAgentPolicyPreventsHttpInvocationTests.External_invoke_policy_deny_does_not_call_protocol_client; External_invoke_requires_review_does_not_call_protocol_client"
+                            },
+                            {
+                                "id":  "PR105-001",
+                                "pr":  105,
+                                "description":  "Integration compatibility matrix documents Fake/Http/Disabled modes, required endpoints, and known limits.",
+                                "passes":  true,
+                                "evidence":  "docs/integrations/compatibility-matrix.md"
                             }
                         ]
 }

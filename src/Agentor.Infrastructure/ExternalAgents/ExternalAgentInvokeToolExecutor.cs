@@ -44,6 +44,7 @@ public sealed class ExternalAgentInvokeToolExecutor : IToolExecutor
             ["protocolKind"] = kind.ToString(),
             ["invocationStatus"] = result.Status.ToString(),
             ["nonCanon"] = "true",
+            ["isNonCanonEvidence"] = result.IsNonCanonEvidence ? "true" : "false",
         };
 
         return new ToolExecutionResult(true, output);

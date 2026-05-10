@@ -29,9 +29,22 @@ public sealed class ModelGatewayToolExecutor : IToolExecutor
         var modelId = request.Input.TryGetValue("modelId", out var m) ? m : string.Empty;
         var promptProfileRef = ReadOptionalRef(request.Input, "promptProfileRef");
         var modelProfileRef = ReadOptionalRef(request.Input, "modelProfileRef");
+        decimal? declaredCost = null;
+        if (request.Input.TryGetValue("declaredCostUnits", out var dc)
+            && decimal.TryParse(dc, NumberStyles.Number, CultureInfo.InvariantCulture, out var dcVal))
+        {
+            declaredCost = dcVal;
+        }
+
+        int? declaredLatency = null;
+        if (request.Input.TryGetValue("declaredLatencyMs", out var dl)
+            && int.TryParse(dl, NumberStyles.Integer, CultureInfo.InvariantCulture, out var dlVal))
+        {
+            declaredLatency = dlVal;
+        }
 
         var result = await _gateway
-            .CompleteAsync(new ModelCallRequestDto(prompt, modelId, promptProfileRef, modelProfileRef), cancellationToken)
+            .CompleteAsync(new ModelCallRequestDto(prompt, modelId, promptProfileRef, modelProfileRef, declaredCost, declaredLatency), cancellationToken)
             .ConfigureAwait(false);
 
         var output = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)

@@ -1,5 +1,21 @@
 # Agentor harness progress
 
+## Phase 21 PR101–PR105 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+- Athanor, Conexus, MCP, and external-agent HTTP adapters covered with fake-handler contract tests plus policy gating tests for external invoke.
+- Conexus request DTO extended with optional declared budget fields; executor passes tool input into gateway; HTTP clients return clearer errors on non-2xx.
+- Documentation: `docs/integrations/compatibility-matrix.md` (Fake/Http/Disabled matrix, endpoints, unsupported features).
+
+**Verification**:
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **394 passed, 0 failed**
+- `verify-harness.ps1 -ExpectedPhase 21 -ExpectedHarnessPass PR105` (via Windows PowerShell)
+- `verify-repo-clean.ps1` (via Windows PowerShell)
+
+**Scope guard**: Phase 22 not started.
+
 ## Phase 20 PR100.6 — Attempted Atomic Claim Hardening (2026-05-10)
 
 **Status**: Reverted to PR100.5 baseline due to SQLite LINQ translation limitations.

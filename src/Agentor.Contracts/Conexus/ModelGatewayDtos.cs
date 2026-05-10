@@ -7,7 +7,9 @@ public sealed record ModelCallRequestDto(
     string Prompt,
     string ModelId,
     string? PromptProfileRef = null,
-    string? ModelProfileRef = null);
+    string? ModelProfileRef = null,
+    decimal? DeclaredCostUnits = null,
+    int? DeclaredLatencyMs = null);
 
 /// <summary>
 /// Completion envelope from Conexus; echoes profile routing for provenance and telemetry.

@@ -45,6 +45,129 @@ public sealed class HttpModelGatewayClientTests
         Assert.Equal("m1", result.ModelId);
     }
 
+    [Fact]
+    public async Task CompleteAsync_deserializes_full_telemetry_and_profile_refs()
+    {
+        var requestDto = new ModelCallRequestDto("hi", "m1", "pp", "mp");
+        var resultDto = new ModelCallResultDto("ok", "prov", "m1", 10, 20, 0.03m, 42, "pp", "mp");
+
+        var handler = new LambdaHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(resultDto, options: AgentorHttpJson.Options),
+            }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://conexus.test/") };
+        var opts = new AgentorIntegrationsOptions
+        {
+            Conexus = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://conexus.test/" },
+            },
+        };
+
+        var sut = new HttpModelGatewayClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        var result = await sut.CompleteAsync(requestDto, CancellationToken.None);
+
+        Assert.Equal(10, result.PromptTokens);
+        Assert.Equal(20, result.CompletionTokens);
+        Assert.Equal(0.03m, result.EstimatedCostUnits);
+        Assert.Equal(42, result.LatencyMs);
+        Assert.Equal("pp", result.PromptProfileRef);
+        Assert.Equal("mp", result.ModelProfileRef);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_posts_declared_budget_json_when_set_on_request()
+    {
+        var requestDto = new ModelCallRequestDto("p", "mid", null, null, 1.25m, 500);
+
+        ModelCallRequestDto? parsed = null;
+        var handler = new LambdaHandler(async (req, _) =>
+        {
+            parsed = await req.Content!.ReadFromJsonAsync<ModelCallRequestDto>(AgentorHttpJson.Options);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(
+                    new ModelCallResultDto("x", "p", "mid", 1, 1, 0m, 1),
+                    options: AgentorHttpJson.Options),
+            };
+        });
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://conexus.test/") };
+        var opts = new AgentorIntegrationsOptions
+        {
+            Conexus = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://conexus.test/" },
+            },
+        };
+
+        var sut = new HttpModelGatewayClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        _ = await sut.CompleteAsync(requestDto, CancellationToken.None);
+
+        Assert.NotNull(parsed);
+        Assert.Equal(1.25m, parsed!.DeclaredCostUnits);
+        Assert.Equal(500, parsed.DeclaredLatencyMs);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_on5xx_throws_HttpRequestException()
+    {
+        var handler = new LambdaHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            {
+                Content = new StringContent("overload"),
+            }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://conexus.test/") };
+        var opts = new AgentorIntegrationsOptions
+        {
+            Conexus = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://conexus.test/" },
+            },
+        };
+
+        var sut = new HttpModelGatewayClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            sut.CompleteAsync(new ModelCallRequestDto("a", "b"), CancellationToken.None));
+
+        Assert.Contains("503", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("overload", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_short_client_timeout_maps_to_TaskCanceledException()
+    {
+        var handler = new LambdaHandler(async (_, ct) =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10), ct);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://conexus.test/"), Timeout = TimeSpan.FromMilliseconds(30) };
+        var opts = new AgentorIntegrationsOptions
+        {
+            Conexus = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://conexus.test/" },
+            },
+        };
+
+        var sut = new HttpModelGatewayClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            sut.CompleteAsync(new ModelCallRequestDto("a", "b"), CancellationToken.None));
+    }
+
     private sealed class StubFactory(HttpClient client) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => client;

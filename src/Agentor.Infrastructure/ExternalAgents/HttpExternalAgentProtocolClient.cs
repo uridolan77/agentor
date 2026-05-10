@@ -32,7 +32,7 @@ public sealed class HttpExternalAgentProtocolClient(
             $"v1/capabilities?protocolKind={(int)kind}",
             cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccess(response, cancellationToken);
         var list = await response.Content.ReadFromJsonAsync<List<ExternalAgentCapabilityDto>>(AgentorHttpJson.Options, cancellationToken);
         return list ?? [];
     }
@@ -47,10 +47,25 @@ public sealed class HttpExternalAgentProtocolClient(
         using var content = JsonContent.Create(request, options: AgentorHttpJson.Options);
         using var response = await Client().PostAsync("v1/invocations", content, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccess(response, cancellationToken);
         var dto = await response.Content.ReadFromJsonAsync<ExternalAgentInvocationResultDto>(AgentorHttpJson.Options, cancellationToken);
         return dto ?? throw new InvalidOperationException("External agent invocation returned an empty body.");
     }
+
+    private static async Task EnsureSuccess(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        throw new HttpRequestException(
+            $"External-agents HTTP {(int)response.StatusCode} {response.ReasonPhrase}. Body: {Truncate(body)}");
+    }
+
+    private static string Truncate(string s, int max = 512) =>
+        s.Length <= max ? s : s[..max] + "…";
 
     private HttpClient Client() => httpFactory.CreateClient(HttpClientName);
 

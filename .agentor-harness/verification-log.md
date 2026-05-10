@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 21 PR101–PR105 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 21 -ExpectedHarnessPass PR105
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **394 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=21`, `ExpectedHarnessPass=PR105`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 72 / Total 72
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 131 / Total 131
+- Agentor.Infrastructure.Tests: Passed 89 / Total 89
+- Agentor.Api.Tests: Passed 89 / Total 89
+
+Scope:
+
+- completed: Phase 21 integration contract conformance (PR101–PR105)
+- not started: Phase 22+
+
 ## Phase 20 PR100.6 attempted/reverted verification (2026-05-11)
 
 ```powershell

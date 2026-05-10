@@ -91,6 +91,73 @@ public sealed class HttpExternalAgentProtocolClientExtraTests
         Assert.Equal(ExternalAgentInvocationStatus.Succeeded, result.Status);
     }
 
+    [Fact]
+    public async Task ListCapabilitiesAsync_on4xx_throws_HttpRequestException()
+    {
+        var handler = new LambdaHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden)
+            {
+                Content = new StringContent("no"),
+            }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://ext.test/") };
+
+        var opts = new AgentorIntegrationsOptions
+        {
+            ExternalAgents = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://ext.test/" },
+            },
+        };
+
+        var sut = new HttpExternalAgentProtocolClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            sut.ListCapabilitiesAsync(ExternalAgentProtocolKind.A2AStyled));
+
+        Assert.Contains("403", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_maps_IsNonCanonEvidence_from_wire()
+    {
+        var body = new ExternalAgentInvocationRequestDto(
+            ExternalAgentProtocolKind.A2AStyled,
+            "ag",
+            "cap",
+            new Dictionary<string, string>());
+
+        var responseBody = new ExternalAgentInvocationResultDto(
+            ExternalAgentInvocationStatus.Succeeded,
+            new Dictionary<string, string> { ["k"] = "v" },
+            null,
+            IsNonCanonEvidence: false);
+
+        var handler = new LambdaHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(responseBody, options: AgentorHttpJson.Options),
+            }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://ext.test/") };
+
+        var opts = new AgentorIntegrationsOptions
+        {
+            ExternalAgents = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://ext.test/" },
+            },
+        };
+
+        var sut = new HttpExternalAgentProtocolClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        var result = await sut.InvokeAsync(body, CancellationToken.None);
+
+        Assert.False(result.IsNonCanonEvidence);
+    }
+
     private sealed class StubFactory(HttpClient client) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => client;

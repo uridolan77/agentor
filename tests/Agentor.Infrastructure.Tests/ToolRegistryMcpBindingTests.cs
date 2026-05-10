@@ -62,4 +62,11 @@ public sealed class ToolRegistryMcpBindingTests
         Assert.NotNull(d);
         Assert.NotNull(i);
     }
+
+    [Fact]
+    public void McpToolKeys_Format_is_stable_for_contract_mapping()
+    {
+        Assert.Equal("mcp.demo-server.echo", McpToolKeys.Format("demo-server", "echo"));
+        Assert.Equal("mcp.demo-server.echo", McpToolKeys.Format("demo-server", "echo"));
+    }
 }

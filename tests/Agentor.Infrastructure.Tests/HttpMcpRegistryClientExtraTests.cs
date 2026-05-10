@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Http;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
@@ -74,6 +75,104 @@ public sealed class HttpMcpRegistryClientExtraTests
         var result = await sut.InvokeToolAsync("s1", "t1", new Dictionary<string, string>(), CancellationToken.None);
 
         Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task ListToolsAsync_GetsV1ServersTools()
+    {
+        var wire = new[]
+        {
+            new { ServerId = "s1", Name = "echo", Description = "d", NominalRisk = "low" },
+        };
+
+        var handler = new LambdaHandler((req, _) =>
+        {
+            Assert.Equal(HttpMethod.Get, req.Method);
+            Assert.EndsWith("/v1/servers/s1/tools", req.RequestUri!.AbsolutePath, StringComparison.Ordinal);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(wire, options: AgentorHttpJson.Options),
+            });
+        });
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://mcp.test/") };
+
+        var opts = new AgentorIntegrationsOptions
+        {
+            Mcp = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://mcp.test/" },
+            },
+        };
+
+        var sut = new HttpMcpRegistryClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        var list = await sut.ListToolsAsync("s1");
+
+        Assert.Single(list);
+        Assert.Equal("echo", list[0].Name);
+    }
+
+    [Fact]
+    public async Task ListToolsAsync_invalid_nominalRisk_defaults_to_medium()
+    {
+        var wire = new[]
+        {
+            new { ServerId = "s1", Name = "t", Description = "d", NominalRisk = "not-a-real-level" },
+        };
+
+        var handler = new LambdaHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(wire, options: AgentorHttpJson.Options),
+            }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://mcp.test/") };
+
+        var opts = new AgentorIntegrationsOptions
+        {
+            Mcp = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://mcp.test/" },
+            },
+        };
+
+        var sut = new HttpMcpRegistryClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        var list = await sut.ListToolsAsync("s1");
+
+        Assert.Single(list);
+        Assert.Equal(ToolRiskLevel.Medium, list[0].NominalRisk);
+    }
+
+    [Fact]
+    public async Task ListServersAsync_on5xx_throws_HttpRequestException()
+    {
+        var handler = new LambdaHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            {
+                Content = new StringContent("boom"),
+            }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://mcp.test/") };
+
+        var opts = new AgentorIntegrationsOptions
+        {
+            Mcp = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://mcp.test/" },
+            },
+        };
+
+        var sut = new HttpMcpRegistryClient(new StubFactory(httpClient), new StaticMonitor(opts));
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => sut.ListServersAsync());
+
+        Assert.Contains("500", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("boom", ex.Message, StringComparison.Ordinal);
     }
 
     private sealed class StubFactory(HttpClient client) : IHttpClientFactory
