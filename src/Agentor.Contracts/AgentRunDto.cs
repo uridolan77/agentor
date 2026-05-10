@@ -32,7 +32,8 @@ public sealed record AgentRunSummaryDto(
     string TraceId,
     AgentRunStatus Status,
     DateTimeOffset StartedAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt,
+    string? ErrorMessage = null);
 
 public sealed record AgentRunListResponseDto(
     IReadOnlyList<AgentRunSummaryDto> Items,

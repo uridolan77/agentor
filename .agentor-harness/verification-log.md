@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 22 PR106–PR110 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 22 -ExpectedHarnessPass PR110
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **408 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=22`, `ExpectedHarnessPass=PR110`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 72 / Total 72
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 135 / Total 135
+- Agentor.Infrastructure.Tests: Passed 95 / Total 95
+- Agentor.Api.Tests: Passed 93 / Total 93
+
+Scope:
+
+- completed: Phase 22 PR106–PR110 operator UX / workflow completeness slice
+- not started: Phase 23+
+
 ## Phase 21 PR105.5 (2026-05-11)
 
 ```powershell

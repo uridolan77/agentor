@@ -20,7 +20,8 @@ public static class DtoMappings
             summary.TraceId,
             summary.Status,
             summary.StartedAt,
-            summary.CompletedAt);
+            summary.CompletedAt,
+            summary.ErrorMessage);
     }
 
     public static AgentRunListResponseDto ToDto(this AgentRunListPage page)

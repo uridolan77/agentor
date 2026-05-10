@@ -56,6 +56,7 @@ public static class GovernanceEndpoints
 
         v1.MapGet("/agent-runs/{runId:guid}/audit-export", async (
             Guid runId,
+            string? format,
             GetRunAuditExportQueryHandler handler,
             ICurrentActorAccessor actorAccessor,
             IAuthorizationDecisionService authorization,
@@ -72,19 +73,28 @@ public static class GovernanceEndpoints
                 return authResult;
             }
 
-            var result = await handler.HandleAsync(runId, cancellationToken);
+            var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+            if (!AuditExportFormatParser.TryParse(format, out var exportFormat, out var formatError))
+            {
+                return Results.BadRequest(new ApiErrorDto(
+                    "AuditExportFormatInvalid",
+                    formatError ?? "Invalid audit export format.",
+                    traceId,
+                    formatError is null ? null : [formatError]));
+            }
+
+            var result = await handler.HandleAsync(runId, exportFormat, cancellationToken);
             if (result is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
             httpContext.Response.Headers["X-Agentor-Audit-Content-SHA256"] = result.ContentSha256Hex;
-            return Results.Text(result.CanonicalJson, "application/json; charset=utf-8");
+            return Results.Text(result.ResponseBody, "application/json; charset=utf-8");
         })
             .WithName("GetRunAuditExport")
             .WithTags("Governance")
-            .WithSummary("Deterministic JSON audit packet for a run with redaction boundaries (PR55).");
+            .WithSummary("Deterministic JSON audit export with PR55 redaction boundaries. Query format=canonical|pretty|redactionReport|hashOnly; X-Agentor-Audit-Content-SHA256 always hashes canonical minified audit JSON.");
 
         return v1;
     }

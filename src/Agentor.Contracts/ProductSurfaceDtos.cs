@@ -137,10 +137,26 @@ public sealed record RunTimelineSkillInvocationDto(
     int EndEventIndex,
     IReadOnlyList<int> InnerEventIndices);
 
+public enum RunTimelineGroupKind
+{
+    PlanStep = 0,
+    SkillInvocation = 1,
+    PolicyDecision = 2,
+    ReviewDecision = 3
+}
+
+/// <summary>Ordered, possibly overlapping index sets into <see cref="RunTimelineResponseDto.OrderedEvents"/> (PR107 timeline v2).</summary>
+public sealed record RunTimelineGroupV2Dto(
+    RunTimelineGroupKind Kind,
+    string Key,
+    int AnchorEventIndex,
+    IReadOnlyList<int> EventIndices);
+
 public sealed record RunTimelineResponseDto(
     Guid RunId,
     IReadOnlyList<RunTimelineEventResponseDto> OrderedEvents,
-    IReadOnlyList<RunTimelineSkillInvocationDto> SkillInvocations);
+    IReadOnlyList<RunTimelineSkillInvocationDto> SkillInvocations,
+    IReadOnlyList<RunTimelineGroupV2Dto> TimelineGroups);
 
 public sealed record RunCoordinationPlanStepViewDto(
     string SourceStepId,
@@ -162,7 +178,11 @@ public sealed record PendingHumanReviewItemDto(
     DateTimeOffset? CompletedAt,
     string? ReviewReason);
 
-public sealed record PendingHumanReviewListResponseDto(IReadOnlyList<PendingHumanReviewItemDto> Items);
+public sealed record PendingHumanReviewListResponseDto(
+    IReadOnlyList<PendingHumanReviewItemDto> Items,
+    int TotalCount,
+    int Skip,
+    int Take);
 
 public sealed record OperatorDashboardModuleLinkDto(string Title, string Href);
 

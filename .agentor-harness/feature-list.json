@@ -1,10 +1,11 @@
 {
-    "phase":  21,
-    "title":  "Phase 21 integration contract conformance (PR101–PR105 + PR105.5)",
-    "harnessPass":  "PR105.5",
+    "phase":  22,
+    "title":  "Phase 22 operator UX and workflow completeness (PR106–PR110)",
+    "harnessPass":  "PR110",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
+                  "Phase 22 PR106–PR110 (2026-05-11): Operator UX — pending inbox pagination (totalCount/skip/take) + review reason via AgentRunSummary.ErrorMessage (no N+1 loads); policy-driven RequiresReview fixture + ReviewInboxWorkflowApiTests end-to-end approve/inbox; timeline v2 RunTimelineGroupKind groups on GET /runs/{id}/timeline (plan step spans, skill spans, policy/review singletons); dashboard modules queue/outbox/integration readiness/policyRuntime/quality/deferred risks + IIntegrationStatusReader; audit export format=canonical|pretty|redactionReport|hashOnly with stable canonical SHA-256 header; operator docs docs/operator/*.md. Verification: dotnet test Agentor.sln — 408 passed; verify-harness phase 22 PR110; verify-repo-clean.",
                   "PR105.5 (2026-05-11): Integration HTTP error-shape hardening — shared IntegrationHttpError (ThrowIfUnsuccessfulAsync, RedactAndTruncate) used by Athanor, Conexus, MCP, and external-agent HTTP clients; HttpRequestException.StatusCode populated; upstream bodies truncated and best-effort redacted (Bearer, JSON secret keys, token=apiKey-style pairs). Tests: IntegrationHttpErrorTests; adapter tests assert StatusCode. docs/integrations/compatibility-matrix.md updated. Full verification: 400 tests passed; verify-harness phase 21 PR105.5; verify-repo-clean.",
                   "Phase 21 (2026-05-11): Integration HTTP contract test packs — Athanor (HttpKnowledgeStateClientTests + path canonize exclusion), Conexus (HttpModelGatewayClientTests + ModelGatewayToolExecutor declared budget pass-through + HttpModelGatewayClient EnsureSuccess), MCP (HttpMcpRegistryClientExtraTests + ToolRegistryMcpBindingTests + McpDescriptorDomainBoundaryTests), External agents (HttpExternalAgentProtocolClientExtraTests + ExternalAgentInvokeToolExecutorTests + ExternalAgentPolicyPreventsHttpInvocationTests). docs/integrations/compatibility-matrix.md. ModelCallTelemetryAggregator unchanged; evidence ModelCallTelemetryAggregatorTests. Superseded for harness pass by PR105.5 error-shape hardening; see PR105.5 note.",
                   "PR100.5 (2026-05-10): Phase 20 reconciliation hardening — added OpsRead permission and enforced it on /api/v1/ops/queue|outbox|leases; Service role explicitly denied OpsRead; ops queue/outbox error fields now sanitized and truncated for secret-safety; EfRunQueueStore claims pending or expired-claimed work only; MarkCompleted/MarkFailed now ownership-checked with worker id in durable queue implementations; OutboxHostedService blocks NoOpOutboxSink outside Development/Test unless OutboxDispatch:AllowNoOpSinkOutsideDevelopment=true. Full verification: restore/build/test and harness scripts passed.",
@@ -1705,6 +1706,48 @@
                                 "description":  "Upstream error bodies are truncated and best-effort redacted (Bearer, JSON apiKey/token/password/secret/authorization, key=value patterns).",
                                 "passes":  true,
                                 "evidence":  "IntegrationHttpErrorTests (RedactAndTruncate_*); HttpKnowledgeStateClientTests.SubmitCandidateAsync_On5xx_redacts_Bearer_in_upstream_body"
+                            },
+                            {
+                                "id":  "PR106-001",
+                                "pr":  106,
+                                "description":  "Review inbox lists RequiresReview runs with pagination metadata and review reason without per-row full loads.",
+                                "passes":  true,
+                                "evidence":  "PendingHumanReviewListResponseDto (totalCount/skip/take); AgentRunSummary.ErrorMessage; ListPendingHumanReviewsQueryHandler; Phase13ProductSurfaceApiTests.GetReviewsPending_ReturnsOk_WithItemsArray"
+                            },
+                            {
+                                "id":  "PR106-002",
+                                "pr":  106,
+                                "description":  "HTTP workflow produces RequiresReview via runtime policy, pending inbox shows run, approve clears inbox.",
+                                "passes":  true,
+                                "evidence":  "ReviewInboxWorkflowApiTests.ReviewInbox_EndToEnd_Approve_RemovesFromPending; ReviewInboxPolicyWebApplicationFactory configuration"
+                            },
+                            {
+                                "id":  "PR107-001",
+                                "pr":  107,
+                                "description":  "Run timeline exposes deterministic v2 groups for plan steps, skills, policy decisions, and review decisions.",
+                                "passes":  true,
+                                "evidence":  "RunTimelineGroupV2Dto; GetRunTimelineQueryHandler.BuildTimelineGroups; GetRunTimelineQueryHandlerTests.HandleAsync_MultiStepStyleTrace_ProducesOrderedGroups"
+                            },
+                            {
+                                "id":  "PR108-001",
+                                "pr":  108,
+                                "description":  "Operator dashboard adds read-only queue/outbox/integration/policy-runtime/quality/deferred-risk modules backed by existing repositories or IIntegrationStatusReader.",
+                                "passes":  true,
+                                "evidence":  "OperatorDashboardQueryHandler; IntegrationStatusReader; Phase13ProductSurfaceApiTests.GetOperatorDashboard_ReturnsModulesWithLinks"
+                            },
+                            {
+                                "id":  "PR109-001",
+                                "pr":  109,
+                                "description":  "Audit export/packet supports canonical, pretty, redaction report, and hash-only variants with identical canonical SHA-256.",
+                                "passes":  true,
+                                "evidence":  "GetRunAuditExportQueryHandler (AuditExportFormatKind); GetRunAuditExportQueryHandlerTests (Pretty/HashOnly/RedactionReport); ApiContractTests (pretty/hashOnly/bad format)"
+                            },
+                            {
+                                "id":  "PR110-001",
+                                "pr":  110,
+                                "description":  "Operator docs cover review workflow, run debugging, and audit export variants aligned with endpoints.",
+                                "passes":  true,
+                                "evidence":  "docs/operator/review-workflow.md; docs/operator/debug-run.md; docs/operator/audit-export.md"
                             }
                         ]
 }

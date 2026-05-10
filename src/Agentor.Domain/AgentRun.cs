@@ -612,7 +612,8 @@ public sealed record AgentRunSummary(
     Guid? TenantId = null,
     Guid? WorkspaceId = null,
     Guid? ProjectId = null,
-    Guid? KnowledgeScopeId = null);
+    Guid? KnowledgeScopeId = null,
+    string? ErrorMessage = null);
 
 public sealed record AgentRunListPage(
     IReadOnlyList<AgentRunSummary> Items,

@@ -233,7 +233,7 @@ internal static class Phase13ProductEndpoints
             })
             .WithName("GetRunTimeline")
             .WithTags("Runs")
-            .WithSummary("Deterministic ordered trace plus skill invocation groupings (no secrets added).");
+            .WithSummary("Deterministic ordered trace; skill invocation spans plus timeline v2 groups (plan steps, skill blocks, policy decisions, review decisions). Indices reference orderedEvents.");
 
         v1.MapGet("/runs/{runId:guid}/coordination-view", async (
                 Guid runId,
@@ -255,6 +255,7 @@ internal static class Phase13ProductEndpoints
 
         v1.MapGet("/runs/{runId:guid}/audit-packet", async (
                 Guid runId,
+                string? format,
                 GetRunAuditExportQueryHandler handler,
                 ICurrentActorAccessor actorAccessor,
                 IAuthorizationDecisionService authorization,
@@ -271,19 +272,28 @@ internal static class Phase13ProductEndpoints
                     return authResult;
                 }
 
-                var result = await handler.HandleAsync(runId, cancellationToken);
+                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                if (!AuditExportFormatParser.TryParse(format, out var exportFormat, out var formatError))
+                {
+                    return Results.BadRequest(new ApiErrorDto(
+                        "AuditExportFormatInvalid",
+                        formatError ?? "Invalid audit export format.",
+                        traceId,
+                        formatError is null ? null : [formatError]));
+                }
+
+                var result = await handler.HandleAsync(runId, exportFormat, cancellationToken);
                 if (result is null)
                 {
-                    var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
                     return Results.NotFound(new ApiErrorDto("RunNotFound", $"Run '{runId}' was not found.", traceId));
                 }
 
                 httpContext.Response.Headers["X-Agentor-Audit-Content-SHA256"] = result.ContentSha256Hex;
-                return Results.Text(result.CanonicalJson, "application/json; charset=utf-8");
+                return Results.Text(result.ResponseBody, "application/json; charset=utf-8");
             })
             .WithName("GetRunAuditPacket")
             .WithTags("Runs")
-            .WithSummary("Alias of audit export JSON + SHA-256 header (PR55 redaction rules).");
+            .WithSummary("Deterministic JSON audit views for a run (canonical minified default). Query format=canonical|pretty|redactionReport|hashOnly; SHA-256 header always matches canonical audit JSON.");
     }
 
     private static void MapOperator(RouteGroupBuilder v1)

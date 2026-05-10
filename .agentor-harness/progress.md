@@ -1,5 +1,25 @@
 # Agentor harness progress
 
+## Phase 22 PR106–PR110 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **PR106**: `PendingHumanReviewListResponseDto` adds totalCount/skip/take; inbox reasons come from `AgentRunSummary.ErrorMessage` (summary projection extended on Domain + EF mapper); `ReviewInboxWorkflowApiTests` + `ReviewInboxPolicyWebApplicationFactory` exercise HTTP RequiresReview → pending → approve → inbox clearance.
+- **PR107**: `RunTimelineResponseDto.timelineGroups` (`RunTimelineGroupKind`) — plan step spans, skill invocation spans, policy/review singletons; `GetRunTimelineQueryHandlerTests`.
+- **PR108**: `OperatorDashboardQueryHandler` modules for queue/outbox/deferred risks/policy runtime/expanded integrations + quality proxies; `IIntegrationStatusReader` + `IntegrationStatusReader` DI.
+- **PR109**: `AuditExportFormatKind` + `AuditExportFormatParser`; `RunAuditExportResult` carries response body + canonical hash inputs; governance + audit-packet routes accept `format` query.
+- **PR110**: `docs/operator/review-workflow.md`, `debug-run.md`, `audit-export.md`.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **408 passed, 0 failed**
+- `verify-harness.ps1 -ExpectedPhase 22 -ExpectedHarnessPass PR110` (Windows PowerShell)
+- `verify-repo-clean.ps1`
+
+**Scope guard**: Phase 23 not started.
+
 ## Phase 21 PR105.5 (2026-05-11)
 
 **Status**: Complete.

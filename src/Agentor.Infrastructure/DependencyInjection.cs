@@ -123,6 +123,7 @@ public static class DependencyInjection
         services.AddSingleton<InMemorySkillPackageCatalog>();
         services.AddSingleton<ISkillPackageCatalog>(sp => sp.GetRequiredService<InMemorySkillPackageCatalog>());
         services.AddSingleton<IntegrationSurfaceService>();
+        services.AddSingleton<IIntegrationStatusReader, IntegrationStatusReader>();
 
         services.AddSingleton<InMemoryManagementRecipeStore>();
         services.AddSingleton<IManagementRecipeStore>(sp => sp.GetRequiredService<InMemoryManagementRecipeStore>());

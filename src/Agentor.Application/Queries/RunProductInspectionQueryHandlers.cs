@@ -22,20 +22,27 @@ public sealed class GetRunTimelineQueryHandler
             return null;
         }
 
-        var ordered = run.Trace
+        var orderedDomain = run.Trace
             .OrderBy(e => e.OccurredAt)
             .ThenBy(e => e.Id)
+            .ToList();
+
+        var ordered = orderedDomain
             .Select(e => new RunTimelineEventResponseDto(
                 e.Id,
                 e.Kind,
                 e.Message,
                 e.OccurredAt,
-                new SortedDictionary<string, string>(new Dictionary<string, string>(e.Data), StringComparer.Ordinal)))
+                new SortedDictionary<string, string>(
+                    new Dictionary<string, string>(e.Data ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)),
+                    StringComparer.Ordinal)))
             .ToList();
 
-        var skillInvocations = BuildSkillInvocations(run.Trace.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).ToList());
+        var skillInvocations = BuildSkillInvocations(orderedDomain);
 
-        return new RunTimelineResponseDto(run.Id, ordered, skillInvocations);
+        var groups = BuildTimelineGroups(orderedDomain, skillInvocations);
+
+        return new RunTimelineResponseDto(run.Id, ordered, skillInvocations, groups);
     }
 
     private static IReadOnlyList<RunTimelineSkillInvocationDto> BuildSkillInvocations(IReadOnlyList<ExecutionTraceEvent> ordered)
@@ -47,6 +54,7 @@ public sealed class GetRunTimelineQueryHandler
         {
             var e = ordered[i];
             if (e.Kind == TraceEventKind.SkillInvocationStarted
+                && e.Data is not null
                 && e.Data.TryGetValue("skillKey", out var sk)
                 && !string.IsNullOrWhiteSpace(sk))
             {
@@ -55,6 +63,7 @@ public sealed class GetRunTimelineQueryHandler
             }
 
             if (e.Kind == TraceEventKind.SkillInvocationCompleted
+                && e.Data is not null
                 && e.Data.TryGetValue("skillKey", out var sk2)
                 && !string.IsNullOrWhiteSpace(sk2))
             {
@@ -88,6 +97,107 @@ public sealed class GetRunTimelineQueryHandler
 
         return segments;
     }
+
+    private static IReadOnlyList<RunTimelineGroupV2Dto> BuildTimelineGroups(
+        IReadOnlyList<ExecutionTraceEvent> ordered,
+        IReadOnlyList<RunTimelineSkillInvocationDto> skills)
+    {
+        var groups = new List<RunTimelineGroupV2Dto>();
+
+        var openPlan = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var e = ordered[i];
+            if (e.Kind == TraceEventKind.PlanExecutionStepStarted && TrySourceStepId(e, out var sid))
+            {
+                openPlan[sid] = i;
+            }
+            else if (IsPlanStepTerminal(e.Kind) && TrySourceStepId(e, out var sid2))
+            {
+                if (openPlan.TryGetValue(sid2, out var start))
+                {
+                    groups.Add(new RunTimelineGroupV2Dto(
+                        RunTimelineGroupKind.PlanStep,
+                        sid2,
+                        start,
+                        IndicesSpan(start, i)));
+                    openPlan.Remove(sid2);
+                }
+                else
+                {
+                    groups.Add(new RunTimelineGroupV2Dto(
+                        RunTimelineGroupKind.PlanStep,
+                        sid2,
+                        i,
+                        [i]));
+                }
+            }
+        }
+
+        foreach (var kv in openPlan)
+        {
+            var start = kv.Value;
+            groups.Add(new RunTimelineGroupV2Dto(
+                RunTimelineGroupKind.PlanStep,
+                kv.Key,
+                start,
+                IndicesSpan(start, ordered.Count - 1)));
+        }
+
+        foreach (var s in skills)
+        {
+            groups.Add(new RunTimelineGroupV2Dto(
+                RunTimelineGroupKind.SkillInvocation,
+                s.SkillKey,
+                s.StartEventIndex,
+                IndicesSpan(s.StartEventIndex, s.EndEventIndex)));
+        }
+
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            var k = ordered[i].Kind;
+            if (k == TraceEventKind.PolicyEvaluated)
+            {
+                groups.Add(new RunTimelineGroupV2Dto(RunTimelineGroupKind.PolicyDecision, $"policy:{i}", i, [i]));
+            }
+            else if (k == TraceEventKind.HumanReviewDecisionRecorded)
+            {
+                groups.Add(new RunTimelineGroupV2Dto(RunTimelineGroupKind.ReviewDecision, $"review:{i}", i, [i]));
+            }
+        }
+
+        return groups
+            .OrderBy(g => g.AnchorEventIndex)
+            .ThenBy(g => g.Kind)
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static List<int> IndicesSpan(int start, int end)
+    {
+        var list = new List<int>();
+        for (var i = start; i <= end; i++)
+        {
+            list.Add(i);
+        }
+
+        return list;
+    }
+
+    private static bool TrySourceStepId(ExecutionTraceEvent e, out string sid)
+    {
+        sid = "";
+        return e.Data is not null
+               && e.Data.TryGetValue("sourceStepId", out var raw)
+               && !string.IsNullOrWhiteSpace(raw)
+               && !string.IsNullOrWhiteSpace(sid = raw.Trim());
+    }
+
+    private static bool IsPlanStepTerminal(TraceEventKind kind) =>
+        kind is TraceEventKind.PlanExecutionStepCompleted
+            or TraceEventKind.PlanExecutionFailed
+            or TraceEventKind.PlanExecutionRequiresReview
+            or TraceEventKind.PlanStepSkipped;
 }
 
 public sealed class GetRunCoordinationViewQueryHandler
@@ -197,14 +307,16 @@ public sealed class ListPendingHumanReviewsQueryHandler
     public async Task<PendingHumanReviewListResponseDto> HandleAsync(int skip, int take, CancellationToken cancellationToken)
     {
         var page = await _repository.ListSummariesAsync(skip, take, cancellationToken, AgentRunStatus.RequiresReview);
-        var items = new List<PendingHumanReviewItemDto>();
-        foreach (var s in page.Items)
-        {
-            var run = await _repository.GetAsync(s.Id, cancellationToken);
-            var reason = run?.ErrorMessage;
-            items.Add(new PendingHumanReviewItemDto(s.Id, s.AgentName, s.TraceId, s.StartedAt, s.CompletedAt, reason));
-        }
+        var items = page.Items
+            .Select(s => new PendingHumanReviewItemDto(
+                s.Id,
+                s.AgentName,
+                s.TraceId,
+                s.StartedAt,
+                s.CompletedAt,
+                s.ErrorMessage))
+            .ToList();
 
-        return new PendingHumanReviewListResponseDto(items);
+        return new PendingHumanReviewListResponseDto(items, page.TotalCount, page.Skip, page.Take);
     }
 }

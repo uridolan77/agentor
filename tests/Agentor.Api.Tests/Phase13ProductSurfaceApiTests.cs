@@ -35,6 +35,11 @@ public sealed class Phase13ProductSurfaceApiTests : IClassFixture<WebApplication
         Assert.NotNull(dto);
         Assert.True(dto!.Modules.ContainsKey("runs"));
         Assert.True(dto.Modules.ContainsKey("reviews"));
+        Assert.True(dto.Modules.ContainsKey("queue"));
+        Assert.True(dto.Modules.ContainsKey("outbox"));
+        Assert.True(dto.Modules.ContainsKey("integrations"));
+        Assert.True(dto.Modules.ContainsKey("deferredRisks"));
+        Assert.True(dto.Modules.ContainsKey("policyRuntime"));
     }
 
     [Fact]
@@ -149,6 +154,9 @@ public sealed class Phase13ProductSurfaceApiTests : IClassFixture<WebApplication
         var dto = await response.Content.ReadFromJsonAsync<PendingHumanReviewListResponseDto>(JsonOptions);
         Assert.NotNull(dto);
         Assert.NotNull(dto!.Items);
+        Assert.True(dto.TotalCount >= 0);
+        Assert.Equal(0, dto.Skip);
+        Assert.Equal(10, dto.Take);
     }
 
     [Fact]

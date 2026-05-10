@@ -58,7 +58,8 @@ public sealed class TestAgentRunRepository : IAgentRunRepository
                 r.TenantId,
                 r.WorkspaceId,
                 r.ProjectId,
-                r.KnowledgeScopeId))
+                r.KnowledgeScopeId,
+                r.ErrorMessage))
             .ToList();
 
         return Task.FromResult(new AgentRunListPage(items, total, skip, take));

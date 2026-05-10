@@ -116,7 +116,8 @@ internal static class RecordMapper
             record.TenantId,
             record.WorkspaceId,
             record.ProjectId,
-            record.KnowledgeScopeId);
+            record.KnowledgeScopeId,
+            record.ErrorMessage);
     }
 
     internal static AgentRun ToDomain(AgentRunRecord record)

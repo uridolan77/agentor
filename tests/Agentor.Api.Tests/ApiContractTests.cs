@@ -456,4 +456,66 @@ public sealed class AgentRunQueryEndpointsTests
         Assert.True(second.Headers.TryGetValues("X-Agentor-Audit-Content-SHA256", out var h2));
         Assert.Equal(h1!.Single(), h2!.Single());
     }
+
+    [Fact]
+    public async Task GetAuditExport_PrettyFormat_MatchesCanonicalShaHeader()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        var post = await client.PostAsJsonAsync(
+            "/api/v1/agent-runs",
+            new StartAgentRunRequestDto("Audit agent", "Pretty format.", "audit-pretty-trace"));
+        post.EnsureSuccessStatusCode();
+        var run = await post.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(run);
+
+        var canonical = await client.GetAsync($"/api/v1/agent-runs/{run!.Id}/audit-export");
+        var pretty = await client.GetAsync($"/api/v1/agent-runs/{run.Id}/audit-export?format=pretty");
+        canonical.EnsureSuccessStatusCode();
+        pretty.EnsureSuccessStatusCode();
+
+        Assert.True(canonical.Headers.TryGetValues("X-Agentor-Audit-Content-SHA256", out var h1));
+        Assert.True(pretty.Headers.TryGetValues("X-Agentor-Audit-Content-SHA256", out var h2));
+        Assert.Equal(h1!.Single(), h2!.Single());
+
+        var cBody = await canonical.Content.ReadAsStringAsync();
+        var pBody = await pretty.Content.ReadAsStringAsync();
+        Assert.NotEqual(cBody, pBody);
+    }
+
+    [Fact]
+    public async Task GetAuditExport_HashOnlyBody_ContainsHexMatchingHeader()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        var post = await client.PostAsJsonAsync(
+            "/api/v1/agent-runs",
+            new StartAgentRunRequestDto("Audit agent", "Hash only.", "audit-hashonly-trace"));
+        post.EnsureSuccessStatusCode();
+        var run = await post.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(run);
+
+        var hashResp = await client.GetAsync($"/api/v1/agent-runs/{run!.Id}/audit-export?format=hashOnly");
+        hashResp.EnsureSuccessStatusCode();
+        Assert.True(hashResp.Headers.TryGetValues("X-Agentor-Audit-Content-SHA256", out var hex));
+
+        using var doc = JsonDocument.Parse(await hashResp.Content.ReadAsStringAsync());
+        Assert.Equal(hex!.Single(), doc.RootElement.GetProperty("contentSha256Hex").GetString());
+    }
+
+    [Fact]
+    public async Task GetAuditExport_InvalidFormat_ReturnsBadRequest()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        var post = await client.PostAsJsonAsync(
+            "/api/v1/agent-runs",
+            new StartAgentRunRequestDto("Audit agent", "Bad format.", "audit-badfmt-trace"));
+        post.EnsureSuccessStatusCode();
+        var run = await post.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(run);
+
+        var bad = await client.GetAsync($"/api/v1/agent-runs/{run!.Id}/audit-export?format=not-a-real-format");
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+    }
 }

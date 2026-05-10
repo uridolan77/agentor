@@ -63,12 +63,14 @@ public sealed class ContractDtoCompatibilityTests
             "trace",
             AgentRunStatus.Completed,
             DateTimeOffset.Parse("2026-01-02T03:04:05Z"),
-            DateTimeOffset.Parse("2026-01-02T03:05:06Z"));
+            DateTimeOffset.Parse("2026-01-02T03:05:06Z"),
+            null);
         var json = JsonSerializer.Serialize(original, JsonOptions);
         var back = JsonSerializer.Deserialize<AgentRunSummaryDto>(json, JsonOptions);
         Assert.NotNull(back);
         Assert.Equal(original.Id, back.Id);
         Assert.Equal(original.Status, back.Status);
+        Assert.Equal(original.ErrorMessage, back.ErrorMessage);
     }
 
     [Fact]
@@ -289,14 +291,21 @@ public sealed class ContractDtoCompatibilityTests
             DateTimeOffset.Parse("2026-01-02T03:04:05Z"),
             new Dictionary<string, string> { ["x"] = "y" });
         var skill = new RunTimelineSkillInvocationDto("skill", "1.0", 0, 1, new List<int> { 0 });
+        var groups = new List<RunTimelineGroupV2Dto>
+        {
+            new(RunTimelineGroupKind.SkillInvocation, "skill", 0, new List<int> { 0, 1 }),
+            new(RunTimelineGroupKind.PolicyDecision, "policy:1", 1, new List<int> { 1 })
+        };
         var original = new RunTimelineResponseDto(
             Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             new List<RunTimelineEventResponseDto> { ev },
-            new List<RunTimelineSkillInvocationDto> { skill });
+            new List<RunTimelineSkillInvocationDto> { skill },
+            groups);
         AssertRoundTrip(original, (_, b) =>
         {
             Assert.Single(b.OrderedEvents);
             Assert.Single(b.SkillInvocations);
+            Assert.Equal(2, b.TimelineGroups.Count);
         });
     }
 

@@ -2,8 +2,9 @@ using System.Security.Cryptography;
 using System.Text;
 using Agentor.Application;
 using Agentor.Application.Options;
-using Agentor.Infrastructure;
 using Agentor.Application.Queries;
+using Agentor.Contracts;
+using Agentor.Infrastructure;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Microsoft.Extensions.Options;
@@ -67,6 +68,73 @@ public sealed class GetRunAuditExportQueryHandlerTests
         Assert.DoesNotContain("super-secret", result.CanonicalJson, StringComparison.Ordinal);
         Assert.DoesNotContain("hunter2", result.CanonicalJson, StringComparison.Ordinal);
         Assert.Contains("visible", result.CanonicalJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HandleAsync_PrettyFormat_PreservesCanonicalJsonAndHash()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var run = BuildSimpleCompletedRun(clock.UtcNow);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = new GetRunAuditExportQueryHandler(repo, Microsoft.Extensions.Options.Options.Create(new AuditExportOptions()));
+        var canonical = await handler.HandleAsync(run.Id, AuditExportFormatKind.Canonical, CancellationToken.None);
+        var pretty = await handler.HandleAsync(run.Id, AuditExportFormatKind.Pretty, CancellationToken.None);
+
+        Assert.NotNull(canonical);
+        Assert.NotNull(pretty);
+        Assert.NotEqual(canonical!.ResponseBody, pretty!.ResponseBody);
+        Assert.Equal(canonical.CanonicalJson, pretty.CanonicalJson);
+        Assert.Equal(canonical.ContentSha256Hex, pretty.ContentSha256Hex);
+    }
+
+    [Fact]
+    public async Task HandleAsync_HashOnlyFormat_ContainsCanonicalHex()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var run = BuildSimpleCompletedRun(clock.UtcNow);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = new GetRunAuditExportQueryHandler(repo, Microsoft.Extensions.Options.Options.Create(new AuditExportOptions()));
+        var canonical = await handler.HandleAsync(run.Id, AuditExportFormatKind.Canonical, CancellationToken.None);
+        var hashOnly = await handler.HandleAsync(run.Id, AuditExportFormatKind.HashOnly, CancellationToken.None);
+
+        Assert.NotNull(canonical);
+        Assert.NotNull(hashOnly);
+        Assert.Contains(canonical!.ContentSha256Hex, hashOnly!.ResponseBody, StringComparison.Ordinal);
+        Assert.Equal(canonical.ContentSha256Hex, hashOnly.ContentSha256Hex);
+    }
+
+    [Fact]
+    public async Task HandleAsync_RedactionReport_ListsPathsAndMatchesCanonicalHash()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var now = clock.UtcNow;
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Objective", "trace-redact-report", now);
+        var step = run.StartStep("Step", now);
+        var tool = ToolCall.Start(
+            run.Id,
+            step.Id,
+            WellKnownToolKeys.Pr1FakeTool,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["apiKey"] = "secret-token" },
+            now);
+        step.AddToolCall(tool);
+        tool.Succeed(new Dictionary<string, string> { ["ok"] = "1" }, now);
+        step.Complete(now);
+        run.Complete(now);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = new GetRunAuditExportQueryHandler(repo, Microsoft.Extensions.Options.Options.Create(new AuditExportOptions()));
+        var canonical = await handler.HandleAsync(run.Id, AuditExportFormatKind.Canonical, CancellationToken.None);
+        var report = await handler.HandleAsync(run.Id, AuditExportFormatKind.RedactionReport, CancellationToken.None);
+
+        Assert.NotNull(canonical);
+        Assert.NotNull(report);
+        Assert.Contains("redactedKeyPaths", report!.ResponseBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(canonical!.ContentSha256Hex, report.ContentSha256Hex);
     }
 
     private static AgentRun BuildSimpleCompletedRun(DateTimeOffset now)

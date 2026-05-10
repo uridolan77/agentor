@@ -8,6 +8,7 @@ using Agentor.Application.Manifest;
 using Agentor.Application.Options;
 using Agentor.Application.Quality;
 using Agentor.Application.Redaction;
+using Agentor.Contracts;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Domain.Policy;
@@ -15,7 +16,10 @@ using Microsoft.Extensions.Options;
 
 namespace Agentor.Application.Queries;
 
-public sealed record RunAuditExportResult(string CanonicalJson, string ContentSha256Hex);
+/// <param name="ResponseBody">Payload for the HTTP response (may be pretty JSON or sidecar document).</param>
+/// <param name="ContentSha256Hex">SHA-256 of UTF-8 <see cref="CanonicalJson"/> (minified canonical audit).</param>
+/// <param name="CanonicalJson">Redacted canonical minified audit JSON used for hashing.</param>
+public sealed record RunAuditExportResult(string ResponseBody, string ContentSha256Hex, string CanonicalJson);
 
 public sealed class GetRunAuditExportQueryHandler
 {
@@ -23,6 +27,13 @@ public sealed class GetRunAuditExportQueryHandler
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    private static readonly JsonSerializerOptions PrettySerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
@@ -49,7 +60,13 @@ public sealed class GetRunAuditExportQueryHandler
         _policyProfileRepository = policyProfileRepository;
     }
 
-    public async Task<RunAuditExportResult?> HandleAsync(Guid runId, CancellationToken cancellationToken)
+    public Task<RunAuditExportResult?> HandleAsync(Guid runId, CancellationToken cancellationToken) =>
+        HandleAsync(runId, AuditExportFormatKind.Canonical, cancellationToken);
+
+    public async Task<RunAuditExportResult?> HandleAsync(
+        Guid runId,
+        AuditExportFormatKind format,
+        CancellationToken cancellationToken)
     {
         var run = await _repository.GetAsync(runId, cancellationToken);
         if (run is null)
@@ -71,10 +88,49 @@ public sealed class GetRunAuditExportQueryHandler
         var quality = RunQualityGateEvaluator.Evaluate(run, requireCompleted: false);
 
         var root = BuildAuditRoot(run, manifest, quality, activePolicyProfile);
-        JsonRedaction.Apply(root, RedactionPolicy.FromAuditExportOptions(_options));
-        var canonical = root.ToJsonString(SerializerOptions);
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
-        return new RunAuditExportResult(canonical, hash);
+        var policy = RedactionPolicy.FromAuditExportOptions(_options);
+
+        var clone = JsonNode.Parse(root.ToJsonString(SerializerOptions))
+                    ?? throw new InvalidOperationException("Audit root could not be cloned for redaction.");
+
+        var redaction = JsonRedaction.Apply(clone, policy);
+        var canonicalJson = clone.ToJsonString(SerializerOptions);
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonicalJson)));
+
+        var body = format switch
+        {
+            AuditExportFormatKind.Canonical => canonicalJson,
+            AuditExportFormatKind.Pretty => JsonSerializer.Serialize(JsonNode.Parse(canonicalJson), PrettySerializerOptions),
+            AuditExportFormatKind.RedactionReport => BuildRedactionReportBody(run.Id, hash, redaction),
+            AuditExportFormatKind.HashOnly => BuildHashOnlyBody(run.Id, hash),
+            _ => canonicalJson
+        };
+
+        return new RunAuditExportResult(body, hash, canonicalJson);
+    }
+
+    private static string BuildHashOnlyBody(Guid runId, string hash)
+    {
+        var o = new JsonObject
+        {
+            ["schemaVersion"] = "agentor.audit.hashOnly.v1",
+            ["runId"] = runId.ToString("D"),
+            ["contentSha256Hex"] = hash
+        };
+        return o.ToJsonString(SerializerOptions);
+    }
+
+    private static string BuildRedactionReportBody(Guid runId, string hash, RedactionResult redaction)
+    {
+        var o = new JsonObject
+        {
+            ["schemaVersion"] = "agentor.audit.redactionReport.v1",
+            ["runId"] = runId.ToString("D"),
+            ["contentSha256Hex"] = hash,
+            ["redactedPropertyCount"] = redaction.RedactedPropertyCount,
+            ["redactedKeyPaths"] = JsonSerializer.SerializeToNode(redaction.RedactedKeyPaths.ToList(), SerializerOptions)
+        };
+        return o.ToJsonString(PrettySerializerOptions);
     }
 
     private static JsonObject BuildAuditRoot(
@@ -135,7 +191,7 @@ public sealed class GetRunAuditExportQueryHandler
                 }),
                 SerializerOptions),
             ["trace"] = JsonSerializer.SerializeToNode(
-                run.Trace.OrderBy(t => t.OccurredAt).Select(e => new
+                run.Trace.OrderBy(t => t.OccurredAt).ThenBy(t => t.Id).Select(e => new
                 {
                     e.Id,
                     kind = e.Kind.ToString(),
