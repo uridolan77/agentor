@@ -4,8 +4,11 @@ using Microsoft.Extensions.Options;
 namespace Agentor.Infrastructure.HttpResilience;
 
 /// <summary>
-/// Retries and opens a circuit for named integration <see cref="HttpClient"/> instances.
-/// Does not change <see cref="Agentor.Application.Abstractions.IToolExecutionPipeline"/> retry semantics.
+/// Retries and opens a circuit for named integration HttpClient instances.
+/// Does not change application-level tool pipeline retry semantics.
+/// When resilience is enabled, each outbound attempt uses a cloned HttpRequestMessage so
+/// retries never resend the same HttpContent instance (POST bodies are buffered once).
+/// HttpRequestOptions entries on the inbound message are not copied to clones (integration clients do not rely on them today).
 /// </summary>
 public sealed class ResilientIntegrationDelegatingHandler : DelegatingHandler
 {
@@ -37,6 +40,12 @@ public sealed class ResilientIntegrationDelegatingHandler : DelegatingHandler
             return blocked;
         }
 
+        byte[]? bufferedBody = null;
+        if (request.Content is not null)
+        {
+            bufferedBody = await request.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         var maxAttempts = 1 + Math.Clamp(opts.MaxRetries, 0, 10);
         HttpResponseMessage? disposeNext = null;
         for (var attempt = 0; attempt < maxAttempts; attempt++)
@@ -44,7 +53,9 @@ public sealed class ResilientIntegrationDelegatingHandler : DelegatingHandler
             disposeNext?.Dispose();
             disposeNext = null;
 
-            var response = await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using var attemptRequest = CloneHttpRequestMessage(request, bufferedBody);
+
+            var response = await base.SendAsync(attemptRequest, cancellationToken).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
                 _registry.RecordSuccess(_clientName, _options);
@@ -69,6 +80,36 @@ public sealed class ResilientIntegrationDelegatingHandler : DelegatingHandler
         }
 
         return new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable);
+    }
+
+    private static HttpRequestMessage CloneHttpRequestMessage(HttpRequestMessage source, byte[]? bufferedBody)
+    {
+        var clone = new HttpRequestMessage(source.Method, source.RequestUri)
+        {
+            Version = source.Version,
+            VersionPolicy = source.VersionPolicy,
+        };
+
+        foreach (var header in source.Headers)
+        {
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        if (bufferedBody is not null)
+        {
+            var content = new ByteArrayContent(bufferedBody);
+            if (source.Content is not null)
+            {
+                foreach (var header in source.Content.Headers)
+                {
+                    content.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                }
+            }
+
+            clone.Content = content;
+        }
+
+        return clone;
     }
 
     private static bool ShouldRetry(System.Net.HttpStatusCode code, TransportResilienceOptions opts)

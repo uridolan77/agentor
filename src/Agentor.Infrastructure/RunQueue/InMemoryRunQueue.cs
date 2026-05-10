@@ -9,6 +9,9 @@ using Microsoft.Extensions.Options;
 
 namespace Agentor.Infrastructure.RunQueue;
 
+/// <summary>
+/// In-process queue only: not durable across restarts and not broker-backed (PR60.6).
+/// </summary>
 public sealed class InMemoryRunQueue : IRunQueue
 {
     private readonly IServiceScopeFactory _scopeFactory;

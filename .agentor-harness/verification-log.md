@@ -1,5 +1,27 @@
 ﻿# Agentor harness - verification log
 
+## Phase 12 + PR60.6 verification (2026-05-10)
+
+Commands (repository root):
+
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results: restore OK; build OK; test OK.
+
+Counts: **Domain 38**, **Application 76**, **Infrastructure 59**, **Api 45** (total **218**).
+
+Scope: PR60.6 HTTP integration retry hardening — ResilientIntegrationDelegatingHandler clones HttpRequestMessage per attempt with buffered POST bodies; ResilientIntegrationDelegatingHandlerTests; InMemoryRunQueue XML note (in-memory / not broker-backed); harness feature-list.json phase **12**, harnessPass **PR60.6**; note punctuation cleanup. Phase 13 not started.
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 12 -ExpectedHarnessPass PR60.6
+```
+
+Result: Harness verification passed.
+
 ## Phase 12 + PR60.5 verification (2026-05-10)
 
 Commands (repository root):

@@ -1,7 +1,7 @@
 {
     "phase": 12,
-    "title": "Durable execution & reliability (Phase 12 PR56-PR60) + PR60.5 harness",
-    "harnessPass": "PR60.5",
+    "title": "Durable execution & reliability (Phase 12 PR56-PR60) + PR60.6 HTTP retry hardening",
+    "harnessPass": "PR60.6",
     "encoding": "utf-8",
     "lastVerified": "2026-05-10",
     "notes": [
@@ -21,8 +21,8 @@
         "Phase 9 PR41-PR45: IExternalAgentProtocolClient + deterministic fakes (generic + A2A-styled); external-agent.discover / external-agent.invoke via ToolRegistry + policy + pipeline; RunManifest v1.2 external-agent telemetry; trace kinds + SequentialAgentPlanExecutor deny/review paths; RunEvaluationHarness snapshot external counts + RunQualityGateEvaluator EXTERNAL_AGENT_OUTPUT_UNREVIEWED; fixtures eval/external-agent-one-call.json; no real network transports.",
         "Phase 10 PR46-PR50: Agentor:Integrations modes Fake|Http|Disabled; HTTP adapters (Athanor knowledge state, Conexus model gateway, MCP registry, ExternalAgents protocol); named HttpClients; /health liveness-only; /ready and GET /api/v1/integrations/status via IntegrationSurfaceService.",
         "PR50.5: HTTP readiness probes fail on non-2xx; Disabled adapters report detail=disabled while Ready=true; API + Infrastructure tests; harness bumped to phase 10.",
-        "PR55.5: Phase 11 harness reconciliation ??? granular acceptance rows, expanded tests (scope, Athanor project id, policy profile, human review, actor accessor, audit export, persistence), docs/GOVERNANCE_BOUNDARY.md, verification log updated.",
-        "Phase 11 code (PR51???PR55) is implemented in-tree; PR55.5 records harness acceptance only for behaviors covered by automated tests or explicit harness notes."
+        "PR55.5: Phase 11 harness reconciliation: granular acceptance rows, expanded tests (scope, Athanor project id, policy profile, human review, actor accessor, audit export, persistence), docs/GOVERNANCE_BOUNDARY.md, verification log updated.",
+        "Phase 11 code (PR51-PR55) is implemented in-tree; PR55.5 records harness acceptance only for behaviors covered by automated tests or explicit harness notes."
     ],
     "acceptanceItems": [
         {
@@ -899,6 +899,34 @@
             "description": "EF round-trip for outbox_messages, execution_leases, distributed_operations (Sqlite EnsureCreated).",
             "passes": true,
             "evidence": "tests/Agentor.Infrastructure.Tests/Phase12EfRoundTripTests.cs; migration src/Agentor.Infrastructure/Persistence/Migrations/20260512080000_Phase12Reliability.cs"
+        },
+        {
+            "id": "PR60.6-001",
+            "pr": 60,
+            "description": "ResilientIntegrationDelegatingHandler buffers request body once and sends a cloned HttpRequestMessage per attempt (no resend of consumed HttpContent).",
+            "passes": true,
+            "evidence": "src/Agentor.Infrastructure/HttpResilience/ResilientIntegrationDelegatingHandler.cs; tests/Agentor.Infrastructure.Tests/ResilientIntegrationDelegatingHandlerTests.cs::PostJson_RetriesWithFreshRequestMessage_EachAttemptHasSameBody"
+        },
+        {
+            "id": "PR60.6-002",
+            "pr": 60,
+            "description": "HTTP resilience retries stop at MaxRetries+1 attempts for retryable status codes.",
+            "passes": true,
+            "evidence": "ResilientIntegrationDelegatingHandlerTests.MaxRetries_Stops_AtConfiguredAttempts"
+        },
+        {
+            "id": "PR60.6-003",
+            "pr": 60,
+            "description": "Non-retryable HTTP status is not retried.",
+            "passes": true,
+            "evidence": "ResilientIntegrationDelegatingHandlerTests.NonRetryableStatus_DoesNotRetry"
+        },
+        {
+            "id": "PR60.6-004",
+            "pr": 60,
+            "description": "Open transport circuit returns synthetic 503 without invoking inner handler.",
+            "passes": true,
+            "evidence": "ResilientIntegrationDelegatingHandlerTests.CircuitOpen_ReturnsSynthetic503_WithoutCallingInner"
         }
     ]
 }

@@ -1,8 +1,17 @@
 # Agentor harness progress
 
+## Phase 12 + PR60.6 (2026-05-10)
+
+Completed: PR60.6 hardens HTTP integration retries: ResilientIntegrationDelegatingHandler buffers request bodies once and sends a cloned HttpRequestMessage per attempt (safe POST/JSON replays). Added ResilientIntegrationDelegatingHandlerTests. Harness: phase **12**, harnessPass **PR60.6**; eature-list.json note punctuation normalized.
+
+- Run queue remains **in-memory only** (no durable queue broker in this repo yet).
+- Outbox: OutboxDispatcher exists for application-triggered dispatch; there is **no hosted background outbox worker** unless explicitly added later.
+
+Next harness marker: Phase 13 product operator surface (not started in this pass).
+
 ## Phase 12 + PR60.5 (2026-05-10)
 
-Completed: durable execution and reliability slice PR56 through PR60 is implemented in-tree; harness reconciled to phase **12**, harnessPass **PR60.5**.
+Completed: durable execution and reliability slice PR56 through PR60 is implemented in-tree; harness reconciled to phase **12**, harnessPass **PR60.5** (superseded by PR60.6 marker above).
 
 - PR56: Run queue (RunQueueOptions, IRunQueue, InMemoryRunQueue, background worker), API POST/GET /api/v1/agent-runs/queued.
 - PR57: Outbox models, IOutboxStore, OutboxDispatcher, in-memory + EF stores.
@@ -10,8 +19,6 @@ Completed: durable execution and reliability slice PR56 through PR60 is implemen
 - PR59: TransportResilienceRegistry, ResilientIntegrationDelegatingHandler, integration status exposure for HTTP resilience.
 - PR60: EF entities and manual migration 20260512080000_Phase12Reliability; Sqlite round-trip tests for outbox, leases, ledger; ledger clears tracker after successful commit.
 - PR60.5: Harness alignment, OutboxDispatcherTests, TransportResilienceRegistryTests, Phase12EfRoundTripTests, verification log.
-
-Next harness marker: Phase 13 product operator surface (not started in this pass).
 
 ## Phase 11 + PR55.5 (2026-05-10)
 
@@ -24,7 +31,7 @@ Completed: governance slice PR51 through PR55 is implemented in-tree; harness re
 - PR55: Deterministic audit export JSON, SHA-256 header, baseline key-name redaction.
 - PR55.5: Harness files (current-pr.md, feature-list.json, acceptance rows), expanded tests, verification-log.md, docs/GOVERNANCE_BOUNDARY.md.
 
-Follow-up: Phase 12 (PR56–PR60) completed in the Phase 12 + PR60.5 harness pass above.
+Follow-up: Phase 12 (PR56–PR60) completed in the Phase 12 + PR60.5 harness pass; PR60.6 retry hardening documented above.
 
 ## Phase 10 + PR50.5 (2026-05-10)
 
