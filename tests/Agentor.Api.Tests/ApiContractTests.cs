@@ -398,7 +398,8 @@ public sealed class AgentRunQueryEndpointsTests
     [Fact]
     public async Task PostAgentRuns_WithGovernanceScope_GetReturnsSameIdentifiers()
     {
-        using var client = _factory.CreateClient();
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
         var tenantId = Guid.NewGuid();
         var workspaceId = Guid.NewGuid();
         var projectId = Guid.NewGuid();
@@ -433,7 +434,8 @@ public sealed class AgentRunQueryEndpointsTests
     [Fact]
     public async Task GetAuditExport_ReturnsStableJsonAndSha256Header()
     {
-        using var client = _factory.CreateClient();
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
         var post = await client.PostAsJsonAsync(
             "/api/v1/agent-runs",
             new StartAgentRunRequestDto("Audit agent", "Audit export contract.", "audit-contract-trace"));

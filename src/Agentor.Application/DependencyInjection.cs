@@ -1,6 +1,7 @@
 using Agentor.Application.Athanor;
 using Agentor.Application.Commands;
 using Agentor.Application.Queries;
+using Agentor.Application.Reliability;
 using Agentor.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -21,6 +22,8 @@ public static class DependencyInjection
 
         services.AddScoped<ApplyHumanReviewDecisionHandler>();
         services.AddScoped<GetRunAuditExportQueryHandler>();
+
+        services.AddSingleton<OutboxDispatcher>();
 
         services.AddScoped<GetLatestAthanorSnapshotForRunQueryHandler>();
         services.AddScoped<LookupAthanorCanonicalForRunQueryHandler>();

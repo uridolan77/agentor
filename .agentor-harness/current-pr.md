@@ -8,4 +8,8 @@ Completed: **Phase 11 PR51–PR55** — governance identifiers on `AgentRun` / s
 
 Completed: **PR55.5** — Phase 11 harness reconciliation: `feature-list.json` phase **11** / harnessPass **PR55.5**, granular acceptance rows, expanded automated tests, `docs/GOVERNANCE_BOUNDARY.md`, verification log refresh.
 
-Next: **PR56** — Background run queue (Phase 12 entry — do not implement until PR56 scope is opened).
+Completed: **Phase 12 PR56–PR60** — background run queue (`IRunQueue`, in-memory worker, `POST/GET .../agent-runs/queued`), durable outbox (`OutboxDispatcher`, EF + in-memory stores), execution leases and distributed operation ledger (EF + in-memory), HTTP transport resilience (`TransportResilienceRegistry`, delegating handler), EF persistence and migration `20260512080000_Phase12Reliability`.
+
+Completed: **PR60.5** — Phase 12 harness reconciliation: `feature-list.json` phase **12** / harnessPass **PR60.5**; `OutboxDispatcherTests`, `Phase12EfRoundTripTests` (Sqlite), `TransportResilienceRegistryTests`; `EfDistributedOperationLedger` clears change tracker after successful insert; verification log refresh.
+
+Next: **Phase 13** — Product operator surface (`docs/planning/pr41-pr75/PHASE_13_PRODUCT_OPERATOR_SURFACE.md`) — do not implement until that scope is opened.

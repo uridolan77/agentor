@@ -1,7 +1,7 @@
 using System.Net;
 using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
-using Agentor.Infrastructure.ExternalAgents;
+using Agentor.Infrastructure.HttpResilience;
 using Agentor.Infrastructure.IntegrationStatus;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
@@ -76,7 +76,8 @@ public sealed class IntegrationSurfaceServiceTests
             integrationMonitor,
             persistenceMonitor,
             factory,
-            new ThrowingScopeFactory());
+            new ThrowingScopeFactory(),
+            new TransportResilienceRegistry());
     }
 
     private sealed class StubHttpClientFactory(HttpClient client) : IHttpClientFactory

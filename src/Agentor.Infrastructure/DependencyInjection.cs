@@ -4,9 +4,13 @@ using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.ExternalAgents;
 using Agentor.Infrastructure.IntegrationStatus;
+using Agentor.Application.Options;
+using Agentor.Application.Reliability;
+using Agentor.Infrastructure.HttpResilience;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
 using Agentor.Infrastructure.Persistence;
+using Agentor.Infrastructure.RunQueue;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +30,14 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<AgentorIntegrationsOptions>, AgentorIntegrationsOptionsValidator>();
 
+        services.AddOptions<TransportResilienceOptions>()
+            .Bind(configuration.GetSection(TransportResilienceOptions.SectionName));
+        services.AddOptions<RunQueueOptions>()
+            .Bind(configuration.GetSection(RunQueueOptions.SectionName));
+        services.AddOptions<OutboxDispatcherOptions>()
+            .Bind(configuration.GetSection(OutboxDispatcherOptions.SectionName));
+
+        services.AddSingleton<TransportResilienceRegistry>();
         RegisterIntegrationHttpClients(services);
 
         services.AddSingleton<IClock, SystemClock>();
@@ -105,37 +117,41 @@ public static class DependencyInjection
         services.AddSingleton<ISkillPackageCatalog>(sp => sp.GetRequiredService<InMemorySkillPackageCatalog>());
         services.AddSingleton<IntegrationSurfaceService>();
 
+        services.AddSingleton<InMemoryRunQueue>();
+        services.AddSingleton<IRunQueue>(sp => sp.GetRequiredService<InMemoryRunQueue>());
+        services.AddHostedService<RunQueueBackgroundWorker>();
+
+        services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
+        services.AddSingleton<IRunExecutionLeaseStore, InMemoryExecutionLeaseStore>();
+        services.AddSingleton<IDistributedOperationLedger, InMemoryDistributedOperationLedger>();
+
         return services;
     }
 
     private static void RegisterIntegrationHttpClients(IServiceCollection services)
     {
-        services.AddHttpClient(HttpKnowledgeStateClient.HttpClientName)
-            .ConfigureHttpClient((sp, client) =>
-            {
-                var opts = sp.GetRequiredService<IOptionsMonitor<AgentorIntegrationsOptions>>();
-                ApplyHttpOptions(client, opts.CurrentValue.Athanor.Http);
-            });
+        AddResilientIntegrationClient(services, HttpKnowledgeStateClient.HttpClientName, o => o.Athanor.Http);
+        AddResilientIntegrationClient(services, HttpModelGatewayClient.HttpClientName, o => o.Conexus.Http);
+        AddResilientIntegrationClient(services, HttpMcpRegistryClient.HttpClientName, o => o.Mcp.Http);
+        AddResilientIntegrationClient(services, HttpExternalAgentProtocolClient.HttpClientName, o => o.ExternalAgents.Http);
+    }
 
-        services.AddHttpClient(HttpModelGatewayClient.HttpClientName)
+    private static void AddResilientIntegrationClient(
+        IServiceCollection services,
+        string clientName,
+        Func<AgentorIntegrationsOptions, HttpIntegrationOptions?> selectHttp)
+    {
+        services.AddHttpClient(clientName)
             .ConfigureHttpClient((sp, client) =>
             {
                 var opts = sp.GetRequiredService<IOptionsMonitor<AgentorIntegrationsOptions>>();
-                ApplyHttpOptions(client, opts.CurrentValue.Conexus.Http);
-            });
-
-        services.AddHttpClient(HttpMcpRegistryClient.HttpClientName)
-            .ConfigureHttpClient((sp, client) =>
+                ApplyHttpOptions(client, selectHttp(opts.CurrentValue));
+            })
+            .AddHttpMessageHandler(sp =>
             {
-                var opts = sp.GetRequiredService<IOptionsMonitor<AgentorIntegrationsOptions>>();
-                ApplyHttpOptions(client, opts.CurrentValue.Mcp.Http);
-            });
-
-        services.AddHttpClient(HttpExternalAgentProtocolClient.HttpClientName)
-            .ConfigureHttpClient((sp, client) =>
-            {
-                var opts = sp.GetRequiredService<IOptionsMonitor<AgentorIntegrationsOptions>>();
-                ApplyHttpOptions(client, opts.CurrentValue.ExternalAgents.Http);
+                var registry = sp.GetRequiredService<TransportResilienceRegistry>();
+                var tro = sp.GetRequiredService<IOptionsMonitor<TransportResilienceOptions>>();
+                return new ResilientIntegrationDelegatingHandler(clientName, registry, tro);
             });
     }
 
@@ -172,6 +188,25 @@ public static class DependencyInjection
         }
 
         services.AddScoped<IAgentRunIdempotencyLedger, EfAgentRunIdempotencyLedger>();
+
+        foreach (var d in services.Where(x => x.ServiceType == typeof(IOutboxStore)).ToList())
+        {
+            services.Remove(d);
+        }
+
+        foreach (var d in services.Where(x => x.ServiceType == typeof(IRunExecutionLeaseStore)).ToList())
+        {
+            services.Remove(d);
+        }
+
+        foreach (var d in services.Where(x => x.ServiceType == typeof(IDistributedOperationLedger)).ToList())
+        {
+            services.Remove(d);
+        }
+
+        services.AddScoped<IOutboxStore, EfOutboxStore>();
+        services.AddScoped<IRunExecutionLeaseStore, EfExecutionLeaseStore>();
+        services.AddScoped<IDistributedOperationLedger, EfDistributedOperationLedger>();
 
         return services;
     }

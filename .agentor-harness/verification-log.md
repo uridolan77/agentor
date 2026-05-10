@@ -1,5 +1,27 @@
 ﻿# Agentor harness - verification log
 
+## Phase 12 + PR60.5 verification (2026-05-10)
+
+Commands (repository root):
+
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results: restore OK; build OK; test OK.
+
+Counts: **Domain 38**, **Application 76**, **Infrastructure 55**, **Api 45** (total **214**).
+
+Scope: Phase 12 durable execution (PR56 run queue + queued API, PR57 outbox + dispatcher, PR58 leases + distributed op ledger, PR59 HTTP transport resilience registry, PR60 EF migration + Sqlite round-trips); `EfDistributedOperationLedger.TryCommitOnceAsync` clears change tracker after successful save; tests `OutboxDispatcherTests`, `Phase12EfRoundTripTests`, `TransportResilienceRegistryTests`; harness `feature-list.json` phase **12**, harnessPass **PR60.5**. Phase 13 / product operator surface not started.
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 12 -ExpectedHarnessPass PR60.5
+```
+
+(`pwsh` was not on PATH; Windows PowerShell used. Result: Harness verification passed.)
+
 ## Phase 11 + PR55.5 verification (2026-05-10)
 
 Commands (repository root):

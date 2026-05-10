@@ -2,6 +2,7 @@ using Agentor.Contracts;
 using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.ExternalAgents;
+using Agentor.Infrastructure.HttpResilience;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
 using Agentor.Infrastructure.Persistence;
@@ -18,7 +19,8 @@ public sealed class IntegrationSurfaceService(
     IOptionsMonitor<AgentorIntegrationsOptions> integrations,
     IOptionsMonitor<AgentorPersistenceOptions> persistence,
     IHttpClientFactory httpFactory,
-    IServiceScopeFactory scopeFactory)
+    IServiceScopeFactory scopeFactory,
+    TransportResilienceRegistry transportResilience)
 {
     public async Task<IntegrationsStatusResponseDto> GetStatusAsync(CancellationToken cancellationToken = default)
     {
@@ -36,7 +38,8 @@ public sealed class IntegrationSurfaceService(
 
         var persistenceReady = await IsPersistenceReadyAsync(cancellationToken);
         var ready = persistenceReady && dict.Values.All(a => a.Ready);
-        return new IntegrationsStatusResponseDto(ready, dict);
+        var resilience = BuildTransportResilienceSnapshot();
+        return new IntegrationsStatusResponseDto(ready, dict, resilience);
     }
 
     public async Task<(bool Ready, string? Reason)> GetReadinessAsync(CancellationToken cancellationToken = default)
@@ -63,6 +66,26 @@ public sealed class IntegrationSurfaceService(
         }
 
         return (false, string.Join("; ", reasons));
+    }
+
+    private IReadOnlyDictionary<string, TransportResilienceClientDto>? BuildTransportResilienceSnapshot()
+    {
+        var snap = transportResilience.GetSnapshot();
+        if (snap.Count == 0)
+        {
+            return null;
+        }
+
+        var dict = new Dictionary<string, TransportResilienceClientDto>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in snap)
+        {
+            dict[kv.Key] = new TransportResilienceClientDto(
+                kv.Value.CircuitOpen,
+                kv.Value.ConsecutiveFailures,
+                kv.Value.CircuitOpenUntilUtc);
+        }
+
+        return dict;
     }
 
     private async Task<bool> IsPersistenceReadyAsync(CancellationToken cancellationToken)

@@ -310,6 +310,90 @@ namespace Agentor.Infrastructure.Persistence.Migrations
                     b.ToTable("agent_run_idempotency_keys", (string)null);
                 });
 
+            modelBuilder.Entity("Agentor.Infrastructure.Persistence.Records.OutboxMessageRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempt_count");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("payload_json");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("outbox_messages", (string)null);
+                });
+
+            modelBuilder.Entity("Agentor.Infrastructure.Persistence.Records.ExecutionLeaseRecord", b =>
+                {
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<string>("LeaseHolder")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("lease_holder");
+
+                    b.Property<Guid>("ResourceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resource_id");
+
+                    b.HasKey("ResourceId");
+
+                    b.ToTable("execution_leases", (string)null);
+                });
+
+            modelBuilder.Entity("Agentor.Infrastructure.Persistence.Records.DistributedOperationRecord", b =>
+                {
+                    b.Property<DateTimeOffset>("CommittedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("committed_at_utc");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("operation_key");
+
+                    b.HasKey("OperationKey");
+
+                    b.ToTable("distributed_operations", (string)null);
+                });
+
             modelBuilder.Entity("Agentor.Infrastructure.Persistence.Records.AgentStepRecord", b =>
                 {
                     b.HasOne("Agentor.Infrastructure.Persistence.Records.AgentRunRecord", "Run")

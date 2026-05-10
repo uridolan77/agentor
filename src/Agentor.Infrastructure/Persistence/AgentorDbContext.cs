@@ -16,6 +16,12 @@ public sealed class AgentorDbContext : DbContext
     public DbSet<TraceEventRecord> TraceEvents => Set<TraceEventRecord>();
     public DbSet<AgentRunIdempotencyRecord> AgentRunIdempotencyKeys => Set<AgentRunIdempotencyRecord>();
 
+    public DbSet<OutboxMessageRecord> OutboxMessages => Set<OutboxMessageRecord>();
+
+    public DbSet<ExecutionLeaseRecord> ExecutionLeases => Set<ExecutionLeaseRecord>();
+
+    public DbSet<DistributedOperationRecord> DistributedOperations => Set<DistributedOperationRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AgentRunRecord>(entity =>
@@ -121,6 +127,37 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(r => r.RequestFingerprint).HasColumnName("request_fingerprint").IsRequired().HasMaxLength(128);
             entity.Property(r => r.AgentRunId).HasColumnName("agent_run_id");
             entity.Property(r => r.CreatedAt).HasColumnName("created_at");
+        });
+
+        modelBuilder.Entity<OutboxMessageRecord>(entity =>
+        {
+            entity.ToTable("outbox_messages");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.Id).HasColumnName("id");
+            entity.Property(r => r.Kind).HasColumnName("kind").IsRequired().HasMaxLength(64);
+            entity.Property(r => r.PayloadJson).HasColumnName("payload_json").IsRequired();
+            entity.Property(r => r.Status).HasColumnName("status").IsRequired().HasMaxLength(64);
+            entity.Property(r => r.AttemptCount).HasColumnName("attempt_count");
+            entity.Property(r => r.CreatedAt).HasColumnName("created_at");
+            entity.Property(r => r.LastError).HasColumnName("last_error").HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<ExecutionLeaseRecord>(entity =>
+        {
+            entity.ToTable("execution_leases");
+            entity.HasKey(r => r.ResourceId);
+            entity.Property(r => r.ResourceId).HasColumnName("resource_id");
+            entity.Property(r => r.LeaseHolder).HasColumnName("lease_holder").IsRequired().HasMaxLength(256);
+            entity.Property(r => r.ExpiresAtUtc).HasColumnName("expires_at_utc");
+            entity.Property(r => r.CreatedAtUtc).HasColumnName("created_at_utc");
+        });
+
+        modelBuilder.Entity<DistributedOperationRecord>(entity =>
+        {
+            entity.ToTable("distributed_operations");
+            entity.HasKey(r => r.OperationKey);
+            entity.Property(r => r.OperationKey).HasColumnName("operation_key").HasMaxLength(512);
+            entity.Property(r => r.CommittedAtUtc).HasColumnName("committed_at_utc");
         });
     }
 }
