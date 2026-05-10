@@ -31,9 +31,9 @@ PR100.6 — Phase 20 atomic claim hardening (attempted and reverted).
 - `dotnet --info` succeeded
 - `dotnet restore Agentor.sln` succeeded
 - `dotnet build Agentor.sln --no-restore` succeeded
-- `dotnet test Agentor.sln --no-build` succeeded (**379 passed, 0 failed**)
+- `dotnet test Agentor.sln --no-build` succeeded (**373 passed, 0 failed**)
 - `dotnet test tests/Agentor.Api.Tests/Agentor.Api.Tests.csproj --no-build` succeeded (**89 passed, 0 failed**)
-- `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 20 -ExpectedHarnessPass PR100.6` succeeded
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 20 -ExpectedHarnessPass PR100.5` succeeded
 - `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
 ## What is next

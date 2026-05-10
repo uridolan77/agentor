@@ -1,25 +1,21 @@
 # Verification log
 
-## Phase 20 PR100.6 (2026-05-10)
+## Phase 20 PR100.6 attempted/reverted verification (2026-05-11)
 
 ```powershell
-dotnet --info
 dotnet restore Agentor.sln
 dotnet build Agentor.sln --no-restore
 dotnet test Agentor.sln --no-build
-dotnet test tests/Agentor.Api.Tests/Agentor.Api.Tests.csproj --no-build
-pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 20 -ExpectedHarnessPass PR100.6
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 20 -ExpectedHarnessPass PR100.5
 pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
 ```
 
 Results:
 
-- dotnet info: succeeded
 - Restore: succeeded
 - Build: succeeded
-- Tests: **379 passed, 0 failed**
-- API smoke evidence: **89 passed, 0 failed**
-- verify-harness: passed (`ExpectedPhase=20`, `ExpectedHarnessPass=PR100.6`)
+- Tests: **373 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=20`, `ExpectedHarnessPass=PR100.5`)
 - verify-repo-clean: passed
 
 Counts:
@@ -27,12 +23,13 @@ Counts:
 - Agentor.Domain.Tests: Passed 72 / Total 72
 - Agentor.Contracts.Tests: Passed 13 / Total 13
 - Agentor.Application.Tests: Passed 128 / Total 128
-- Agentor.Infrastructure.Tests: Passed 77 / Total 77 (+2 concurrent claim race tests)
+- Agentor.Infrastructure.Tests: Passed 71 / Total 71
 - Agentor.Api.Tests: Passed 89 / Total 89
 
 Scope:
 
-- completed: PR100.6 Phase 20 atomic claim hardening (ExecuteUpdateAsync conditional claim)
+- attempted/reverted: PR100.6 atomic expired-claim hardening (SQLite EF Core translation limitation)
+- completed baseline remains: Phase 20 / PR100.5
 - not started: Phase 21+
 
 ## Phase 20 PR100.5 (2026-05-10)
