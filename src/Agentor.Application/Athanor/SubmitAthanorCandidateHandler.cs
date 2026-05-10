@@ -28,7 +28,7 @@ public sealed class SubmitAthanorCandidateHandler(
         }
 
         var submission = new CandidateKnowledgeSubmissionDto(summary, payloadJson);
-        var result = await knowledgeState.SubmitCandidateAsync(run.ProfileId, run.Id, submission, cancellationToken);
+        var result = await knowledgeState.SubmitCandidateAsync(run.ResolveAthanorProjectId(), run.Id, submission, cancellationToken);
         run.RecordAthanorCandidateSubmission(result.CandidateId, summary, clock.UtcNow);
         await repository.SaveAsync(run, cancellationToken);
         return (true, result.CandidateId);

@@ -26,7 +26,7 @@ public sealed class QueueAthanorReviewHandler(
             return false;
         }
 
-        var result = await knowledgeState.QueueForReviewAsync(run.ProfileId, candidateId, actorId, cancellationToken);
+        var result = await knowledgeState.QueueForReviewAsync(run.ResolveAthanorProjectId(), candidateId, actorId, cancellationToken);
         run.RecordAthanorReviewQueued(result.ReviewItemId, candidateId, actorId, clock.UtcNow);
         await repository.SaveAsync(run, cancellationToken);
         return true;

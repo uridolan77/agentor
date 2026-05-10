@@ -1,5 +1,6 @@
 using Agentor.Contracts;
 using Agentor.Domain;
+using Agentor.Domain.Governance;
 
 namespace Agentor.Api.Mapping;
 
@@ -10,6 +11,10 @@ public static class DtoMappings
         return new AgentRunSummaryDto(
             summary.Id,
             summary.ProfileId,
+            summary.TenantId,
+            summary.WorkspaceId,
+            summary.ProjectId,
+            summary.KnowledgeScopeId,
             summary.AgentName,
             summary.TraceId,
             summary.Status,
@@ -31,6 +36,11 @@ public static class DtoMappings
         return new AgentRunDto(
             run.Id,
             run.ProfileId,
+            run.TenantId,
+            run.WorkspaceId,
+            run.ProjectId,
+            run.KnowledgeScopeId,
+            run.ResolveAthanorProjectId(),
             run.AgentName,
             run.Objective,
             run.TraceId,
@@ -39,7 +49,8 @@ public static class DtoMappings
             run.CompletedAt,
             run.ErrorMessage,
             run.Steps.Select(ToDto).ToList(),
-            run.Trace.Select(ToDto).ToList());
+            run.Trace.Select(ToDto).ToList(),
+            run.HumanReviewDecisions.Select(d => d.ToDto()).ToList());
     }
 
     public static AgentStepDto ToDto(this AgentStep step)
@@ -63,6 +74,17 @@ public static class DtoMappings
             decision.ReasonCode,
             decision.Reason,
             decision.DecidedAt);
+    }
+
+    public static HumanReviewDecisionDto ToDto(this HumanReviewDecision decision)
+    {
+        return new HumanReviewDecisionDto(
+            decision.Id,
+            decision.Kind,
+            decision.ActorId,
+            decision.DecidedAt,
+            decision.Note,
+            decision.Resolution);
     }
 
     public static ToolCallDto ToDto(this ToolCall toolCall)

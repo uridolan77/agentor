@@ -44,6 +44,15 @@ namespace Agentor.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("error_message");
 
+                    b.Property<string>("HumanReviewDecisionsJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("human_review_decisions_json");
+
+                    b.Property<Guid?>("KnowledgeScopeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("knowledge_scope_id");
+
                     b.Property<string>("SessionMemoryJson")
                         .IsRequired()
                         .HasColumnType("text")
@@ -59,6 +68,10 @@ namespace Agentor.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("profile_id");
 
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");
@@ -69,11 +82,19 @@ namespace Agentor.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("status");
 
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
                     b.Property<string>("TraceId")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("trace_id");
+
+                    b.Property<Guid?>("WorkspaceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("workspace_id");
 
                     b.HasKey("Id");
 

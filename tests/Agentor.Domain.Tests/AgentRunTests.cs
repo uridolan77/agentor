@@ -35,4 +35,16 @@ public sealed class AgentRunTests
         Assert.Equal(AgentStepStatus.Running, step.Status);
         Assert.Equal(1, step.Index);
     }
+
+    [Fact]
+    public void Start_WithExplicitProjectId_UsesItForAthanorProjectResolution()
+    {
+        var profileId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var scope = new AgentRunScope(null, null, projectId, null);
+        var run = AgentRun.Start(profileId, "Test Agent", "Test objective", "trace-scope", DateTimeOffset.UtcNow, scope);
+
+        Assert.Equal(projectId, run.ResolveAthanorProjectId());
+        Assert.Equal(profileId, run.ProfileId);
+    }
 }

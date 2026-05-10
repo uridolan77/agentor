@@ -160,4 +160,75 @@ public sealed class RuntimePolicyEvaluatorTests
 
         Assert.Equal(PolicyDecisionOutcome.Allow, decision.Outcome);
     }
+
+    [Fact]
+    public async Task Evaluate_ActiveProfile_DeniesListedMcpTool()
+    {
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
+        var clock = new SystemClock();
+        var mcpKey = McpToolKeys.Format("demo-server", "echo");
+        var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
+        {
+            ActiveProfile = new PolicyProfileRules
+            {
+                McpDeniedToolKeys = [mcpKey]
+            }
+        });
+        var policy = new RuntimePolicyEvaluator(registry, clock, opts);
+
+        var decision = await policy.EvaluateToolCallAsync(
+            new PolicyEvaluationRequest(Guid.NewGuid(), Guid.NewGuid(), mcpKey, new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        Assert.Equal(PolicyDecisionOutcome.Deny, decision.Outcome);
+        Assert.Equal("MCP_TOOL_DENIED", decision.ReasonCode);
+    }
+
+    [Fact]
+    public async Task Evaluate_ActiveProfile_DeniesListedExternalAgentTool()
+    {
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
+        var clock = new SystemClock();
+        var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
+        {
+            ActiveProfile = new PolicyProfileRules
+            {
+                ExternalAgentDeniedToolKeys = [ExternalAgentToolKeys.Invoke]
+            }
+        });
+        var policy = new RuntimePolicyEvaluator(registry, clock, opts);
+
+        var decision = await policy.EvaluateToolCallAsync(
+            new PolicyEvaluationRequest(Guid.NewGuid(), Guid.NewGuid(), ExternalAgentToolKeys.Invoke, new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        Assert.Equal(PolicyDecisionOutcome.Deny, decision.Outcome);
+        Assert.Equal("EXTERNAL_AGENT_TOOL_DENIED", decision.ReasonCode);
+    }
+
+    [Fact]
+    public async Task Evaluate_ResumeAfterApprovedHumanReview_AllowsHighRiskTool()
+    {
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
+        var clock = new SystemClock();
+        var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
+        {
+            MaxAutoApproveRisk = nameof(ToolRiskLevel.Low)
+        });
+        var policy = new RuntimePolicyEvaluator(registry, clock, opts);
+
+        var decision = await policy.EvaluateToolCallAsync(
+            new PolicyEvaluationRequest(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                WellKnownToolKeys.Pr1HighRiskFakeTool,
+                new Dictionary<string, string>(),
+                new PolicyEvaluationContext(ResumeAfterApprovedHumanReview: true)),
+            CancellationToken.None);
+
+        Assert.Equal(PolicyDecisionOutcome.Allow, decision.Outcome);
+    }
 }

@@ -86,6 +86,20 @@ public sealed class AgentStep
         CompletedAt = now;
     }
 
+    public void ResumeAfterHumanReviewApproval(DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureStepCanResumeFromHumanReview(this);
+        Status = AgentStepStatus.Running;
+        CompletedAt = null;
+    }
+
+    public void FailAfterHumanReviewRejection(DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureStepCanResumeFromHumanReview(this);
+        Status = AgentStepStatus.Failed;
+        CompletedAt = now;
+    }
+
     public static AgentStep Reconstitute(
         Guid id,
         Guid runId,

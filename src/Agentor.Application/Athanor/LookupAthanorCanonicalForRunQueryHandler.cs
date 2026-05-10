@@ -26,7 +26,7 @@ public sealed class LookupAthanorCanonicalForRunQueryHandler(
             throw new ArgumentException("Canonical key is required.", nameof(canonicalKey));
         }
 
-        var entry = await knowledgeState.LookupCanonicalEntryAsync(run.ProfileId, canonicalKey.Trim(), cancellationToken);
+        var entry = await knowledgeState.LookupCanonicalEntryAsync(run.ResolveAthanorProjectId(), canonicalKey.Trim(), cancellationToken);
         return new AthanorCanonicalLookupResult(true, entry);
     }
 }

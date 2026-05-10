@@ -5,6 +5,11 @@ namespace Agentor.Contracts;
 public sealed record AgentRunDto(
     Guid Id,
     Guid ProfileId,
+    Guid? TenantId,
+    Guid? WorkspaceId,
+    Guid? ProjectId,
+    Guid? KnowledgeScopeId,
+    Guid AthanorProjectId,
     string AgentName,
     string Objective,
     string TraceId,
@@ -13,11 +18,16 @@ public sealed record AgentRunDto(
     DateTimeOffset? CompletedAt,
     string? ErrorMessage,
     IReadOnlyList<AgentStepDto> Steps,
-    IReadOnlyList<TraceEventDto> Trace);
+    IReadOnlyList<TraceEventDto> Trace,
+    IReadOnlyList<HumanReviewDecisionDto> HumanReviewDecisions);
 
 public sealed record AgentRunSummaryDto(
     Guid Id,
     Guid ProfileId,
+    Guid? TenantId,
+    Guid? WorkspaceId,
+    Guid? ProjectId,
+    Guid? KnowledgeScopeId,
     string AgentName,
     string TraceId,
     AgentRunStatus Status,

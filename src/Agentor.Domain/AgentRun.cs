@@ -1,4 +1,5 @@
 using Agentor.Domain.Enums;
+using Agentor.Domain.Governance;
 
 namespace Agentor.Domain;
 
@@ -7,8 +8,19 @@ public sealed class AgentRun
     private readonly List<AgentStep> _steps = new();
     private readonly List<ExecutionTraceEvent> _trace = new();
     private readonly Dictionary<string, string> _sessionMemory = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<HumanReviewDecision> _humanReviewDecisions = new();
 
-    private AgentRun(Guid id, Guid profileId, string agentName, string objective, string traceId, DateTimeOffset startedAt)
+    private AgentRun(
+        Guid id,
+        Guid profileId,
+        string agentName,
+        string objective,
+        string traceId,
+        DateTimeOffset startedAt,
+        Guid? tenantId,
+        Guid? workspaceId,
+        Guid? projectId,
+        Guid? knowledgeScopeId)
     {
         Id = id;
         ProfileId = profileId;
@@ -16,12 +28,26 @@ public sealed class AgentRun
         Objective = objective;
         TraceId = traceId;
         StartedAt = startedAt;
+        TenantId = tenantId;
+        WorkspaceId = workspaceId;
+        ProjectId = projectId;
+        KnowledgeScopeId = knowledgeScopeId;
         Status = AgentRunStatus.Running;
     }
 
     public Guid Id { get; }
 
     public Guid ProfileId { get; }
+
+    /// <summary>Optional explicit tenant scope (PR51).</summary>
+    public Guid? TenantId { get; }
+
+    public Guid? WorkspaceId { get; }
+
+    /// <summary>Explicit Athanor project id; when null, <see cref="ProfileId"/> is used for Athanor calls (backward compatible).</summary>
+    public Guid? ProjectId { get; }
+
+    public Guid? KnowledgeScopeId { get; }
 
     public string AgentName { get; }
 
@@ -41,13 +67,24 @@ public sealed class AgentRun
 
     public IReadOnlyList<ExecutionTraceEvent> Trace => _trace;
 
+    public IReadOnlyList<HumanReviewDecision> HumanReviewDecisions => _humanReviewDecisions;
+
     /// <summary>
     /// Bounded run-scoped scratch memory for coordination (key/value strings).
     /// Not Athanor canon, not durable knowledge, not a knowledge-state engine; persisted only as operational scratch when the infrastructure layer maps it to storage.
     /// </summary>
     public IReadOnlyDictionary<string, string> SessionMemory => _sessionMemory;
 
-    public static AgentRun Start(Guid profileId, string agentName, string objective, string traceId, DateTimeOffset now)
+    /// <summary>Athanor HTTP paths use this project id; defaults to <see cref="ProfileId"/> when <see cref="ProjectId"/> is unset.</summary>
+    public Guid ResolveAthanorProjectId() => ProjectId ?? ProfileId;
+
+    public static AgentRun Start(
+        Guid profileId,
+        string agentName,
+        string objective,
+        string traceId,
+        DateTimeOffset now,
+        AgentRunScope? scope = null)
     {
         if (profileId == Guid.Empty)
         {
@@ -69,12 +106,47 @@ public sealed class AgentRun
             throw new ArgumentException("Trace id is required.", nameof(traceId));
         }
 
-        var run = new AgentRun(Guid.NewGuid(), profileId, agentName.Trim(), objective.Trim(), traceId.Trim(), now);
-        run.RecordTrace(TraceEventKind.RunStarted, "Agent run started.", now, new Dictionary<string, string>
+        var s = scope ?? new AgentRunScope(null, null, null, null);
+        var run = new AgentRun(
+            Guid.NewGuid(),
+            profileId,
+            agentName.Trim(),
+            objective.Trim(),
+            traceId.Trim(),
+            now,
+            s.TenantId,
+            s.WorkspaceId,
+            s.ProjectId,
+            s.KnowledgeScopeId);
+
+        var startData = new Dictionary<string, string>
         {
             ["profileId"] = profileId.ToString(),
-            ["objective"] = objective.Trim()
-        });
+            ["objective"] = objective.Trim(),
+            ["athanorProjectId"] = run.ResolveAthanorProjectId().ToString("D")
+        };
+
+        if (run.TenantId is { } tid)
+        {
+            startData["tenantId"] = tid.ToString("D");
+        }
+
+        if (run.WorkspaceId is { } wid)
+        {
+            startData["workspaceId"] = wid.ToString("D");
+        }
+
+        if (run.ProjectId is { } pid)
+        {
+            startData["explicitProjectId"] = pid.ToString("D");
+        }
+
+        if (run.KnowledgeScopeId is { } kid)
+        {
+            startData["knowledgeScopeId"] = kid.ToString("D");
+        }
+
+        run.RecordTrace(TraceEventKind.RunStarted, "Agent run started.", now, startData);
 
         return run;
     }
@@ -220,6 +292,135 @@ public sealed class AgentRun
     }
 
     /// <summary>
+    /// Records a human governance decision. <see cref="ReviewDecisionKind.Approve"/> reopens execution for the pending reviewed tool when policy had required review (PR53).
+    /// </summary>
+    public void ApplyHumanReviewDecision(HumanReviewDecision decision, DateTimeOffset now)
+    {
+        if (decision.Id == Guid.Empty)
+        {
+            throw new ArgumentException("Decision id is required.", nameof(decision));
+        }
+
+        if (decision.ActorId == Guid.Empty)
+        {
+            throw new ArgumentException("Actor id is required.", nameof(decision));
+        }
+
+        switch (decision.Kind)
+        {
+            case ReviewDecisionKind.Approve:
+            case ReviewDecisionKind.Reject:
+                AgentStateMachine.EnsureRunCanResumeFromHumanReview(this);
+                if (FindPendingReviewStepAndTool().Tool is null)
+                {
+                    throw new InvalidOperationException("No pending tool call in RequiresReview state was found for this decision.");
+                }
+
+                break;
+            case ReviewDecisionKind.RequestChanges:
+            case ReviewDecisionKind.Escalate:
+                AgentStateMachine.EnsureRunCanResumeFromHumanReview(this);
+                break;
+        }
+
+        _humanReviewDecisions.Add(decision);
+
+        RecordTrace(
+            TraceEventKind.HumanReviewDecisionRecorded,
+            "Human review decision recorded (governance; does not canonize knowledge).",
+            now,
+            new Dictionary<string, string>
+            {
+                ["decisionId"] = decision.Id.ToString("D"),
+                ["kind"] = decision.Kind.ToString(),
+                ["actorId"] = decision.ActorId.ToString("D"),
+                ["resolution"] = decision.Resolution.ToString()
+            });
+
+        switch (decision.Kind)
+        {
+            case ReviewDecisionKind.Approve:
+                ApplyApproveHumanReview(decision, now);
+                break;
+            case ReviewDecisionKind.Reject:
+                ApplyRejectHumanReview(decision, now);
+                break;
+            case ReviewDecisionKind.RequestChanges:
+            case ReviewDecisionKind.Escalate:
+                break;
+        }
+    }
+
+    private void ApplyApproveHumanReview(HumanReviewDecision decision, DateTimeOffset now)
+    {
+        var (step, tool) = FindPendingReviewStepAndTool();
+        if (step is null || tool is null)
+        {
+            throw new InvalidOperationException("No pending tool call in RequiresReview state was found to approve.");
+        }
+
+        Status = AgentRunStatus.Running;
+        CompletedAt = null;
+        ErrorMessage = null;
+        step.ResumeAfterHumanReviewApproval(now);
+        tool.ResumeAfterHumanReviewApproval(now);
+
+        RecordTrace(
+            TraceEventKind.RunResumedAfterHumanReview,
+            "Run resumed after explicit human approval (execution may continue; output is not canonized).",
+            now,
+            new Dictionary<string, string>
+            {
+                ["decisionId"] = decision.Id.ToString("D"),
+                ["stepId"] = step.Id.ToString("D"),
+                ["toolCallId"] = tool.Id.ToString("D")
+            });
+    }
+
+    private void ApplyRejectHumanReview(HumanReviewDecision decision, DateTimeOffset now)
+    {
+        var (step, tool) = FindPendingReviewStepAndTool();
+        if (step is null || tool is null)
+        {
+            throw new InvalidOperationException("No pending tool call in RequiresReview state was found to reject.");
+        }
+
+        var reason = string.IsNullOrWhiteSpace(decision.Note)
+            ? "Human review rejected execution."
+            : decision.Note.Trim();
+
+        tool.FailAfterHumanReviewRejection(reason, now);
+        step.FailAfterHumanReviewRejection(now);
+        Status = AgentRunStatus.Failed;
+        ErrorMessage = reason;
+        CompletedAt = now;
+        RecordTrace(TraceEventKind.RunFailed, "Agent run failed after human review rejection.", now, new Dictionary<string, string>
+        {
+            ["error"] = reason,
+            ["decisionId"] = decision.Id.ToString("D")
+        });
+    }
+
+    private (AgentStep? Step, ToolCall? Tool) FindPendingReviewStepAndTool()
+    {
+        var step = Steps
+            .Where(s => s.Status == AgentStepStatus.RequiresReview)
+            .OrderByDescending(s => s.Index)
+            .FirstOrDefault();
+
+        if (step is null)
+        {
+            return (null, null);
+        }
+
+        var tool = step.ToolCalls
+            .Where(t => t.Status == ToolCallStatus.RequiresReview)
+            .LastOrDefault();
+
+        return (step, tool);
+    }
+
+    /// <summary>
     /// Records Athanor evidence search result identifiers as provenance inputs. Does not canonize knowledge.
     /// </summary>
     public void AttachAthanorEvidenceSearchProvenance(string query, IReadOnlyList<Guid> evidenceResultIds, DateTimeOffset now)
@@ -299,9 +500,14 @@ public sealed class AgentRun
         string? errorMessage,
         IEnumerable<AgentStep> steps,
         IEnumerable<ExecutionTraceEvent> trace,
-        IReadOnlyDictionary<string, string>? sessionMemory = null)
+        IReadOnlyDictionary<string, string>? sessionMemory = null,
+        Guid? tenantId = null,
+        Guid? workspaceId = null,
+        Guid? projectId = null,
+        Guid? knowledgeScopeId = null,
+        IEnumerable<HumanReviewDecision>? humanReviewDecisions = null)
     {
-        var run = new AgentRun(id, profileId, agentName, objective, traceId, startedAt);
+        var run = new AgentRun(id, profileId, agentName, objective, traceId, startedAt, tenantId, workspaceId, projectId, knowledgeScopeId);
         run.Status = status;
         run.CompletedAt = completedAt;
         run.ErrorMessage = errorMessage;
@@ -315,9 +521,21 @@ public sealed class AgentRun
             }
         }
 
+        if (humanReviewDecisions is not null)
+        {
+            run._humanReviewDecisions.AddRange(humanReviewDecisions);
+        }
+
         return run;
     }
 }
+
+/// <summary>Optional explicit scope for a run (PR51).</summary>
+public sealed record AgentRunScope(
+    Guid? TenantId,
+    Guid? WorkspaceId,
+    Guid? ProjectId,
+    Guid? KnowledgeScopeId);
 
 public sealed record AgentRunSummary(
     Guid Id,
@@ -326,7 +544,11 @@ public sealed record AgentRunSummary(
     string TraceId,
     AgentRunStatus Status,
     DateTimeOffset StartedAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt,
+    Guid? TenantId = null,
+    Guid? WorkspaceId = null,
+    Guid? ProjectId = null,
+    Guid? KnowledgeScopeId = null);
 
 public sealed record AgentRunListPage(
     IReadOnlyList<AgentRunSummary> Items,

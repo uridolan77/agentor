@@ -38,7 +38,11 @@ public sealed class InMemoryAgentRunRepository : IAgentRunRepository
                 r.TraceId,
                 r.Status,
                 r.StartedAt,
-                r.CompletedAt))
+                r.CompletedAt,
+                r.TenantId,
+                r.WorkspaceId,
+                r.ProjectId,
+                r.KnowledgeScopeId))
             .ToList();
 
         return Task.FromResult(new AgentRunListPage(items, total, skip, take));

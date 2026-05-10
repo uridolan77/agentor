@@ -38,7 +38,13 @@ public sealed class StartAgentRunHandler
             ? Guid.NewGuid().ToString("N")
             : command.TraceId.Trim();
 
-        var run = AgentRun.Start(profile.Id, profile.Name, command.Objective, traceId, _clock.UtcNow);
+        var scope = new AgentRunScope(
+            command.TenantId,
+            command.WorkspaceId,
+            command.ProjectId,
+            command.KnowledgeScopeId);
+
+        var run = AgentRun.Start(profile.Id, profile.Name, command.Objective, traceId, _clock.UtcNow, scope);
 
         try
         {
@@ -71,7 +77,7 @@ public sealed class StartAgentRunHandler
             var toolKey = registration.Definition.Key;
 
             var policyDecision = await _policyEvaluator.EvaluateToolCallAsync(
-                new PolicyEvaluationRequest(run.Id, step.Id, toolKey, input),
+                new PolicyEvaluationRequest(run.Id, step.Id, toolKey, input, null),
                 cancellationToken);
 
             step.AddPolicyDecision(policyDecision);

@@ -19,6 +19,9 @@ public static class DependencyInjection
         services.AddScoped<GetAgentRunStepsQueryHandler>();
         services.AddScoped<GetAgentRunToolCallsQueryHandler>();
 
+        services.AddScoped<ApplyHumanReviewDecisionHandler>();
+        services.AddScoped<GetRunAuditExportQueryHandler>();
+
         services.AddScoped<GetLatestAthanorSnapshotForRunQueryHandler>();
         services.AddScoped<LookupAthanorCanonicalForRunQueryHandler>();
         services.AddScoped<AttachAthanorEvidenceProvenanceHandler>();

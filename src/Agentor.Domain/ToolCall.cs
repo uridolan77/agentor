@@ -86,6 +86,24 @@ public sealed class ToolCall
         CompletedAt = now;
     }
 
+    /// <summary>Reopens a tool call for execution after an explicit human approval (PR53).</summary>
+    public void ResumeAfterHumanReviewApproval(DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureToolCallCanResumeFromHumanReview(this);
+        Status = ToolCallStatus.Running;
+        CompletedAt = null;
+        ErrorMessage = null;
+    }
+
+    /// <summary>Terminal failure after human review rejection while the call was pending review.</summary>
+    public void FailAfterHumanReviewRejection(string reason, DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureToolCallCanResumeFromHumanReview(this);
+        Status = ToolCallStatus.Failed;
+        ErrorMessage = reason;
+        CompletedAt = now;
+    }
+
     public static ToolCall Reconstitute(
         Guid id,
         Guid runId,

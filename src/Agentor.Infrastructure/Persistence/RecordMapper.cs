@@ -1,6 +1,8 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Domain.Governance;
 using Agentor.Infrastructure.Persistence.Records;
 
 namespace Agentor.Infrastructure.Persistence;
@@ -9,7 +11,8 @@ internal static class RecordMapper
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     // ── Domain → Records ────────────────────────────────────────────────────
@@ -20,6 +23,10 @@ internal static class RecordMapper
         {
             Id = run.Id,
             ProfileId = run.ProfileId,
+            TenantId = run.TenantId,
+            WorkspaceId = run.WorkspaceId,
+            ProjectId = run.ProjectId,
+            KnowledgeScopeId = run.KnowledgeScopeId,
             AgentName = run.AgentName,
             Objective = run.Objective,
             TraceId = run.TraceId,
@@ -28,6 +35,7 @@ internal static class RecordMapper
             CompletedAt = run.CompletedAt,
             ErrorMessage = run.ErrorMessage,
             SessionMemoryJson = JsonSerializer.Serialize(run.SessionMemory, JsonOpts),
+            HumanReviewDecisionsJson = JsonSerializer.Serialize(run.HumanReviewDecisions.ToList(), JsonOpts),
             Steps = run.Steps.Select(ToRecord).ToList(),
             TraceEvents = run.Trace.Select(ToRecord).ToList()
         };
@@ -104,7 +112,11 @@ internal static class RecordMapper
             record.TraceId,
             Enum.Parse<AgentRunStatus>(record.Status),
             record.StartedAt,
-            record.CompletedAt);
+            record.CompletedAt,
+            record.TenantId,
+            record.WorkspaceId,
+            record.ProjectId,
+            record.KnowledgeScopeId);
     }
 
     internal static AgentRun ToDomain(AgentRunRecord record)
@@ -122,6 +134,9 @@ internal static class RecordMapper
         var sessionMemory = JsonSerializer.Deserialize<Dictionary<string, string>>(record.SessionMemoryJson, JsonOpts)
                            ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        var humanReviews = JsonSerializer.Deserialize<List<HumanReviewDecisionJsonDto>>(record.HumanReviewDecisionsJson, JsonOpts)
+                           ?? [];
+
         return AgentRun.Reconstitute(
             record.Id,
             record.ProfileId,
@@ -134,7 +149,12 @@ internal static class RecordMapper
             record.ErrorMessage,
             steps,
             trace,
-            sessionMemory);
+            sessionMemory,
+            record.TenantId,
+            record.WorkspaceId,
+            record.ProjectId,
+            record.KnowledgeScopeId,
+            humanReviews.Select(r => r.ToDomain()));
     }
 
     private static AgentStep ToDomain(AgentStepRecord record)
@@ -197,5 +217,23 @@ internal static class RecordMapper
             record.Message,
             record.OccurredAt,
             data);
+    }
+
+    private sealed class HumanReviewDecisionJsonDto
+    {
+        public Guid Id { get; set; }
+
+        public ReviewDecisionKind Kind { get; set; }
+
+        public Guid ActorId { get; set; }
+
+        public DateTimeOffset DecidedAt { get; set; }
+
+        public string? Note { get; set; }
+
+        public ReviewResolutionStatus Resolution { get; set; }
+
+        public HumanReviewDecision ToDomain() =>
+            new(Id, Kind, ActorId, DecidedAt, Note, Resolution);
     }
 }

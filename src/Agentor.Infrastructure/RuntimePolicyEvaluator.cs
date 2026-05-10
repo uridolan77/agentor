@@ -38,8 +38,14 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
         }
 
         var definition = reg.Definition;
+        var profile = _options.ActiveProfile;
+        var denied = profile?.DeniedToolKeys ?? _options.DeniedToolKeys;
+        var allowed = profile?.AllowedToolKeys ?? _options.AllowedToolKeys;
+        var maxAutoApproveRisk = profile?.MaxAutoApproveRisk ?? _options.MaxAutoApproveRisk;
+        var maxCost = profile?.MaxDeclaredModelCallCostUnits ?? _options.MaxDeclaredModelCallCostUnits;
+        var maxLatency = profile?.MaxDeclaredModelCallLatencyMs ?? _options.MaxDeclaredModelCallLatencyMs;
 
-        if (_options.DeniedToolKeys.Exists(k => string.Equals(k, request.ToolKey, StringComparison.OrdinalIgnoreCase)))
+        if (denied.Exists(k => string.Equals(k, request.ToolKey, StringComparison.OrdinalIgnoreCase)))
         {
             return Task.FromResult(new PolicyDecision(
                 Guid.NewGuid(),
@@ -51,8 +57,36 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
                 _clock.UtcNow));
         }
 
-        if (_options.AllowedToolKeys.Count > 0
-            && !_options.AllowedToolKeys.Exists(k => string.Equals(k, request.ToolKey, StringComparison.OrdinalIgnoreCase)))
+        if (profile?.McpDeniedToolKeys is { Count: > 0 } mcpDenied
+            && McpToolKeys.IsMcpToolKey(request.ToolKey)
+            && mcpDenied.Exists(k => string.Equals(k, request.ToolKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Task.FromResult(new PolicyDecision(
+                Guid.NewGuid(),
+                request.RunId,
+                request.StepId,
+                PolicyDecisionOutcome.Deny,
+                "MCP_TOOL_DENIED",
+                $"MCP tool '{request.ToolKey}' is denied by policy profile.",
+                _clock.UtcNow));
+        }
+
+        if (profile?.ExternalAgentDeniedToolKeys is { Count: > 0 } extDenied
+            && ExternalAgentToolKeys.IsExternalAgentTool(request.ToolKey)
+            && extDenied.Exists(k => string.Equals(k, request.ToolKey, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Task.FromResult(new PolicyDecision(
+                Guid.NewGuid(),
+                request.RunId,
+                request.StepId,
+                PolicyDecisionOutcome.Deny,
+                "EXTERNAL_AGENT_TOOL_DENIED",
+                $"External-agent tool '{request.ToolKey}' is denied by policy profile.",
+                _clock.UtcNow));
+        }
+
+        if (allowed.Count > 0
+            && !allowed.Exists(k => string.Equals(k, request.ToolKey, StringComparison.OrdinalIgnoreCase)))
         {
             return Task.FromResult(new PolicyDecision(
                 Guid.NewGuid(),
@@ -66,9 +100,9 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
 
         if (string.Equals(request.ToolKey, WellKnownToolKeys.ConexusModelComplete, StringComparison.OrdinalIgnoreCase))
         {
-            if (_options.MaxDeclaredModelCallCostUnits is { } maxCost
+            if (maxCost is { } maxCostVal
                 && TryParseDecimal(request.Input, "declaredCostUnits", out var declaredCost)
-                && declaredCost > maxCost)
+                && declaredCost > maxCostVal)
             {
                 return Task.FromResult(new PolicyDecision(
                     Guid.NewGuid(),
@@ -76,13 +110,13 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
                     request.StepId,
                     PolicyDecisionOutcome.Deny,
                     "BUDGET_DECLARED_COST",
-                    $"Declared model-call cost {declaredCost} exceeds policy maximum {maxCost}.",
+                    $"Declared model-call cost {declaredCost} exceeds policy maximum {maxCostVal}.",
                     _clock.UtcNow));
             }
 
-            if (_options.MaxDeclaredModelCallLatencyMs is { } maxLatency
+            if (maxLatency is { } maxLatencyVal
                 && TryParseInt(request.Input, "declaredLatencyMs", out var declaredLatency)
-                && declaredLatency > maxLatency)
+                && declaredLatency > maxLatencyVal)
             {
                 return Task.FromResult(new PolicyDecision(
                     Guid.NewGuid(),
@@ -90,13 +124,14 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
                     request.StepId,
                     PolicyDecisionOutcome.Deny,
                     "BUDGET_DECLARED_LATENCY",
-                    $"Declared model-call latency {declaredLatency} ms exceeds policy maximum {maxLatency} ms.",
+                    $"Declared model-call latency {declaredLatency} ms exceeds policy maximum {maxLatencyVal} ms.",
                     _clock.UtcNow));
             }
         }
 
-        var maxRisk = ParseRisk(_options.MaxAutoApproveRisk);
-        if (CompareRisk(definition.RiskLevel, maxRisk) > 0)
+        var maxRisk = ParseRisk(maxAutoApproveRisk);
+        if (CompareRisk(definition.RiskLevel, maxRisk) > 0
+            && request.Context?.ResumeAfterApprovedHumanReview != true)
         {
             return Task.FromResult(new PolicyDecision(
                 Guid.NewGuid(),

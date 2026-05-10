@@ -22,7 +22,7 @@ public sealed class AttachAthanorEvidenceProvenanceHandler(
             return false;
         }
 
-        var hits = await knowledgeState.SearchEvidenceAsync(run.ProfileId, query, cancellationToken);
+        var hits = await knowledgeState.SearchEvidenceAsync(run.ResolveAthanorProjectId(), query, cancellationToken);
         var ids = hits.Select(h => h.EvidenceId).ToList();
         run.AttachAthanorEvidenceSearchProvenance(query, ids, clock.UtcNow);
         await repository.SaveAsync(run, cancellationToken);

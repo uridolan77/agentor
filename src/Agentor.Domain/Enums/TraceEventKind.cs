@@ -14,6 +14,12 @@ public enum TraceEventKind
     /// <summary>Run stopped pending human or workflow review (distinct from failure).</summary>
     RunRequiresReview,
 
+    /// <summary>Human governance review decision recorded (Agentor-side; does not canonize knowledge).</summary>
+    HumanReviewDecisionRecorded,
+
+    /// <summary>Run execution reopened after explicit human approval of a pending reviewed tool.</summary>
+    RunResumedAfterHumanReview,
+
     SessionMemoryWriteAccepted,
     SessionMemoryWriteRejected,
 

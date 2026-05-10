@@ -38,9 +38,9 @@ public static class AgentStateMachine
 
     public static void EnsureRunCanFail(AgentRun run)
     {
-        if (run.Status != AgentRunStatus.Running)
+        if (run.Status is not AgentRunStatus.Running and not AgentRunStatus.RequiresReview)
         {
-            throw new InvalidOperationException($"Run must be Running to fail. Current status: {run.Status}");
+            throw new InvalidOperationException($"Run must be Running or RequiresReview to fail. Current status: {run.Status}");
         }
     }
 
@@ -52,6 +52,14 @@ public static class AgentStateMachine
         }
     }
 
+    public static void EnsureRunCanResumeFromHumanReview(AgentRun run)
+    {
+        if (run.Status != AgentRunStatus.RequiresReview)
+        {
+            throw new InvalidOperationException($"Run must be RequiresReview to resume after human review. Current status: {run.Status}");
+        }
+    }
+
     public static void EnsureStepCanMutate(AgentStep step)
     {
         if (step.Status is AgentStepStatus.Completed or AgentStepStatus.Failed or AgentStepStatus.RequiresReview)
@@ -60,11 +68,27 @@ public static class AgentStateMachine
         }
     }
 
+    public static void EnsureStepCanResumeFromHumanReview(AgentStep step)
+    {
+        if (step.Status != AgentStepStatus.RequiresReview)
+        {
+            throw new InvalidOperationException($"Step must be RequiresReview to resume. Current status: {step.Status}");
+        }
+    }
+
     public static void EnsureToolCallCanMutate(ToolCall call)
     {
         if (call.Status != ToolCallStatus.Running)
         {
             throw new InvalidOperationException($"Tool call is not running ({call.Status}) and cannot be mutated.");
+        }
+    }
+
+    public static void EnsureToolCallCanResumeFromHumanReview(ToolCall call)
+    {
+        if (call.Status != ToolCallStatus.RequiresReview)
+        {
+            throw new InvalidOperationException($"Tool call must be RequiresReview to resume. Current status: {call.Status}");
         }
     }
 

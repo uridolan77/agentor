@@ -7,6 +7,9 @@ public static class McpToolKeys
 {
     public const string Prefix = "mcp.";
 
+    public static bool IsMcpToolKey(string toolKey) =>
+        toolKey.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase);
+
     public static string Format(string serverId, string toolName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(serverId);

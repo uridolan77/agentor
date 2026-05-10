@@ -18,7 +18,7 @@ public sealed class GetLatestAthanorSnapshotForRunQueryHandler(
             return new AthanorSnapshotQueryResult(false, null);
         }
 
-        var snapshot = await knowledgeState.GetLatestSnapshotAsync(run.ProfileId, cancellationToken);
+        var snapshot = await knowledgeState.GetLatestSnapshotAsync(run.ResolveAthanorProjectId(), cancellationToken);
         return new AthanorSnapshotQueryResult(true, snapshot);
     }
 }

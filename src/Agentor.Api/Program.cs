@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using Agentor.Api.Mapping;
 using Agentor.Api.Middleware;
+using Agentor.Api.Security;
 using Agentor.Application;
+using Agentor.Application.Abstractions;
 using Agentor.Application.Athanor;
 using Agentor.Application.Commands;
 using Agentor.Application.Options;
@@ -36,6 +38,9 @@ if (persistenceOpts.Mode == AgentorPersistenceOptions.ModePostgres
 
 builder.Services.AddOpenApi();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentActorAccessor, HeaderOrFakeActorAccessor>();
+
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -55,6 +60,9 @@ builder.Services
 
 builder.Services.Configure<RuntimePolicyOptions>(
     builder.Configuration.GetSection(RuntimePolicyOptions.SectionName));
+
+builder.Services.Configure<AuditExportOptions>(
+    builder.Configuration.GetSection(AuditExportOptions.SectionName));
 
 builder.Services.Configure<ToolExecutionOptions>(
     builder.Configuration.GetSection(ToolExecutionOptions.SectionName));
@@ -126,7 +134,14 @@ v1.MapPost("/agent-runs", async (
         ? requestTraceId
         : request.TraceId;
 
-    var command = new StartAgentRunCommand(request.AgentName, request.Objective, commandTraceId);
+    var command = new StartAgentRunCommand(
+        request.AgentName,
+        request.Objective,
+        commandTraceId,
+        request.TenantId,
+        request.WorkspaceId,
+        request.ProjectId,
+        request.KnowledgeScopeId);
     var validation = StartAgentRunValidator.Validate(command);
 
     if (!validation.IsValid)
@@ -413,16 +428,27 @@ v1.MapPost("/agent-runs/{runId:guid}/athanor/review-queue", async (
     Guid runId,
     QueueAthanorReviewRequestDto request,
     QueueAthanorReviewHandler handler,
+    ICurrentActorAccessor actorAccessor,
     HttpContext httpContext,
     CancellationToken cancellationToken) =>
 {
-    if (request.CandidateId == Guid.Empty || request.ActorId == Guid.Empty)
+    if (request.CandidateId == Guid.Empty)
     {
         var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
-        return Results.BadRequest(new ApiErrorDto("ValidationError", "CandidateId and ActorId are required.", traceId, null));
+        return Results.BadRequest(new ApiErrorDto("ValidationError", "CandidateId is required.", traceId, null));
     }
 
-    var outcome = await handler.HandleAsync(runId, request.CandidateId, request.ActorId, cancellationToken);
+    var actorId = request.ActorId is { } aid && aid != Guid.Empty
+        ? aid
+        : actorAccessor.Current.ActorId;
+
+    if (actorId == Guid.Empty)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.BadRequest(new ApiErrorDto("ValidationError", "ActorId is required (body or X-Agentor-Actor-Id).", traceId, null));
+    }
+
+    var outcome = await handler.HandleAsync(runId, request.CandidateId, actorId, cancellationToken);
     if (outcome is null)
     {
         var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
@@ -439,7 +465,57 @@ v1.MapPost("/agent-runs/{runId:guid}/athanor/review-queue", async (
 })
 .WithName("QueueAthanorReview")
 .WithTags("Athanor")
-.WithSummary("Queues a candidate for Athanor human review and records the queue item on the run trace (non-canon).");
+.WithSummary("Queues a candidate for Athanor human review and records the queue item on the run trace (non-canon). ActorId may be omitted when X-Agentor-Actor-Id is present.");
+
+v1.MapPost("/agent-runs/{runId:guid}/human-review", async (
+    Guid runId,
+    ApplyHumanReviewRequestDto request,
+    ApplyHumanReviewDecisionHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+    try
+    {
+        var run = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(runId, request.Kind, request.Note),
+            cancellationToken);
+
+        if (run is null)
+        {
+            return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+        }
+
+        return Results.Ok(run.ToDto());
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Conflict(new ApiErrorDto("HumanReviewInvalid", ex.Message, traceId, [ex.Message]));
+    }
+})
+.WithName("ApplyHumanReviewDecision")
+.WithTags("Governance")
+.WithSummary("Records a human review decision. Approve resumes execution for a pending RequiresReview tool (does not canonize knowledge). Deny cannot be converted from a prior policy Deny outcome.");
+
+v1.MapGet("/agent-runs/{runId:guid}/audit-export", async (
+    Guid runId,
+    GetRunAuditExportQueryHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var result = await handler.HandleAsync(runId, cancellationToken);
+    if (result is null)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    httpContext.Response.Headers["X-Agentor-Audit-Content-SHA256"] = result.ContentSha256Hex;
+    return Results.Text(result.CanonicalJson, "application/json; charset=utf-8");
+})
+.WithName("GetRunAuditExport")
+.WithTags("Governance")
+.WithSummary("Deterministic JSON audit packet for a run with redaction boundaries (PR55).");
 
 app.Run();
 

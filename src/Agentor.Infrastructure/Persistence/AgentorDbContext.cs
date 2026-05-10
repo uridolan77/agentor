@@ -24,6 +24,10 @@ public sealed class AgentorDbContext : DbContext
             entity.HasKey(r => r.Id);
             entity.Property(r => r.Id).HasColumnName("id");
             entity.Property(r => r.ProfileId).HasColumnName("profile_id");
+            entity.Property(r => r.TenantId).HasColumnName("tenant_id");
+            entity.Property(r => r.WorkspaceId).HasColumnName("workspace_id");
+            entity.Property(r => r.ProjectId).HasColumnName("project_id");
+            entity.Property(r => r.KnowledgeScopeId).HasColumnName("knowledge_scope_id");
             entity.Property(r => r.AgentName).HasColumnName("agent_name").IsRequired().HasMaxLength(500);
             entity.Property(r => r.Objective).HasColumnName("objective").IsRequired().HasMaxLength(2000);
             entity.Property(r => r.TraceId).HasColumnName("trace_id").IsRequired().HasMaxLength(128);
@@ -32,6 +36,7 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(r => r.CompletedAt).HasColumnName("completed_at");
             entity.Property(r => r.ErrorMessage).HasColumnName("error_message").HasMaxLength(2000);
             entity.Property(r => r.SessionMemoryJson).HasColumnName("session_memory_json").IsRequired();
+            entity.Property(r => r.HumanReviewDecisionsJson).HasColumnName("human_review_decisions_json").IsRequired();
 
             entity.HasMany(r => r.Steps)
                 .WithOne(s => s.Run)
