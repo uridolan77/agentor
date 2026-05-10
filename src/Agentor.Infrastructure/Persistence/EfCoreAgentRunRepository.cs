@@ -42,4 +42,21 @@ public sealed class EfCoreAgentRunRepository : IAgentRunRepository
 
         return record is null ? null : RecordMapper.ToDomain(record);
     }
+
+    public async Task<AgentRunListPage> ListSummariesAsync(int skip, int take, CancellationToken cancellationToken)
+    {
+        var query = _context.AgentRuns
+            .AsNoTracking()
+            .OrderByDescending(r => r.StartedAt)
+            .ThenBy(r => r.Id);
+
+        var total = await query.CountAsync(cancellationToken);
+        var rows = await query
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        var items = rows.Select(RecordMapper.ToSummary).ToList();
+        return new AgentRunListPage(items, total, skip, take);
+    }
 }

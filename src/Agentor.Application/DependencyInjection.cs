@@ -11,6 +11,10 @@ public static class DependencyInjection
         services.AddScoped<StartAgentRunHandler>();
         services.AddScoped<GetAgentRunQueryHandler>();
         services.AddScoped<GetRunManifestQueryHandler>();
+        services.AddScoped<ListAgentRunsQueryHandler>();
+        services.AddScoped<GetAgentRunTraceQueryHandler>();
+        services.AddScoped<GetAgentRunStepsQueryHandler>();
+        services.AddScoped<GetAgentRunToolCallsQueryHandler>();
 
         return services;
     }

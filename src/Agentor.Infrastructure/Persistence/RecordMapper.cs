@@ -94,6 +94,18 @@ internal static class RecordMapper
 
     // ── Records → Domain ────────────────────────────────────────────────────
 
+    internal static AgentRunSummary ToSummary(AgentRunRecord record)
+    {
+        return new AgentRunSummary(
+            record.Id,
+            record.ProfileId,
+            record.AgentName,
+            record.TraceId,
+            Enum.Parse<AgentRunStatus>(record.Status),
+            record.StartedAt,
+            record.CompletedAt);
+    }
+
     internal static AgentRun ToDomain(AgentRunRecord record)
     {
         var steps = record.Steps

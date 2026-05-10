@@ -151,3 +151,18 @@ public sealed class AgentRun
         }
     }
 }
+
+public sealed record AgentRunSummary(
+    Guid Id,
+    Guid ProfileId,
+    string AgentName,
+    string TraceId,
+    AgentRunStatus Status,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? CompletedAt);
+
+public sealed record AgentRunListPage(
+    IReadOnlyList<AgentRunSummary> Items,
+    int TotalCount,
+    int Skip,
+    int Take);

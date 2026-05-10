@@ -67,6 +67,22 @@ app.MapGet("/health", (IOptions<AgentorRuntimeOptions> runtimeOpts) => Results.O
 
 var v1 = app.MapGroup("/api/v1");
 
+v1.MapGet("/agent-runs", async (
+    int? skip,
+    int? take,
+    ListAgentRunsQueryHandler handler,
+    CancellationToken cancellationToken) =>
+{
+    var s = skip ?? 0;
+    var t = take ?? ListAgentRunsQueryHandler.DefaultTake;
+    var page = await handler.HandleAsync(s, t, cancellationToken);
+    return Results.Ok(page.ToDto());
+})
+.WithName("ListAgentRuns")
+.WithTags("AgentRuns")
+.WithSummary("Lists agent runs with stable ordering (newest first) and pagination.")
+.WithOpenApi();
+
 v1.MapPost("/agent-runs", async (
     StartAgentRunRequestDto request,
     StartAgentRunHandler handler,
@@ -118,6 +134,66 @@ v1.MapGet("/agent-runs/{runId:guid}", async (
 .WithName("GetAgentRun")
 .WithTags("AgentRuns")
 .WithSummary("Returns an agent run by ID.")
+.WithOpenApi();
+
+v1.MapGet("/agent-runs/{runId:guid}/trace", async (
+    Guid runId,
+    GetAgentRunTraceQueryHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var trace = await handler.HandleAsync(runId, cancellationToken);
+    if (trace is null)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    return Results.Ok(trace.Select(t => t.ToDto()).ToList());
+})
+.WithName("GetAgentRunTrace")
+.WithTags("AgentRuns")
+.WithSummary("Returns execution trace events for an agent run.")
+.WithOpenApi();
+
+v1.MapGet("/agent-runs/{runId:guid}/steps", async (
+    Guid runId,
+    GetAgentRunStepsQueryHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var steps = await handler.HandleAsync(runId, cancellationToken);
+    if (steps is null)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    return Results.Ok(steps.Select(s => s.ToDto()).ToList());
+})
+.WithName("GetAgentRunSteps")
+.WithTags("AgentRuns")
+.WithSummary("Returns steps for an agent run.")
+.WithOpenApi();
+
+v1.MapGet("/agent-runs/{runId:guid}/tool-calls", async (
+    Guid runId,
+    GetAgentRunToolCallsQueryHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var toolCalls = await handler.HandleAsync(runId, cancellationToken);
+    if (toolCalls is null)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    return Results.Ok(toolCalls.Select(tc => tc.ToDto()).ToList());
+})
+.WithName("GetAgentRunToolCalls")
+.WithTags("AgentRuns")
+.WithSummary("Returns tool calls for an agent run (flattened across steps, ordered by step then occurrence).")
 .WithOpenApi();
 
 v1.MapGet("/agent-runs/{runId:guid}/manifest", async (

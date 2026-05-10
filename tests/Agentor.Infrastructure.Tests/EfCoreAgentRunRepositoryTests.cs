@@ -129,4 +129,24 @@ public sealed class EfCoreAgentRunRepositoryTests
         Assert.True(loaded!.Trace.Count >= 1);
         Assert.Equal(run.Trace.Count, loaded.Trace.Count);
     }
+
+    [Fact]
+    public async Task ListSummariesAsync_ReturnsNewestFirst_WithPaging()
+    {
+        await using var ctx = CreateContext("list-summaries-test");
+        var repo = new EfCoreAgentRunRepository(ctx);
+
+        var run1 = BuildCompletedRun("list-trace-1");
+        await Task.Delay(5);
+        var run2 = BuildCompletedRun("list-trace-2");
+
+        await repo.SaveAsync(run1, CancellationToken.None);
+        await repo.SaveAsync(run2, CancellationToken.None);
+
+        var page = await repo.ListSummariesAsync(0, 10, CancellationToken.None);
+
+        Assert.Equal(2, page.TotalCount);
+        Assert.Equal(2, page.Items.Count);
+        Assert.True(page.Items[0].StartedAt >= page.Items[1].StartedAt);
+    }
 }

@@ -1,8 +1,14 @@
 {
   "pr08-read-model-baseline": {
-    "passes": false,
-    "evidence": [],
-    "notes": "PR08 not started. Default-FAIL until read-model/query work ships with its own captured evidence."
+    "passes": true,
+    "evidence": [
+      "artifacts/verification/dotnet-info.txt",
+      "artifacts/verification/dotnet-restore.txt",
+      "artifacts/verification/dotnet-build.txt",
+      "artifacts/verification/dotnet-test.txt",
+      "artifacts/verification/api-smoke.txt"
+    ],
+    "notes": "PR08: list/detail sub-resource query endpoints + tests; evidence read after capture (2026-05-10)."
   },
   "repo-build-test": {
     "passes": true,
@@ -12,6 +18,6 @@
       "artifacts/verification/dotnet-build.txt",
       "artifacts/verification/dotnet-test.txt"
     ],
-    "notes": "Harness install pass (2026-05-10): build 0 errors; tests 17+11+7+15 all passed per dotnet-test.txt after reading verification logs."
+    "notes": "Solution build/test green; Api.Tests also run to api-smoke.txt."
   }
 }

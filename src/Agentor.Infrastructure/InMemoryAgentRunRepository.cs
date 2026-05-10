@@ -19,4 +19,28 @@ public sealed class InMemoryAgentRunRepository : IAgentRunRepository
         _runs.TryGetValue(runId, out var run);
         return Task.FromResult(run);
     }
+
+    public Task<AgentRunListPage> ListSummariesAsync(int skip, int take, CancellationToken cancellationToken)
+    {
+        var ordered = _runs.Values
+            .OrderByDescending(r => r.StartedAt)
+            .ThenBy(r => r.Id)
+            .ToList();
+
+        var total = ordered.Count;
+        var items = ordered
+            .Skip(skip)
+            .Take(take)
+            .Select(r => new AgentRunSummary(
+                r.Id,
+                r.ProfileId,
+                r.AgentName,
+                r.TraceId,
+                r.Status,
+                r.StartedAt,
+                r.CompletedAt))
+            .ToList();
+
+        return Task.FromResult(new AgentRunListPage(items, total, skip, take));
+    }
 }

@@ -5,6 +5,27 @@ namespace Agentor.Api.Mapping;
 
 public static class DtoMappings
 {
+    public static AgentRunSummaryDto ToDto(this AgentRunSummary summary)
+    {
+        return new AgentRunSummaryDto(
+            summary.Id,
+            summary.ProfileId,
+            summary.AgentName,
+            summary.TraceId,
+            summary.Status,
+            summary.StartedAt,
+            summary.CompletedAt);
+    }
+
+    public static AgentRunListResponseDto ToDto(this AgentRunListPage page)
+    {
+        return new AgentRunListResponseDto(
+            page.Items.Select(ToDto).ToList(),
+            page.TotalCount,
+            page.Skip,
+            page.Take);
+    }
+
     public static AgentRunDto ToDto(this AgentRun run)
     {
         return new AgentRunDto(

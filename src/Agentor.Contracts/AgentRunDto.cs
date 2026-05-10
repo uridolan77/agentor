@@ -14,3 +14,18 @@ public sealed record AgentRunDto(
     string? ErrorMessage,
     IReadOnlyList<AgentStepDto> Steps,
     IReadOnlyList<TraceEventDto> Trace);
+
+public sealed record AgentRunSummaryDto(
+    Guid Id,
+    Guid ProfileId,
+    string AgentName,
+    string TraceId,
+    AgentRunStatus Status,
+    DateTimeOffset StartedAt,
+    DateTimeOffset? CompletedAt);
+
+public sealed record AgentRunListResponseDto(
+    IReadOnlyList<AgentRunSummaryDto> Items,
+    int TotalCount,
+    int Skip,
+    int Take);
