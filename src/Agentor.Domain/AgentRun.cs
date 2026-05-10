@@ -42,7 +42,8 @@ public sealed class AgentRun
     public IReadOnlyList<ExecutionTraceEvent> Trace => _trace;
 
     /// <summary>
-    /// Bounded run-scoped scratch memory. Not Athanor canon; not durable knowledge.
+    /// Bounded run-scoped scratch memory for coordination (key/value strings).
+    /// Not Athanor canon, not durable knowledge, not a knowledge-state engine; persisted only as operational scratch when the infrastructure layer maps it to storage.
     /// </summary>
     public IReadOnlyDictionary<string, string> SessionMemory => _sessionMemory;
 
@@ -78,6 +79,10 @@ public sealed class AgentRun
         return run;
     }
 
+    /// <summary>
+    /// Writes run-scratch session memory while the run is <see cref="AgentRunStatus.Running"/>.
+    /// Enforces <paramref name="budget"/>; emits <see cref="TraceEventKind.SessionMemoryWriteAccepted"/> or <see cref="TraceEventKind.SessionMemoryWriteRejected"/>.
+    /// </summary>
     public SessionMemoryWriteResult TryWriteSessionMemory(string key, string value, SessionMemoryBudget budget, DateTimeOffset now)
     {
         AgentStateMachine.EnsureRunCanMutate(this);

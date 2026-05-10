@@ -128,7 +128,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 TraceData(run, plan, ps));
 
             var runStep = run.StartStep($"Plan:{plan.Id:N}:{ps.SourceStepId}", _clock.UtcNow);
-            var input = BuildInput(run, ps);
+            var input = PlanInputBuilder.BuildToolStepInput(run, ps);
 
             if (ps.Kind == RecipeStepKind.Skill)
             {
@@ -244,6 +244,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 ps,
                 runStep,
                 proc.ToolKey.Trim(),
+                proc.StepId,
                 input,
                 state,
                 cancellationToken).ConfigureAwait(false);
@@ -314,6 +315,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         AgentPlanStep ps,
         AgentStep runStep,
         string toolKey,
+        string skillProcedureStepId,
         IReadOnlyDictionary<string, string> input,
         PlanExecutorLoopState state,
         CancellationToken cancellationToken)
@@ -329,7 +331,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 TraceEventKind.PlanExecutionFailed,
                 "Plan execution failed (unknown tool during skill).",
                 _clock.UtcNow,
-                TraceData(run, plan, ps, "toolKey", toolKey));
+                TraceData(run, plan, ps, "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
             return new InnerToolResult(true, false, 0, PolicyDecisionOutcome.Deny, new StepFailureSummary(fr, RetryDisposition.None), null);
         }
 
@@ -342,7 +344,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             TraceEventKind.PolicyEvaluated,
             "Tool policy evaluated (skill inner).",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "outcome", policyDecision.Outcome.ToString(), "reasonCode", policyDecision.ReasonCode, "toolKey", toolKey));
+            TraceData(run, plan, ps, "outcome", policyDecision.Outcome.ToString(), "reasonCode", policyDecision.ReasonCode, "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
 
         var toolCall = ToolCall.Start(run.Id, runStep.Id, toolKey, input, _clock.UtcNow);
 
@@ -379,7 +381,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 TraceEventKind.PlanExecutionRequiresReview,
                 "Plan execution requires review (policy during skill).",
                 _clock.UtcNow,
-                TraceData(run, plan, ps));
+                TraceData(run, plan, ps, "procedureStepId", skillProcedureStepId, "toolKey", toolKey));
             return new InnerToolResult(true, false, 0, policyDecision.Outcome, null, null);
         }
 
@@ -387,7 +389,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             TraceEventKind.ToolCallStarted,
             "Tool call started (skill inner).",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "toolCallId", toolCall.Id.ToString(), "toolKey", toolKey));
+            TraceData(run, plan, ps, "toolCallId", toolCall.Id.ToString(), "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
 
         var pipelineResult = await _pipeline.ExecuteAsync(
             run,
@@ -419,7 +421,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             TraceEventKind.PlanFailureDecisionRecorded,
             "Skill inner tool failure recorded.",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "onFailure", ps.OnFailure.ToString(), "retryDisposition", failure.RetryDisposition.ToString()));
+            TraceData(run, plan, ps, "onFailure", ps.OnFailure.ToString(), "retryDisposition", failure.RetryDisposition.ToString(), "procedureStepId", skillProcedureStepId));
 
         var skip2 = state.SkipRemaining;
         var esc2 = state.Escalation;
@@ -768,30 +770,6 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         }
 
         return output;
-    }
-
-    private static Dictionary<string, string> BuildInput(AgentRun run, AgentPlanStep ps)
-    {
-        var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["objective"] = run.Objective,
-            ["agentName"] = run.AgentName
-        };
-
-        if (ps.InputBinding is not null)
-        {
-            foreach (var kv in ps.InputBinding.Parameters)
-            {
-                d[kv.Key] = kv.Value;
-            }
-        }
-
-        foreach (var kv in run.SessionMemory)
-        {
-            d["session:" + kv.Key] = kv.Value;
-        }
-
-        return d;
     }
 
     private static Dictionary<string, string> TraceData(AgentRun run, AgentPlan plan, AgentPlanStep? step = null, params string[] extraPairs)

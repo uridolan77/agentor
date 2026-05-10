@@ -1,0 +1,25 @@
+using System;
+using Agentor.Application.Coordination;
+using Agentor.Application.Evaluation;
+using Agentor.Application.Tests;
+using Agentor.Domain;
+using Agentor.Domain.Enums;
+using Agentor.Infrastructure;
+using Microsoft.Extensions.Options;
+
+var clock = new SystemClock();
+var run = AgentRun.Start(Guid.NewGuid(), "Eval", "obj", "trace-eval", clock.UtcNow);
+var ok = AgentRecipe.TryCreate(Guid.NewGuid(), "one", AgentRecipeVersion.Parse("1"), CoordinationTopology.SequentialPipeline, [new RecipeStepDefinition("s1", 1, RecipeStepKind.Tool, "pr1.fake-tool")], null, out var recipe, out _);
+if (!ok || recipe is null) throw new Exception("recipe");
+var plan = AgentPlan.Instantiate(recipe, Guid.NewGuid(), clock.UtcNow);
+var registry = new ToolRegistry();
+registry.Register(new ToolDefinition("pr1.fake-tool", "t", "d", ToolRiskLevel.Low), new Fake());
+var policy = new RuntimePolicyEvaluator(registry, clock, Options.Create(new RuntimePolicyOptions()));
+var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock);
+_ = RunEvaluationHarness.ExecutePlanAsync(executor, run, plan, default).GetAwaiter().GetResult();
+Console.WriteLine("Status=" + run.Status + " TraceCount=" + run.Trace.Count + " Tools=" + run.Steps.Sum(s=>s.ToolCalls.Count));
+
+class Fake : Agentor.Application.Abstractions.IToolExecutor
+{
+    public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest r, CancellationToken c) => Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string>(), null));
+}

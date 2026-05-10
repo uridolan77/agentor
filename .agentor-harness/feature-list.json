@@ -1,282 +1,388 @@
-{
-    "phase": 7,
-    "title": "Skills, memory, and evaluation",
-    "harnessPass": "PR31-PR35",
-    "encoding": "utf-8",
-    "lastVerified": "2026-05-10",
-    "notes": [
-        "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
-        "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
-        "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
-        "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests).",
-        "Phase 7 PR31-PR35: SkillPackage model; RecipeStepKind.Skill + ISkillPackageCatalog + plan executor skill traces; bounded session memory on AgentRun + EF session_memory_json; RunEvaluationHarness; RunQualityGateEvaluator."
-    ],
-    "acceptanceItems": [
-        {
-            "id": "PR21-001",
-            "pr": 21,
-            "description": "IKnowledgeStateClient port defines read + candidate + review operations without Canonize",
-            "passes": true,
-            "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations; src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs"
-        },
-        {
-            "id": "PR21-002",
-            "pr": 21,
-            "description": "FakeKnowledgeStateClient implements port with in-memory behavior",
-            "passes": true,
-            "evidence": "FakeKnowledgeStateClientTests (all methods)"
-        },
-        {
-            "id": "PR21-003",
-            "pr": 21,
-            "description": "DI registers IKnowledgeStateClient to FakeKnowledgeStateClient",
-            "passes": true,
-            "evidence": "src/Agentor.Infrastructure/DependencyInjection.cs (AddSingleton<IKnowledgeStateClient, FakeKnowledgeStateClient>)"
-        },
-        {
-            "id": "PR22-001",
-            "pr": 22,
-            "description": "LookupCanonicalEntryAsync resolves from seeded snapshot",
-            "passes": true,
-            "evidence": "FakeKnowledgeStateClientTests.LookupCanonicalEntryAsync_UsesSeededSnapshot"
-        },
-        {
-            "id": "PR22-002",
-            "pr": 22,
-            "description": "Latest snapshot query returns seeded data when run exists",
-            "passes": true,
-            "evidence": "AthanorCommandHandlersTests.GetLatestSnapshot_ReturnsSeededSnapshot_WhenRunExists"
-        },
-        {
-            "id": "PR22-003",
-            "pr": 22,
-            "description": "Canonical lookup returns RunExists=false for unknown run",
-            "passes": true,
-            "evidence": "AthanorCommandHandlersTests.LookupCanonical_UnknownRun_ReturnsRunNotExists"
-        },
-        {
-            "id": "PR22-004",
-            "pr": 22,
-            "description": "Canonical lookup rejects empty canonical key",
-            "passes": true,
-            "evidence": "AthanorCommandHandlersTests.LookupCanonical_EmptyKey_ThrowsArgumentException"
-        },
-        {
-            "id": "PR22-API-001",
-            "pr": 22,
-            "description": "GET latest snapshot returns 404 for unknown run",
-            "passes": true,
-            "evidence": "AthanorApiTests.GetLatestSnapshot_UnknownRun_Returns404"
-        },
-        {
-            "id": "PR22-API-002",
-            "pr": 22,
-            "description": "GET canonical returns 404 for unknown run",
-            "passes": true,
-            "evidence": "AthanorApiTests.GetCanonical_UnknownRun_Returns404"
-        },
-        {
-            "id": "PR22-API-003",
-            "pr": 22,
-            "description": "GET canonical returns 400 when key is empty",
-            "passes": true,
-            "evidence": "AthanorApiTests.GetCanonical_EmptyKey_ReturnsBadRequest"
-        },
-        {
-            "id": "PR23-001",
-            "pr": 23,
-            "description": "Evidence search provenance attaches trace when run is Running",
-            "passes": true,
-            "evidence": "AthanorCommandHandlersTests.AttachEvidenceProvenance_WritesTrace_WhenRunRunning"
-        },
-        {
-            "id": "PR23-API-001",
-            "pr": 23,
-            "description": "POST evidence-provenance returns 409 when run is not Running",
-            "passes": true,
-            "evidence": "AthanorApiTests.PostEvidenceProvenance_AfterCompletedStartRun_Returns409"
-        },
-        {
-            "id": "PR23-API-003",
-            "pr": 23,
-            "description": "Public API returns 2xx for evidence-provenance while run is Running",
-            "passes": false,
-            "evidence": "TODO: running-run fixture or plan-integrated call"
-        },
-        {
-            "id": "PR24-001",
-            "pr": 24,
-            "description": "Candidate submission records trace when run is Running",
-            "passes": true,
-            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
-        },
-        {
-            "id": "PR24-002",
-            "pr": 24,
-            "description": "Submit candidate returns false without trace when run is not Running",
-            "passes": true,
-            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_WhenRunNotRunning_ReturnsFalseWithoutTrace"
-        },
-        {
-            "id": "PR24-API-001",
-            "pr": 24,
-            "description": "POST candidates returns 409 when run is not Running",
-            "passes": true,
-            "evidence": "AthanorApiTests.PostCandidate_AfterCompletedStartRun_Returns409"
-        },
-        {
-            "id": "PR24-API-003",
-            "pr": 24,
-            "description": "Public API returns 2xx for candidate submit while run is Running",
-            "passes": false,
-            "evidence": "TODO: same as PR23-API-003"
-        },
-        {
-            "id": "PR25-001",
-            "pr": 25,
-            "description": "IKnowledgeStateClient has no Canonize-named operations",
-            "passes": true,
-            "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
-        },
-        {
-            "id": "PR25-002",
-            "pr": 25,
-            "description": "AgentRun declared public surface has no Canonize-named methods",
-            "passes": true,
-            "evidence": "NonCanonizationBoundaryTests.AgentRun_public_declared_surface_has_no_Canonize_methods"
-        },
-        {
-            "id": "PR25-003",
-            "pr": 25,
-            "description": "Fake submit status documents non-canon outcome",
-            "passes": true,
-            "evidence": "NonCanonizationBoundaryTests.FakeKnowledgeStateClient_submit_status_is_explicitly_non_canon"
-        },
-        {
-            "id": "PR25-004",
-            "pr": 25,
-            "description": "Review queue records AthanorReviewQueued when run is Running",
-            "passes": true,
-            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
-        },
-        {
-            "id": "PR25-005",
-            "pr": 25,
-            "description": "Queue review returns false without trace when run is not Running",
-            "passes": true,
-            "evidence": "AthanorCommandHandlersTests.QueueReview_WhenRunNotRunning_ReturnsFalseWithoutTrace"
-        },
-        {
-            "id": "PR25-API-001",
-            "pr": 25,
-            "description": "POST review-queue returns 409 when run is not Running",
-            "passes": true,
-            "evidence": "AthanorApiTests.PostReviewQueue_AfterCompletedStartRun_Returns409"
-        },
-        {
-            "passes": true,
-            "description": "IModelGatewayClient port + ModelCallRequestDto/ModelCallResultDto + FakeModelGatewayClient + DI",
-            "pr": 26,
-            "id": "PR26-001",
-            "evidence": "src/Agentor.Application/Abstractions/IModelGatewayClient.cs; src/Agentor.Contracts/Conexus/ModelGatewayDtos.cs; src/Agentor.Infrastructure/Conexus/FakeModelGatewayClient.cs; DependencyInjection.cs"
-        },
-        {
-            "passes": true,
-            "description": "Fake gateway deterministic CompleteAsync",
-            "pr": 26,
-            "id": "PR26-002",
-            "evidence": "tests/Agentor.Infrastructure.Tests/FakeModelGatewayClientTests.cs"
-        },
-        {
-            "passes": true,
-            "description": "conexus.model-complete tool routes through ModelGatewayToolExecutor",
-            "pr": 27,
-            "id": "PR27-001",
-            "evidence": "WellKnownToolKeys.ConexusModelComplete; ToolRegistry.CreateDefault; ModelGatewayToolExecutorTests"
-        },
-        {
-            "passes": true,
-            "description": "PromptProfileRef and ModelProfileRef on gateway DTOs and tool I/O",
-            "pr": 28,
-            "id": "PR28-001",
-            "evidence": "ModelGatewayDtos.cs; ModelGatewayToolExecutor.cs; ModelGatewayToolExecutorTests.ExecuteAsync_EchoesProfileRefs_InOutput"
-        },
-        {
-            "passes": true,
-            "description": "Runtime budget caps for declaredCostUnits / declaredLatencyMs on model tool",
-            "pr": 29,
-            "id": "PR29-001",
-            "evidence": "RuntimePolicyOptions.MaxDeclaredModelCallCostUnits/LatencyMs; RuntimePolicyEvaluator; RuntimePolicyEvaluatorTests budget tests"
-        },
-        {
-            "passes": true,
-            "description": "Run manifest v1.1 + RunManifestDto expose aggregated model-call telemetry",
-            "pr": 30,
-            "id": "PR30-001",
-            "evidence": "RunManifest.cs SummarizeConexusModelCalls; RunManifestDto; DtoMappings; ApiContractTests manifest version 1.1"
-        },
-        {
-            "id": "PR30.5-001",
-            "pr": 30.5,
-            "description": "RunManifest domain stays integration-agnostic; model-call output parsing lives in Application ModelCallTelemetryAggregator",
-            "passes": true,
-            "evidence": "src/Agentor.Application/Manifest/ModelCallTelemetryAggregator.cs; src/Agentor.Domain/RunManifestModelTelemetry.cs; GetRunManifestQueryHandler"
-        },
-        {
-            "id": "PR30.5-002",
-            "pr": 30.5,
-            "description": "Declared budget caps documented as optional pre-execution tool-input checks (not post-run spend enforcement)",
-            "passes": true,
-            "evidence": "docs/CONEXUS_INTEGRATION_BOUNDARY.md; RuntimePolicyOptions XML comments"
-        },
-        {
-            "id": "PR30.5-003",
-            "pr": 30.5,
-            "description": "Runtime policy allows model tool when declaredCostUnits/declaredLatencyMs omitted even if caps are configured",
-            "passes": true,
-            "evidence": "RuntimePolicyEvaluatorTests.Evaluate_AllowsModelCallWhenDeclaredBudgetKeysAbsentEvenIfCapsConfigured"
-        },
-        {
-            "id": "PR30.5-004",
-            "pr": 30.5,
-            "description": "Successful conexus.model-complete output rolls into manifest v1.1 token/cost/latency aggregates (non-zero path)",
-            "passes": true,
-            "evidence": "ModelCallTelemetryAggregatorTests"
-        },
-        {
-            "id": "PR31-001",
-            "pr": 31,
-            "description": "SkillPackage + SkillProcedureStepDefinition + validation",
-            "passes": true,
-            "evidence": "SkillPackageTests; src/Agentor.Domain/SkillPackage.cs"
-        },
-        {
-            "id": "PR32-001",
-            "pr": 32,
-            "description": "Skill invocation in SequentialAgentPlanExecutor with trace kinds and catalog",
-            "passes": true,
-            "evidence": "SequentialAgentPlanExecutorTests.SkillPlan_WithSegmentAndTool_RecordsSkillTraces_AndInvokesInnerTool; ISkillPackageCatalog; InMemorySkillPackageCatalog"
-        },
-        {
-            "id": "PR33-001",
-            "pr": 33,
-            "description": "Session memory TryWriteSessionMemory + plan BuildInput session: prefix + persistence column",
-            "passes": true,
-            "evidence": "AgentRunSessionMemoryTests; AgentRun; RecordMapper; migration SessionMemoryOnAgentRun"
-        },
-        {
-            "id": "PR34-001",
-            "pr": 34,
-            "description": "RunEvaluationHarness.ExecutePlanAsync snapshot metrics",
-            "passes": true,
-            "evidence": "RunEvaluationHarnessTests"
-        },
-        {
-            "id": "PR35-001",
-            "pr": 35,
-            "description": "RunQualityGateEvaluator completion/trace checks",
-            "passes": true,
-            "evidence": "RunQualityGateEvaluatorTests"
-        }
-    ]
+﻿{
+    "phase":  7,
+    "title":  "Skills, memory, and evaluation",
+    "harnessPass":  "PR31-PR35 + PR35.5",
+    "encoding":  "utf-8",
+    "lastVerified":  "2026-05-10",
+    "notes":  [
+                  "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
+                  "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
+                  "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
+                  "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests).",
+                  "Phase 7 PR31-PR35: SkillPackage model; RecipeStepKind.Skill + ISkillPackageCatalog + plan executor skill traces; bounded session memory on AgentRun + EF session_memory_json; RunEvaluationHarness; RunQualityGateEvaluator.",
+                  "PR35.5 (Phase 7 hardening): granular harness acceptance rows for PR31-PR35; evaluation JSON fixture for RunEvaluationSnapshot; stronger quality gate codes + plan warning; skill audit trace assertions; session memory boundary doc; PlanInputBuilder extracted from SequentialAgentPlanExecutor."
+              ],
+    "acceptanceItems":  [
+                            {
+                                "id":  "PR21-001",
+                                "pr":  21,
+                                "description":  "IKnowledgeStateClient port defines read + candidate + review operations without Canonize",
+                                "passes":  true,
+                                "evidence":  "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations; src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs"
+                            },
+                            {
+                                "id":  "PR21-002",
+                                "pr":  21,
+                                "description":  "FakeKnowledgeStateClient implements port with in-memory behavior",
+                                "passes":  true,
+                                "evidence":  "FakeKnowledgeStateClientTests (all methods)"
+                            },
+                            {
+                                "id":  "PR21-003",
+                                "pr":  21,
+                                "description":  "DI registers IKnowledgeStateClient to FakeKnowledgeStateClient",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs (AddSingleton\u003cIKnowledgeStateClient, FakeKnowledgeStateClient\u003e)"
+                            },
+                            {
+                                "id":  "PR22-001",
+                                "pr":  22,
+                                "description":  "LookupCanonicalEntryAsync resolves from seeded snapshot",
+                                "passes":  true,
+                                "evidence":  "FakeKnowledgeStateClientTests.LookupCanonicalEntryAsync_UsesSeededSnapshot"
+                            },
+                            {
+                                "id":  "PR22-002",
+                                "pr":  22,
+                                "description":  "Latest snapshot query returns seeded data when run exists",
+                                "passes":  true,
+                                "evidence":  "AthanorCommandHandlersTests.GetLatestSnapshot_ReturnsSeededSnapshot_WhenRunExists"
+                            },
+                            {
+                                "id":  "PR22-003",
+                                "pr":  22,
+                                "description":  "Canonical lookup returns RunExists=false for unknown run",
+                                "passes":  true,
+                                "evidence":  "AthanorCommandHandlersTests.LookupCanonical_UnknownRun_ReturnsRunNotExists"
+                            },
+                            {
+                                "id":  "PR22-004",
+                                "pr":  22,
+                                "description":  "Canonical lookup rejects empty canonical key",
+                                "passes":  true,
+                                "evidence":  "AthanorCommandHandlersTests.LookupCanonical_EmptyKey_ThrowsArgumentException"
+                            },
+                            {
+                                "id":  "PR22-API-001",
+                                "pr":  22,
+                                "description":  "GET latest snapshot returns 404 for unknown run",
+                                "passes":  true,
+                                "evidence":  "AthanorApiTests.GetLatestSnapshot_UnknownRun_Returns404"
+                            },
+                            {
+                                "id":  "PR22-API-002",
+                                "pr":  22,
+                                "description":  "GET canonical returns 404 for unknown run",
+                                "passes":  true,
+                                "evidence":  "AthanorApiTests.GetCanonical_UnknownRun_Returns404"
+                            },
+                            {
+                                "id":  "PR22-API-003",
+                                "pr":  22,
+                                "description":  "GET canonical returns 400 when key is empty",
+                                "passes":  true,
+                                "evidence":  "AthanorApiTests.GetCanonical_EmptyKey_ReturnsBadRequest"
+                            },
+                            {
+                                "id":  "PR23-001",
+                                "pr":  23,
+                                "description":  "Evidence search provenance attaches trace when run is Running",
+                                "passes":  true,
+                                "evidence":  "AthanorCommandHandlersTests.AttachEvidenceProvenance_WritesTrace_WhenRunRunning"
+                            },
+                            {
+                                "id":  "PR23-API-001",
+                                "pr":  23,
+                                "description":  "POST evidence-provenance returns 409 when run is not Running",
+                                "passes":  true,
+                                "evidence":  "AthanorApiTests.PostEvidenceProvenance_AfterCompletedStartRun_Returns409"
+                            },
+                            {
+                                "id":  "PR23-API-003",
+                                "pr":  23,
+                                "description":  "Public API returns 2xx for evidence-provenance while run is Running",
+                                "passes":  false,
+                                "evidence":  "TODO: running-run fixture or plan-integrated call"
+                            },
+                            {
+                                "id":  "PR24-001",
+                                "pr":  24,
+                                "description":  "Candidate submission records trace when run is Running",
+                                "passes":  true,
+                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
+                            },
+                            {
+                                "id":  "PR24-002",
+                                "pr":  24,
+                                "description":  "Submit candidate returns false without trace when run is not Running",
+                                "passes":  true,
+                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_WhenRunNotRunning_ReturnsFalseWithoutTrace"
+                            },
+                            {
+                                "id":  "PR24-API-001",
+                                "pr":  24,
+                                "description":  "POST candidates returns 409 when run is not Running",
+                                "passes":  true,
+                                "evidence":  "AthanorApiTests.PostCandidate_AfterCompletedStartRun_Returns409"
+                            },
+                            {
+                                "id":  "PR24-API-003",
+                                "pr":  24,
+                                "description":  "Public API returns 2xx for candidate submit while run is Running",
+                                "passes":  false,
+                                "evidence":  "TODO: same as PR23-API-003"
+                            },
+                            {
+                                "id":  "PR25-001",
+                                "pr":  25,
+                                "description":  "IKnowledgeStateClient has no Canonize-named operations",
+                                "passes":  true,
+                                "evidence":  "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
+                            },
+                            {
+                                "id":  "PR25-002",
+                                "pr":  25,
+                                "description":  "AgentRun declared public surface has no Canonize-named methods",
+                                "passes":  true,
+                                "evidence":  "NonCanonizationBoundaryTests.AgentRun_public_declared_surface_has_no_Canonize_methods"
+                            },
+                            {
+                                "id":  "PR25-003",
+                                "pr":  25,
+                                "description":  "Fake submit status documents non-canon outcome",
+                                "passes":  true,
+                                "evidence":  "NonCanonizationBoundaryTests.FakeKnowledgeStateClient_submit_status_is_explicitly_non_canon"
+                            },
+                            {
+                                "id":  "PR25-004",
+                                "pr":  25,
+                                "description":  "Review queue records AthanorReviewQueued when run is Running",
+                                "passes":  true,
+                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
+                            },
+                            {
+                                "id":  "PR25-005",
+                                "pr":  25,
+                                "description":  "Queue review returns false without trace when run is not Running",
+                                "passes":  true,
+                                "evidence":  "AthanorCommandHandlersTests.QueueReview_WhenRunNotRunning_ReturnsFalseWithoutTrace"
+                            },
+                            {
+                                "id":  "PR25-API-001",
+                                "pr":  25,
+                                "description":  "POST review-queue returns 409 when run is not Running",
+                                "passes":  true,
+                                "evidence":  "AthanorApiTests.PostReviewQueue_AfterCompletedStartRun_Returns409"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "IModelGatewayClient port + ModelCallRequestDto/ModelCallResultDto + FakeModelGatewayClient + DI",
+                                "pr":  26,
+                                "id":  "PR26-001",
+                                "evidence":  "src/Agentor.Application/Abstractions/IModelGatewayClient.cs; src/Agentor.Contracts/Conexus/ModelGatewayDtos.cs; src/Agentor.Infrastructure/Conexus/FakeModelGatewayClient.cs; DependencyInjection.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Fake gateway deterministic CompleteAsync",
+                                "pr":  26,
+                                "id":  "PR26-002",
+                                "evidence":  "tests/Agentor.Infrastructure.Tests/FakeModelGatewayClientTests.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "conexus.model-complete tool routes through ModelGatewayToolExecutor",
+                                "pr":  27,
+                                "id":  "PR27-001",
+                                "evidence":  "WellKnownToolKeys.ConexusModelComplete; ToolRegistry.CreateDefault; ModelGatewayToolExecutorTests"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "PromptProfileRef and ModelProfileRef on gateway DTOs and tool I/O",
+                                "pr":  28,
+                                "id":  "PR28-001",
+                                "evidence":  "ModelGatewayDtos.cs; ModelGatewayToolExecutor.cs; ModelGatewayToolExecutorTests.ExecuteAsync_EchoesProfileRefs_InOutput"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Runtime budget caps for declaredCostUnits / declaredLatencyMs on model tool",
+                                "pr":  29,
+                                "id":  "PR29-001",
+                                "evidence":  "RuntimePolicyOptions.MaxDeclaredModelCallCostUnits/LatencyMs; RuntimePolicyEvaluator; RuntimePolicyEvaluatorTests budget tests"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Run manifest v1.1 + RunManifestDto expose aggregated model-call telemetry",
+                                "pr":  30,
+                                "id":  "PR30-001",
+                                "evidence":  "RunManifest.cs SummarizeConexusModelCalls; RunManifestDto; DtoMappings; ApiContractTests manifest version 1.1"
+                            },
+                            {
+                                "id":  "PR30.5-001",
+                                "pr":  30.5,
+                                "description":  "RunManifest domain stays integration-agnostic; model-call output parsing lives in Application ModelCallTelemetryAggregator",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Manifest/ModelCallTelemetryAggregator.cs; src/Agentor.Domain/RunManifestModelTelemetry.cs; GetRunManifestQueryHandler"
+                            },
+                            {
+                                "id":  "PR30.5-002",
+                                "pr":  30.5,
+                                "description":  "Declared budget caps documented as optional pre-execution tool-input checks (not post-run spend enforcement)",
+                                "passes":  true,
+                                "evidence":  "docs/CONEXUS_INTEGRATION_BOUNDARY.md; RuntimePolicyOptions XML comments"
+                            },
+                            {
+                                "id":  "PR30.5-003",
+                                "pr":  30.5,
+                                "description":  "Runtime policy allows model tool when declaredCostUnits/declaredLatencyMs omitted even if caps are configured",
+                                "passes":  true,
+                                "evidence":  "RuntimePolicyEvaluatorTests.Evaluate_AllowsModelCallWhenDeclaredBudgetKeysAbsentEvenIfCapsConfigured"
+                            },
+                            {
+                                "id":  "PR30.5-004",
+                                "pr":  30.5,
+                                "description":  "Successful conexus.model-complete output rolls into manifest v1.1 token/cost/latency aggregates (non-zero path)",
+                                "passes":  true,
+                                "evidence":  "ModelCallTelemetryAggregatorTests"
+                            },
+                            {
+                                "id":  "PR31-001",
+                                "pr":  31,
+                                "description":  "SkillPackage validates required skill key, name, purpose, and procedure steps",
+                                "passes":  true,
+                                "evidence":  "SkillPackageTests; src/Agentor.Domain/SkillPackage.cs"
+                            },
+                            {
+                                "id":  "PR31-002",
+                                "pr":  31,
+                                "description":  "SkillPackage rejects duplicate procedure step ids/order indexes and enforces ToolRef keys",
+                                "passes":  true,
+                                "evidence":  "SkillPackageTests (duplicate id/order, DeclaredToolKeys)"
+                            },
+                            {
+                                "id":  "PR31-003",
+                                "pr":  31,
+                                "description":  "SkillPackage.DeclaredToolKeys lists ToolRef tool keys for policy/catalog alignment",
+                                "passes":  true,
+                                "evidence":  "SkillPackageTests"
+                            },
+                            {
+                                "id":  "PR32-001",
+                                "pr":  32,
+                                "description":  "Recipe supports RecipeStepKind.Skill with InvokedSkillKey and InvokedSkillVersion",
+                                "passes":  true,
+                                "evidence":  "AgentRecipe / RecipeStepDefinition; SequentialAgentPlanExecutorTests skill recipe"
+                            },
+                            {
+                                "id":  "PR32-002",
+                                "pr":  32,
+                                "description":  "SequentialAgentPlanExecutor resolves skills from ISkillPackageCatalog and records SkillInvocation* traces with skill key and version",
+                                "passes":  true,
+                                "evidence":  "SequentialAgentPlanExecutorTests.SkillPlan_WithSegmentAndTool_RecordsSkillTraces_AndInvokesInnerTool"
+                            },
+                            {
+                                "id":  "PR32-003",
+                                "pr":  32,
+                                "description":  "Skill procedure segments record procedureStepId; inner tool traces include procedureStepId and toolKey",
+                                "passes":  true,
+                                "evidence":  "SequentialAgentPlanExecutorTests (segment and inner policy/tool traces)"
+                            },
+                            {
+                                "id":  "PR32-004",
+                                "pr":  32,
+                                "description":  "Inner skill ToolRef executes through policy + tool pipeline with ToolCall and PolicyDecision evidence on the AgentStep",
+                                "passes":  true,
+                                "evidence":  "SequentialAgentPlanExecutorTests (runStep.ToolCalls, PolicyDecisions)"
+                            },
+                            {
+                                "id":  "PR33-001",
+                                "pr":  33,
+                                "description":  "AgentRun.TryWriteSessionMemory enforces SessionMemoryBudget with accept/reject traces",
+                                "passes":  true,
+                                "evidence":  "AgentRunSessionMemoryTests; SessionMemoryWriteAccepted/Rejected"
+                            },
+                            {
+                                "id":  "PR33-002",
+                                "pr":  33,
+                                "description":  "Plan tool input includes session:{key} entries from run scratch memory",
+                                "passes":  true,
+                                "evidence":  "PlanInputBuilder; AgentRunSessionMemoryTests"
+                            },
+                            {
+                                "id":  "PR33-003",
+                                "pr":  33,
+                                "description":  "Session scratch persisted via EF session_memory_json column and RecordMapper",
+                                "passes":  true,
+                                "evidence":  "migration SessionMemoryOnAgentRun; RecordMapper"
+                            },
+                            {
+                                "id":  "PR34-001",
+                                "pr":  34,
+                                "description":  "RunEvaluationHarness.ExecutePlanAsync returns RunEvaluationSnapshot with status, trace count, tool calls, plan steps",
+                                "passes":  true,
+                                "evidence":  "RunEvaluationHarnessTests.ExecutePlanAsync_CapturesSnapshotMetrics"
+                            },
+                            {
+                                "id":  "PR34-002",
+                                "pr":  34,
+                                "description":  "Evaluation harness regression fixture matches deterministic RunEvaluationSnapshot",
+                                "passes":  true,
+                                "evidence":  "RunEvaluationHarnessTests.ExecutePlanAsync_MatchesEvaluationHarnessFixture; fixtures/eval/evaluation-harness-one-step-tool.json"
+                            },
+                            {
+                                "id":  "PR35-001",
+                                "pr":  35,
+                                "description":  "RunQualityGateEvaluator: completed run with RunCompleted trace passes",
+                                "passes":  true,
+                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_CompletedRunWithRunCompletedTrace_Passes"
+                            },
+                            {
+                                "id":  "PR35-002",
+                                "pr":  35,
+                                "description":  "RunQualityGateEvaluator: failed run yields RUN_FAILED when completion is required",
+                                "passes":  true,
+                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_FailedRun_FailsWhenCompletionRequired"
+                            },
+                            {
+                                "id":  "PR35-003",
+                                "pr":  35,
+                                "description":  "RunQualityGateEvaluator: requires-review run yields RUN_REQUIRES_REVIEW when completion is required",
+                                "passes":  true,
+                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_RequiresReview_FailsWhenCompletionRequired"
+                            },
+                            {
+                                "id":  "PR35-004",
+                                "pr":  35,
+                                "description":  "RunQualityGateEvaluator: completed run without RunCompleted trace yields MISSING_RUN_COMPLETED_TRACE",
+                                "passes":  true,
+                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_CompletedWithoutRunCompletedTrace_Fails"
+                            },
+                            {
+                                "id":  "PR35-005",
+                                "pr":  35,
+                                "description":  "RunQualityGateEvaluator: optional plan warns with COMPLETED_RUN_WITH_FAILED_PLAN_STEP",
+                                "passes":  true,
+                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_CompletedWithFailedPlanStep_EmitsWarningWhenPlanProvided"
+                            },
+                            {
+                                "id":  "PR35.5-001",
+                                "pr":  35,
+                                "description":  "PR35.5: harness acceptance expanded; evaluator and evaluation harness hardening",
+                                "passes":  true,
+                                "evidence":  ".agentor-harness/feature-list.json; RunQualityGateEvaluator; RunEvaluationHarnessTests"
+                            },
+                            {
+                                "id":  "PR35.5-002",
+                                "pr":  35,
+                                "description":  "PR35.5: PlanInputBuilder isolates plan-step tool input construction",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Coordination/PlanInputBuilder.cs"
+                            },
+                            {
+                                "id":  "PR35.5-003",
+                                "pr":  35,
+                                "description":  "PR35.5: Session memory boundary documented as run-scratch, non-canon, not Athanor",
+                                "passes":  true,
+                                "evidence":  "docs/SESSION_MEMORY_BOUNDARY.md; AgentRun XML comments"
+                            }
+                        ]
 }

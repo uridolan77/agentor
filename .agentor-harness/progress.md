@@ -1,4 +1,4 @@
-# Agentor harness - progress
+﻿# Agentor harness - progress
 
 ## Phase 5 - Athanor integration (2026-05-10)
 
@@ -28,7 +28,7 @@ PR26–PR30: Conexus port (`IModelGatewayClient`), `FakeModelGatewayClient`, `co
 | PR30 | Model-call telemetry in manifests | Done |
 | PR30.5 | Conexus/manifest boundary + declared budget docs/tests | Done |
 
-Next: PR31 Skills / Phase 7 (not started; PR30.5 completed first).
+Phase 7 (PR31-PR35 + PR35.5) completed; see Phase 7 sections below.
 
 ## Phase 7 - Skills, memory, evaluation (2026-05-10)
 
@@ -41,3 +41,13 @@ PR31-PR35 completed in one harness session: skill package domain, skill plan exe
 | PR33 | Session memory boundary + persistence | Done |
 | PR34 | Evaluation harness | Done |
 | PR35 | Run quality gates | Done |
+
+## Phase 7 hardening - PR35.5 (2026-05-10)
+
+Granular harness acceptance for PR31-PR35; RunEvaluationHarness JSON regression fixture; stronger RunQualityGateEvaluator; skill audit trace assertions; docs/SESSION_MEMORY_BOUNDARY.md; PlanInputBuilder extracted from SequentialAgentPlanExecutor.
+
+| Pass | Scope | Status |
+|------|--------|--------|
+| PR35.5 | Harness + tests + docs + small executor helper | Done |
+
+Next: Phase 8 per docs/planning/pr1-pr40/PR_INDEX.md when scheduled (not started here).

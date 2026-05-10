@@ -1,4 +1,4 @@
-# Agentor harness - verification log
+﻿# Agentor harness - verification log
 
 ## PR25.5 verification (2026-05-10)
 
@@ -87,3 +87,18 @@ Results: restore OK; build OK; test OK (all projects).
 Scope: PR31 SkillPackage + procedure steps; PR32 RecipeStepKind.Skill, ISkillPackageCatalog, InMemorySkillPackageCatalog, SequentialAgentPlanExecutor skill path + TraceEventKind skill kinds; PR33 SessionMemoryBudget/TryWriteSessionMemory, trace kinds, plan BuildInput session: keys, EF agent_runs.session_memory_json migration + snapshot; PR34 RunEvaluationHarness; PR35 RunQualityGateEvaluator.
 
 PR completion notes: PR31-PR35 landed as one integrated pass with per-PR acceptance items in feature-list.json.
+
+## Phase 7 hardening - PR35.5 (2026-05-10)
+
+Commands (repo root):
+
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Scope: expanded feature-list acceptance for PR31-PR35 + PR35.5; RunEvaluationHarness fixture test; RunQualityGateEvaluator codes and plan warning; skill trace audit assertions; SESSION_MEMORY_BOUNDARY.md; PlanInputBuilder extraction.
+
+Result: restore/build/test all succeeded (Agentor.sln).
+

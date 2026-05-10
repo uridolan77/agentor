@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 2,
+  "kind": "RunEvaluationHarness",
+  "agentName": "Eval",
+  "objective": "obj",
+  "traceId": "eval-fix-harness-1",
+  "recipeName": "one",
+  "recipeVersion": "1",
+  "toolStepId": "s1",
+  "toolStepOrder": 1,
+  "toolKey": "pr1.fake-tool",
+  "expectedSnapshot": {
+    "runStatus": "Completed",
+    "traceEventCount": 12,
+    "toolCallCount": 1,
+    "planStepCount": 1
+  }
+}

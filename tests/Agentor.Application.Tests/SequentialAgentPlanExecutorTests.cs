@@ -465,10 +465,31 @@ public sealed class SequentialAgentPlanExecutorTests
         Assert.True(result.Success);
         Assert.Equal(AgentRunStatus.Completed, run.Status);
         Assert.Equal(1, counting.Invocations);
-        Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.SkillInvocationStarted);
-        Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.SkillProcedureSegmentRecorded);
+
+        var started = Assert.Single(run.Trace, e => e.Kind == TraceEventKind.SkillInvocationStarted);
+        Assert.Equal(skillKey, started.Data["skillKey"]);
+        Assert.Equal(skillVersion.Value, started.Data["skillVersion"]);
+
+        var segment = Assert.Single(run.Trace, e => e.Kind == TraceEventKind.SkillProcedureSegmentRecorded);
+        Assert.Equal("p1", segment.Data["procedureStepId"]);
+
+        var innerPolicy = Assert.Single(run.Trace, e =>
+            e.Kind == TraceEventKind.PolicyEvaluated && e.Message.Contains("skill inner", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("p2", innerPolicy.Data["procedureStepId"]);
+        Assert.Equal(FakeTool, innerPolicy.Data["toolKey"]);
+
+        var innerToolStart = Assert.Single(run.Trace, e =>
+            e.Kind == TraceEventKind.ToolCallStarted && e.Message.Contains("skill inner", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("p2", innerToolStart.Data["procedureStepId"]);
+        Assert.Equal(FakeTool, innerToolStart.Data["toolKey"]);
+
         Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.SkillInvocationCompleted);
-        Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.PolicyEvaluated && e.Message.Contains("skill inner", StringComparison.OrdinalIgnoreCase));
+
+        var runStep = Assert.Single(run.Steps);
+        var innerCall = Assert.Single(runStep.ToolCalls);
+        Assert.Equal(FakeTool, innerCall.ToolKey);
+        Assert.Equal(ToolCallStatus.Succeeded, innerCall.Status);
+        Assert.Contains(runStep.PolicyDecisions, d => d.Outcome == PolicyDecisionOutcome.Allow);
     }
 
     private static readonly HashSet<TraceEventKind> PlanCoordinationKinds =
