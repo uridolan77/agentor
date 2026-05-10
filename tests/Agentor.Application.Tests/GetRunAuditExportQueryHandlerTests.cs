@@ -36,6 +36,22 @@ public sealed class GetRunAuditExportQueryHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_IncludesEffectivePolicyScopeObject()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var run = BuildSimpleCompletedRun(clock.UtcNow);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = new GetRunAuditExportQueryHandler(repo, Microsoft.Extensions.Options.Options.Create(new AuditExportOptions()));
+        var result = await handler.HandleAsync(run.Id, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Contains("effectivePolicyScope", result!.CanonicalJson, StringComparison.Ordinal);
+        Assert.Contains("knowledgeScopeId", result.CanonicalJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task HandleAsync_RedactsPropertyNamesMatchingSensitiveSubstrings()
     {
         var repo = new InMemoryAgentRunRepository();

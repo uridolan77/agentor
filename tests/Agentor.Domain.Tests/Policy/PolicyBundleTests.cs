@@ -93,6 +93,36 @@ public sealed class PolicyBundleTests
         Assert.Equal("200", latencyBudget.ThresholdValue);
     }
 
+    [Fact]
+    public void PolicyRule_TenantScope_WithoutTenantId_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new PolicyRule(
+                Guid.NewGuid(),
+                PolicyRuleKind.ToolAccess,
+                PolicyRuleScope.Tenant,
+                PolicyRuleEffect.Deny,
+                "tool",
+                null,
+                "bad tenant scope"));
+    }
+
+    [Fact]
+    public void PolicyRule_KnowledgeScope_WithExtraTenantId_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new PolicyRule(
+                Guid.NewGuid(),
+                PolicyRuleKind.ToolAccess,
+                PolicyRuleScope.KnowledgeScope,
+                PolicyRuleEffect.Deny,
+                "tool",
+                null,
+                "bad ks scope",
+                scopeTenantId: Guid.NewGuid(),
+                scopeKnowledgeScopeId: Guid.NewGuid()));
+    }
+
     // ── PolicyBundle ─────────────────────────────────────────────────────────
 
     [Fact]

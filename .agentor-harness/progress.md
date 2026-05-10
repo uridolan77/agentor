@@ -1,5 +1,40 @@
 # Agentor harness progress
 
+## Phase 26 PR117 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **Scoped policy**: **`PolicyRule`** identifiers + **`KnowledgeScope`**; **`PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope)`**; **`PolicyEvaluationRequest.Scope`**; **`RuntimePolicyEvaluator`**; **`AgentRun.ToPolicyScope()`** at orchestration/review sites; audit **`effectivePolicyScope`**; API/DTO fields; **`PolicyScopeEvaluationTests`**; **`SCOPE-001`** harness closure; docs.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **428 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 27 not started.
+
+## Phase 25 PR116 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **`RunQueueHostedService`**: constructor takes only **`IServiceScopeFactory`**, **`IClock`**, queue/worker options monitors; each **`TryProcessSingleAsync`** iteration opens an async scope and resolves **`IDurableRunQueue`** + **`IRunExecutionLeaseStore`** + **`IAgentRunOrchestrator`** (claim/lease/process share scoped EF **`DbContext`**).
+- **Orchestrator drain**: **`StartAgentRunRouting`** + **`IOptionsMonitor<AgentorPublicRunOptions>`** + **`IAgentRunOrchestrator.StartAsync`** (validation → **`RunOrchestrationValidationException`** → failed queue item).
+- **`AddAgentorInfrastructure`**: binds **`Agentor:PublicRuns`** (`AgentorPublicRunOptions`).
+- **Tests**: **`RunQueueHostedServiceTests`** ctor updates; **`RunQueueHostedServiceEfSqliteScopeTests`** — SQLite file DB + **`ValidateScopes=true`**, enqueue/process/verify completed.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **420 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 25 -ExpectedHarnessPass PR116`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 26 not started.
+
 ## Phase 24 PR115 (2026-05-11)
 
 **Status**: Complete.

@@ -142,6 +142,13 @@ public sealed class GetRunAuditExportQueryHandler
         var root = new JsonObject
         {
             ["schemaVersion"] = "agentor.audit.v1",
+            ["effectivePolicyScope"] = new JsonObject
+            {
+                ["tenantId"] = run.TenantId?.ToString("D"),
+                ["workspaceId"] = run.WorkspaceId?.ToString("D"),
+                ["projectId"] = run.ProjectId?.ToString("D"),
+                ["knowledgeScopeId"] = run.KnowledgeScopeId?.ToString("D")
+            },
             ["run"] = new JsonObject
             {
                 ["id"] = run.Id.ToString("D"),

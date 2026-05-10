@@ -55,6 +55,9 @@ public sealed class AgentRun
 
     public Guid? KnowledgeScopeId { get; }
 
+    /// <summary>Scope dimensions used when evaluating scoped policy bundles against this run.</summary>
+    public AgentRunScope ToPolicyScope() => new(TenantId, WorkspaceId, ProjectId, KnowledgeScopeId);
+
     public string AgentName { get; }
 
     public string Objective { get; }

@@ -23,8 +23,6 @@ public sealed class RunQueueHostedServiceTests
         await queue.EnqueueAsync(workItem, DateTimeOffset.UtcNow, CancellationToken.None);
 
         var svc = new RunQueueHostedService(
-            queue,
-            serviceProvider.GetRequiredService<IRunExecutionLeaseStore>(),
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             serviceProvider.GetRequiredService<IClock>(),
             new StaticMonitor<RunQueueOptions>(new RunQueueOptions { ExecutionMode = RunQueueExecutionMode.DurableBackground }),
@@ -47,8 +45,6 @@ public sealed class RunQueueHostedServiceTests
         await queue.EnqueueAsync(workItem, DateTimeOffset.UtcNow, CancellationToken.None);
 
         var svc = new RunQueueHostedService(
-            queue,
-            serviceProvider.GetRequiredService<IRunExecutionLeaseStore>(),
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             serviceProvider.GetRequiredService<IClock>(),
             new StaticMonitor<RunQueueOptions>(new RunQueueOptions { ExecutionMode = RunQueueExecutionMode.DurableBackground }),
@@ -79,8 +75,6 @@ public sealed class RunQueueHostedServiceTests
         Assert.Equal(LeaseAcquireOutcome.Acquired, acquired);
 
         var svc = new RunQueueHostedService(
-            queue,
-            leases,
             serviceProvider.GetRequiredService<IServiceScopeFactory>(),
             clock,
             new StaticMonitor<RunQueueOptions>(new RunQueueOptions { ExecutionMode = RunQueueExecutionMode.DurableBackground }),

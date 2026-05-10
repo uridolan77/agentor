@@ -17,6 +17,18 @@ public sealed class PolicyRule
 
     public string Description { get; }
 
+    /// <summary>Tenant dimension when <see cref="Scope"/> is <see cref="PolicyRuleScope.Tenant"/> or narrower.</summary>
+    public Guid? ScopeTenantId { get; }
+
+    /// <summary>Workspace dimension when <see cref="Scope"/> is <see cref="PolicyRuleScope.Workspace"/> or narrower.</summary>
+    public Guid? ScopeWorkspaceId { get; }
+
+    /// <summary>Project dimension when <see cref="Scope"/> is <see cref="PolicyRuleScope.Project"/>.</summary>
+    public Guid? ScopeProjectId { get; }
+
+    /// <summary>Knowledge scope dimension when <see cref="Scope"/> is <see cref="PolicyRuleScope.KnowledgeScope"/>.</summary>
+    public Guid? ScopeKnowledgeScopeId { get; }
+
     public PolicyRule(
         Guid id,
         PolicyRuleKind kind,
@@ -24,7 +36,11 @@ public sealed class PolicyRule
         PolicyRuleEffect effect,
         string? targetKey,
         string? thresholdValue,
-        string description)
+        string description,
+        Guid? scopeTenantId = null,
+        Guid? scopeWorkspaceId = null,
+        Guid? scopeProjectId = null,
+        Guid? scopeKnowledgeScopeId = null)
     {
         if (id == Guid.Empty)
         {
@@ -33,6 +49,8 @@ public sealed class PolicyRule
 
         ArgumentException.ThrowIfNullOrWhiteSpace(description, nameof(description));
 
+        ValidateScopeIdentifiers(scope, scopeTenantId, scopeWorkspaceId, scopeProjectId, scopeKnowledgeScopeId);
+
         Id = id;
         Kind = kind;
         Scope = scope;
@@ -40,9 +58,65 @@ public sealed class PolicyRule
         TargetKey = targetKey;
         ThresholdValue = thresholdValue;
         Description = description;
+        ScopeTenantId = scopeTenantId;
+        ScopeWorkspaceId = scopeWorkspaceId;
+        ScopeProjectId = scopeProjectId;
+        ScopeKnowledgeScopeId = scopeKnowledgeScopeId;
     }
 
-    // Factory helpers keep call sites readable.
+    private static void ValidateScopeIdentifiers(
+        PolicyRuleScope scope,
+        Guid? tenantId,
+        Guid? workspaceId,
+        Guid? projectId,
+        Guid? knowledgeScopeId)
+    {
+        switch (scope)
+        {
+            case PolicyRuleScope.Global:
+                if (tenantId is not null || workspaceId is not null || projectId is not null || knowledgeScopeId is not null)
+                {
+                    throw new ArgumentException("Global scope rules must not specify scope identifiers.", nameof(scope));
+                }
+
+                break;
+
+            case PolicyRuleScope.Tenant:
+                if (!tenantId.HasValue || workspaceId is not null || projectId is not null || knowledgeScopeId is not null)
+                {
+                    throw new ArgumentException("Tenant scope requires ScopeTenantId only.", nameof(scope));
+                }
+
+                break;
+
+            case PolicyRuleScope.Workspace:
+                if (!tenantId.HasValue || !workspaceId.HasValue || projectId is not null || knowledgeScopeId is not null)
+                {
+                    throw new ArgumentException("Workspace scope requires ScopeTenantId and ScopeWorkspaceId.", nameof(scope));
+                }
+
+                break;
+
+            case PolicyRuleScope.Project:
+                if (!tenantId.HasValue || !workspaceId.HasValue || !projectId.HasValue || knowledgeScopeId is not null)
+                {
+                    throw new ArgumentException("Project scope requires ScopeTenantId, ScopeWorkspaceId, and ScopeProjectId.", nameof(scope));
+                }
+
+                break;
+
+            case PolicyRuleScope.KnowledgeScope:
+                if (!knowledgeScopeId.HasValue || tenantId is not null || workspaceId is not null || projectId is not null)
+                {
+                    throw new ArgumentException("KnowledgeScope scope requires ScopeKnowledgeScopeId only.", nameof(scope));
+                }
+
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(scope), scope, "Unknown policy rule scope.");
+        }
+    }
 
     public static PolicyRule ToolAllow(Guid id, string toolKey, PolicyRuleScope scope = PolicyRuleScope.Global) =>
         new(id, PolicyRuleKind.ToolAccess, scope, PolicyRuleEffect.Allow, toolKey, null, $"Allow tool '{toolKey}'.");

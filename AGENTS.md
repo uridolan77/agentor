@@ -159,7 +159,7 @@ pwsh ./scripts/verify-repo-clean.ps1
 For phase-specific closeout, pass expected values:
 
 ```powershell
-pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 24 -ExpectedHarnessPass PR115
+pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117
 ```
 
 See `.agentor-harness/SESSION_CLOSEOUT_PROTOCOL.md` for the canonical closeout procedure.

@@ -14,4 +14,5 @@ public sealed record PolicyEvaluationRequest(
     Guid StepId,
     string ToolKey,
     IReadOnlyDictionary<string, string> Input,
-    PolicyEvaluationContext? Context = null);
+    PolicyEvaluationContext? Context = null,
+    AgentRunScope? Scope = null);

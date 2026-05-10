@@ -1,5 +1,71 @@
 # Verification log
 
+## Phase 26 PR117 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+(Use `pwsh` instead of `powershell` when Core PowerShell is installed; CI uses `pwsh`.)
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **428 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=26`, `ExpectedHarnessPass=PR117`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 74 / Total 74
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 141 / Total 141
+- Agentor.Infrastructure.Tests: Passed 96 / Total 96
+- Agentor.Api.Tests: Passed 104 / Total 104
+
+Scope:
+
+- completed: Phase 26 PR117 scoped policy + SCOPE-001 closure + audit/docs/harness
+- not started: Phase 27+
+
+## Phase 25 PR116 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 25 -ExpectedHarnessPass PR116
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+(Use `pwsh` instead of `powershell` when Core PowerShell is installed; CI uses `pwsh`.)
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **420 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=25`, `ExpectedHarnessPass=PR116`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 72 / Total 72
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 135 / Total 135
+- Agentor.Infrastructure.Tests: Passed 96 / Total 96
+- Agentor.Api.Tests: Passed 104 / Total 104
+
+Scope:
+
+- completed: Phase 25 PR116 queue scoped lifetimes + EF ValidateScopes test + REPO_TRUTH + CI harness expectation
+- not started: Phase 26+
+
 ## Phase 24 PR115 (2026-05-11)
 
 ```powershell

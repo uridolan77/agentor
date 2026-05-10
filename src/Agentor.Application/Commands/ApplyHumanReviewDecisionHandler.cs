@@ -112,7 +112,8 @@ public sealed class ApplyHumanReviewDecisionHandler
                 step.Id,
                 toolCall.ToolKey,
                 toolCall.Input,
-                new PolicyEvaluationContext(ResumeAfterApprovedHumanReview: true)),
+                new PolicyEvaluationContext(ResumeAfterApprovedHumanReview: true),
+                run.ToPolicyScope()),
             cancellationToken);
 
         step.AddPolicyDecision(policyDecision);
@@ -304,7 +305,7 @@ public sealed class ApplyHumanReviewDecisionHandler
 
         // Evaluate fresh — approval of a prior step grants no forward-looking license to subsequent tool calls.
         var policyDecision = await _policyEvaluator.EvaluateToolCallAsync(
-            new PolicyEvaluationRequest(run.Id, runStep.Id, pending.ToolKey, input),
+            new PolicyEvaluationRequest(run.Id, runStep.Id, pending.ToolKey, input, Scope: run.ToPolicyScope()),
             cancellationToken);
 
         runStep.AddPolicyDecision(policyDecision);

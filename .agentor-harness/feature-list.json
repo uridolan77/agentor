@@ -1,10 +1,12 @@
 {
-    "phase":  24,
-    "title":  "Phase 24 public run orchestration kernel (PR112–PR115)",
-    "harnessPass":  "PR115",
+    "phase":  26,
+    "title":  "Phase 26 policy scope enforcement — SCOPE-001 closed (PR117)",
+    "harnessPass":  "PR117",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
+                  "PR117 (2026-05-11): Phase 26 — PolicyRule scope identifiers + PolicyRuleScope.KnowledgeScope; PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope) filters + merges (specificity + Deny>RequiresReview>Allow); PolicyEvaluationRequest.Scope; RuntimePolicyEvaluator resolves bundle per run scope; SequentialAgentPlanExecutor/GovernedSingleToolRunDriver/ApplyHumanReviewDecisionHandler propagate AgentRun.ToPolicyScope(); audit export root effectivePolicyScope; CreatePolicyRuleDto/PolicyRuleDto scope id fields; PolicyScopeEvaluationTests + domain validation tests; docs REPO_TRUTH + policy-bundles.md; v1.0-RC-DEFERRED-ITEMS SCOPE-001 closed. Verification: dotnet test Agentor.sln — 428 passed; verify-harness ExpectedPhase 26 PR117; verify-repo-clean.",
+                  "PR116 (2026-05-11): Phase 25 — RunQueueHostedService resolves IDurableRunQueue/IRunExecutionLeaseStore per TryProcessSingleAsync iteration via IServiceScopeFactory (EF scoped DbContext alignment); drain uses StartAgentRunRouting + IAgentRunOrchestrator + AgentorPublicRunOptions; AddAgentorInfrastructure binds Agentor:PublicRuns; RunQueueHostedServiceEfSqliteScopeTests (ValidateScopes=true); docs REPO_TRUTH durable queue worker; CI verify-harness ExpectedPhase 25 PR116. Verification: dotnet test Agentor.sln — 420 passed; verify-harness ExpectedPhase 25 PR116; verify-repo-clean.",
                   "PR115 (2026-05-11): Phase 24 — RunOrchestrationRequest + RunExecutionMode; LegacyFakeRunExecutor + GovernedSingleToolRunDriver; IAgentRunOrchestrator/AgentRunOrchestrator (plan/recipe/skill + single-tool paths); StartAgentRunHandler thin routing via StartAgentRunRouting + AgentorPublicRunOptions; POST /agent-runs DTO extended (planId, recipeId, toolKey, skillKey, mode, input); ExceptionHandlingMiddleware maps RunOrchestrationValidationException to 400; DI IAgentPlanExecutor/SequentialAgentPlanExecutor; AgentRunOrchestrationApiTests (Conexus, MCP echo, external invoke, deny, requires-review, explicit legacy); docs REPO_TRUTH + README; appsettings Agentor:PublicRuns. Verification: dotnet test Agentor.sln — 419 passed; verify-harness ExpectedPhase 24 PR115; verify-repo-clean.",
                   "PR111 (2026-05-11): Phase 23 — README as product documentation; docs/REPO_TRUTH.md; decisions/ADR-023-public-run-kernel-unification.md; legacy package README archived to docs/history/PR1-PR40-package.md. Verification: dotnet test Agentor.sln — 413 passed; verify-harness ExpectedPhase 23 PR111; verify-repo-clean.",
                   "PR110.5 (2026-05-11): Operator dashboard authorization — GET /api/v1/operator/dashboard requires OpsRead (same family as /api/v1/ops/*); Service role remains denied OpsRead; EndpointAuthorizationApiTests (HumanOperator/System OK, Service 403, actor accessor failure 401); RoleBasedAuthorizationDecisionServiceTests.Authorize_Allows_System_ForOpsRead; docs/security/auth-boundary.md, deployment-threat-notes.md, docs/operator/dashboard-and-inbox.md, docs/operator/debug-run.md, docs/api/phase13-product-surface.md, docs/examples/phase13-workflows.md. Verification: dotnet test — 413 passed; verify-harness phase 22 PR110.5; verify-repo-clean.",
@@ -54,7 +56,7 @@
                             {
                                 "id":  "PR111-002",
                                 "pr":  111,
-                                "description":  "docs/REPO_TRUTH.md documents actual public run path, executor default gap, SCOPE-001, EF save, Jwt principal assumption",
+                                "description":  "docs/REPO_TRUTH.md documents public run path, scoped policy enforcement, EF save model, Jwt principal assumption",
                                 "passes":  true,
                                 "evidence":  "docs/REPO_TRUTH.md"
                             },
@@ -85,6 +87,48 @@
                                 "description":  "Policy deny blocks single-tool start; RequiresReview suspends; explicit LegacyFakeTool works when implicit routing disabled",
                                 "passes":  true,
                                 "evidence":  "AgentRunOrchestrationApiTests.PostAgentRuns_PolicyDeny_BlocksBeforeToolExecution; PostAgentRuns_PolicyRequiresReview_SingleToolPr1Fake_SuspendsRun; PostAgentRuns_ModeLegacyExplicit_WorksWhenImplicitDisabled"
+                            },
+                            {
+                                "id":  "PR116-001",
+                                "pr":  116,
+                                "description":  "RunQueueHostedService does not inject scoped queue/lease; resolves stores inside per-drain async scope",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/RunQueue/RunQueueBackgroundWorker.cs"
+                            },
+                            {
+                                "id":  "PR116-002",
+                                "pr":  116,
+                                "description":  "Queued run drain executes via StartAgentRunRouting + IAgentRunOrchestrator + AgentorPublicRunOptions",
+                                "passes":  true,
+                                "evidence":  "RunQueueBackgroundWorker.ProcessOneAsync; DependencyInjection.cs AgentorPublicRunOptions bind"
+                            },
+                            {
+                                "id":  "PR116-003",
+                                "pr":  116,
+                                "description":  "EF SQLite composition with ValidateScopes processes queued item to Completed",
+                                "passes":  true,
+                                "evidence":  "RunQueueHostedServiceEfSqliteScopeTests.TryProcessSingleAsync_WithEfStoresAndValidateScopes_ClaimsExecutesAndCompletes"
+                            },
+                            {
+                                "id":  "PR117-001",
+                                "pr":  117,
+                                "description":  "PolicyBundleRulesAdapter filters bundle rules by AgentRunScope with specificity + effect precedence",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/Policy/PolicyBundleRulesAdapter.cs; PolicyScopeEvaluationTests.Adapter_TenantScopedRule_IgnoredWhenRunHasDifferentTenant"
+                            },
+                            {
+                                "id":  "PR117-002",
+                                "pr":  117,
+                                "description":  "PolicyEvaluationRequest carries scope; orchestration/review paths propagate AgentRun.ToPolicyScope(); evaluator uses scoped ToProfileRules",
+                                "passes":  true,
+                                "evidence":  "IPolicyEvaluator.cs PolicyEvaluationRequest; SequentialAgentPlanExecutor; GovernedSingleToolRunDriver; ApplyHumanReviewDecisionHandler; RuntimePolicyEvaluator.cs"
+                            },
+                            {
+                                "id":  "PR117-003",
+                                "pr":  117,
+                                "description":  "Audit export documents effectivePolicyScope; API/policy DTOs carry optional rule scope identifiers",
+                                "passes":  true,
+                                "evidence":  "GetRunAuditExportQueryHandler.BuildAuditRoot effectivePolicyScope; GetRunAuditExportQueryHandlerTests.HandleAsync_IncludesEffectivePolicyScopeObject; PolicyBundleDtos.cs; PolicyBundleEndpoints.cs"
                             },
                             {
                                 "id":  "PR111-003",
@@ -1391,9 +1435,9 @@
                             {
                                 "id":  "SCOPE-001",
                                 "pr":  85.5,
-                                "description":  "Policy scope enforcement: Tenant/Workspace/Project rule scoping against run identity is deferred",
-                                "passes":  false,
-                                "evidence":  "PolicyRuleScope values are stored on PolicyRule but PolicyBundleRulesAdapter.ToProfileRules() applies all rules globally (no scope-identity filtering). Deferred to v1.1. See docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md SCOPE-001 and SCOPE-001 comment in PolicyBundleRulesAdapter.cs."
+                                "description":  "Policy scope enforcement: bundle rules filtered by run Tenant/Workspace/Project/KnowledgeScope identity",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleRulesAdapter.ToProfileRules(PolicyBundle, AgentRunScope); PolicyScopeEvaluationTests; PolicyEvaluationRequest.Scope; RuntimePolicyEvaluator.ResolveEffectiveProfileAsync(runScope); docs/developer/policy-bundles.md Scoped enforcement"
                             },
                             {
                                 "id":  "PR85.5-001",
@@ -1405,9 +1449,9 @@
                             {
                                 "id":  "PR85.5-002",
                                 "pr":  85.5,
-                                "description":  "PolicyRuleScope limitation documented in code, developer guide, and deferred-items manifest",
+                                "description":  "Policy scope modeling + enforcement documented (Phase 26 closes SCOPE-001)",
                                 "passes":  true,
-                                "evidence":  "SCOPE-001 comment in PolicyBundleRulesAdapter.cs; PolicyBundleRulesAdapter XML doc remarks; Known limitations section in docs/developer/policy-bundles.md; SCOPE-001 item in v1.0-RC-DEFERRED-ITEMS.md"
+                                "evidence":  "docs/developer/policy-bundles.md Scoped enforcement; docs/REPO_TRUTH.md Policy scopes; docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md; feature-list SCOPE-001 passes:true"
                             },
                             {
                                 "id":  "PR85.5-003",

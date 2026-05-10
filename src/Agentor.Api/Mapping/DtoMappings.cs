@@ -163,7 +163,11 @@ public static class DtoMappings
             rule.Effect,
             rule.TargetKey,
             rule.ThresholdValue,
-            rule.Description);
+            rule.Description,
+            rule.ScopeTenantId,
+            rule.ScopeWorkspaceId,
+            rule.ScopeProjectId,
+            rule.ScopeKnowledgeScopeId);
 
     public static ActivePolicyProfileDto ToDto(this ActivePolicyProfile active) =>
         new(active.ProfileId,

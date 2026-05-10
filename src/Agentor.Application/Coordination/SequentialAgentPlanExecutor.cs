@@ -345,7 +345,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         }
 
         var policyDecision = await _policy.EvaluateToolCallAsync(
-            new PolicyEvaluationRequest(run.Id, runStep.Id, toolKey, input, null),
+            new PolicyEvaluationRequest(run.Id, runStep.Id, toolKey, input, null, run.ToPolicyScope()),
             cancellationToken);
 
         runStep.AddPolicyDecision(policyDecision);
@@ -492,7 +492,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         }
 
         var policyDecision = await _policy.EvaluateToolCallAsync(
-            new PolicyEvaluationRequest(run.Id, runStep.Id, toolKey, input, null),
+            new PolicyEvaluationRequest(run.Id, runStep.Id, toolKey, input, null, run.ToPolicyScope()),
             cancellationToken);
 
         runStep.AddPolicyDecision(policyDecision);

@@ -93,7 +93,11 @@ public static class PolicyBundleEndpoints
                             r.Effect,
                             r.TargetKey,
                             r.ThresholdValue,
-                            string.IsNullOrWhiteSpace(r.Description) ? $"Rule {idx + 1}" : r.Description)),
+                            string.IsNullOrWhiteSpace(r.Description) ? $"Rule {idx + 1}" : r.Description,
+                            r.ScopeTenantId,
+                            r.ScopeWorkspaceId,
+                            r.ScopeProjectId,
+                            r.ScopeKnowledgeScopeId)),
                         now);
                 }
                 catch (ArgumentException ex)

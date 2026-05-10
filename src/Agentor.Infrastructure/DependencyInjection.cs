@@ -41,6 +41,8 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(RunQueueOptions.SectionName));
         services.AddOptions<RunWorkerOptions>()
             .Bind(configuration.GetSection(RunWorkerOptions.SectionName));
+        services.AddOptions<AgentorPublicRunOptions>()
+            .Bind(configuration.GetSection(AgentorPublicRunOptions.SectionName));
         services.AddOptions<OutboxDispatcherOptions>()
             .Bind(configuration.GetSection(OutboxDispatcherOptions.SectionName));
         services.AddOptions<OutboxDispatchOptions>()

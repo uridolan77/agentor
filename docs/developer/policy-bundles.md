@@ -123,6 +123,8 @@ When a policy profile is active, `GET /api/v1/agent-runs/{id}/audit-export` incl
 
 When no profile is active, `policyIdentity` is omitted from the JSON.
 
+Canonical audit exports always include a root-level **`effectivePolicyScope`** object (`tenantId`, `workspaceId`, `projectId`, `knowledgeScopeId`) documenting the run identity used when resolving scoped bundle rules.
+
 ## Test fixtures
 
 Deterministic fixture files live under `tests/Agentor.Application.Tests/fixtures/policy/`:
@@ -133,23 +135,27 @@ Deterministic fixture files live under `tests/Agentor.Application.Tests/fixtures
 | `deny-bundle.json` | Tool deny + model budget deny; proves both Deny paths |
 | `review-bundle.json` | Tool-specific RequiresReview + MCP deny; proves distinct outcomes |
 
-## Known limitations (Phase 17)
+## Scoped enforcement (Phase 26)
 
-### PolicyRuleScope is modeled but not enforced
+Rules are filtered by **run identity** before they influence `PolicyProfileRules`:
 
-Each `PolicyRule` carries a `Scope` field (`Global`, `Tenant`, `Workspace`, `Project`). The domain model stores these values correctly.
+| `PolicyRuleScope` | Matches when |
+|---|---|
+| `Global` | Always |
+| `Tenant` | `ScopeTenantId` equals run `TenantId` |
+| `Workspace` | Tenant + workspace ids match |
+| `Project` | Tenant + workspace + project ids match |
+| `KnowledgeScope` | `ScopeKnowledgeScopeId` equals run `KnowledgeScopeId` |
 
-**Phase 17 does not enforce scope.** `PolicyBundleRulesAdapter.ToProfileRules()` iterates all rules in the bundle and maps them into a flat `PolicyProfileRules` without filtering by run identity. A rule marked `Scope = Tenant` is applied just like a rule marked `Scope = Global`.
+**Precedence:** more specific scope wins over broader scope. If two rules apply at the **same** specificity for the same tool key, **Deny** beats **RequiresReview** beats **Allow**.
 
-This is a deliberate deferral (see `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` item `SCOPE-001`). Scoped enforcement requires the evaluation path to receive run-identity context (`TenantId`, `WorkspaceId`, `ProjectId`) and apply scope filters at adapter time. That is a v1.1 concern.
-
-**Do not assume scope filtering is active.** Any consumer that creates Tenant- or Project-scoped rules should be aware that in the current implementation those rules apply globally.
+API requests (`CreatePolicyRuleDto`) accept optional `scopeTenantId`, `scopeWorkspaceId`, `scopeProjectId`, `scopeKnowledgeScopeId`; combinations must satisfy the domain validation on `PolicyRule`.
 
 ## Architecture boundaries
 
 - **Agentor.Domain.Policy**: `PolicyBundle`, `PolicyRule`, `PolicyProfile`, `ActivePolicyProfile`, value objects and enums. No infrastructure dependencies.
-- **Agentor.Application.Abstractions**: `IPolicyBundleRepository`, `IPolicyProfileRepository` interfaces.
-- **Agentor.Infrastructure.Policy**: `PolicyBundleRulesAdapter` (converts bundle → `PolicyProfileRules`, no scope filtering in Phase 17), `InMemoryPolicyBundleRepository`, `InMemoryPolicyProfileRepository`.
-- **Agentor.Infrastructure.RuntimePolicyEvaluator**: Bundle-aware via `IPolicyBundleRepository` + `IPolicyProfileRepository`. Falls back to `RuntimePolicyOptions` when no active profile is set.
-- **Agentor.Contracts**: `PolicyBundleDtos.cs` — request/response DTOs.
+- **Agentor.Application.Abstractions**: `IPolicyBundleRepository`, `IPolicyProfileRepository` interfaces; `PolicyEvaluationRequest` carries `AgentRunScope` for scoped bundle resolution.
+- **Agentor.Infrastructure.Policy**: `PolicyBundleRulesAdapter` (bundle + run scope → `PolicyProfileRules`), `InMemoryPolicyBundleRepository`, `InMemoryPolicyProfileRepository`.
+- **Agentor.Infrastructure.RuntimePolicyEvaluator**: Bundle-aware via active profile + `AgentRunScope` on each evaluation. Falls back to `RuntimePolicyOptions` when no active profile is set.
+- **Agentor.Contracts**: `PolicyBundleDtos.cs` — request/response DTOs (including optional scope identifier fields on rules).
 - **Agentor.Api.Endpoints.PolicyBundleEndpoints**: Four management endpoints; no domain logic.

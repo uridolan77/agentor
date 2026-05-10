@@ -13,7 +13,9 @@ This document states **what the code and HTTP surface actually do today**, so op
 
 ## Policy scopes
 
-- Policy rules carry **tenant / workspace / project / knowledge-scope** model fields, but **`PolicyBundleRulesAdapter` applies bundle rules globally** (no scope-identity filtering). Tracked as **SCOPE-001** in deferred items and harness acceptance.
+- **`PolicyRule`** rules carry **`Scope`** (`Global`, `Tenant`, `Workspace`, `Project`, **`KnowledgeScope`**) plus optional **scope identifier** fields (`ScopeTenantId`, `ScopeWorkspaceId`, `ScopeProjectId`, `ScopeKnowledgeScopeId`) validated at construction.
+- **`PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope)`** includes only rules whose scope matches the run’s **`TenantId` / `WorkspaceId` / `ProjectId` / `KnowledgeScopeId`**. Conflicts merge by **specificity** (KnowledgeScope → Project → Workspace → Tenant → Global); at equal specificity, **Deny > RequiresReview > Allow** for tool-access rules.
+- **`PolicyEvaluationRequest`** includes **`AgentRunScope`** so **`RuntimePolicyEvaluator`** builds the effective profile per tool call from the active bundle and the run’s identity.
 
 ## Persistence
 
@@ -22,6 +24,10 @@ This document states **what the code and HTTP surface actually do today**, so op
 ## Authentication (Jwt mode)
 
 - **Jwt** auth mode consumes an **already-authenticated** `ClaimsPrincipal` (header or upstream gateway). The API does **not** register full **Bearer token validation middleware** by default in that configuration; treat Jwt mode as **explicit external auth** unless you add validation yourself.
+
+## Durable run queue worker
+
+- **`RunQueueHostedService`** is registered as a **hosted singleton** but resolves **`IDurableRunQueue`**, **`IRunExecutionLeaseStore`**, and **`IAgentRunOrchestrator`** inside a **per-drain `IServiceScopeFactory` async scope**, so EF-backed scoped implementations share one **`DbContext`** for claim → execute → mark complete/failed. Drained items execute through **`StartAgentRunRouting`** + **`IAgentRunOrchestrator`** (not a separate fake-centered path). **`AddAgentorInfrastructure`** binds **`Agentor:PublicRuns`** so worker routing defaults match API configuration.
 
 ## Where to read more
 

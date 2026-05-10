@@ -1,6 +1,6 @@
 using Agentor.Application.Abstractions;
-using Agentor.Application.Commands;
 using Agentor.Application.Options;
+using Agentor.Application.Orchestration;
 using Agentor.Application.RunQueue;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -11,8 +11,6 @@ namespace Agentor.Infrastructure.RunQueue;
 /// <summary>Drains durable queued runs when background worker execution is enabled.</summary>
 public sealed class RunQueueHostedService : BackgroundService
 {
-    private readonly IDurableRunQueue _queueStore;
-    private readonly IRunExecutionLeaseStore _leaseStore;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IClock _clock;
     private readonly IOptionsMonitor<RunQueueOptions> _options;
@@ -20,15 +18,11 @@ public sealed class RunQueueHostedService : BackgroundService
     private readonly string _workerId = $"run-worker:{Environment.MachineName}:{Guid.NewGuid():N}";
 
     public RunQueueHostedService(
-        IDurableRunQueue queueStore,
-        IRunExecutionLeaseStore leaseStore,
         IServiceScopeFactory scopeFactory,
         IClock clock,
         IOptionsMonitor<RunQueueOptions> options,
         IOptionsMonitor<RunWorkerOptions> workerOptions)
     {
-        _queueStore = queueStore;
-        _leaseStore = leaseStore;
         _scopeFactory = scopeFactory;
         _clock = clock;
         _options = options;
@@ -59,10 +53,15 @@ public sealed class RunQueueHostedService : BackgroundService
             return false;
         }
 
+        await using var iterationScope = _scopeFactory.CreateAsyncScope();
+        var scopedServices = iterationScope.ServiceProvider;
+        var queueStore = scopedServices.GetRequiredService<IDurableRunQueue>();
+        var leaseStore = scopedServices.GetRequiredService<IRunExecutionLeaseStore>();
+
         var now = _clock.UtcNow;
         var leaseTtl = _workerOptions.CurrentValue.LeaseTtl;
 
-        var item = await _queueStore
+        var item = await queueStore
             .TryClaimNextAsync(_workerId, leaseTtl, now, cancellationToken)
             .ConfigureAwait(false);
 
@@ -71,41 +70,51 @@ public sealed class RunQueueHostedService : BackgroundService
             return false;
         }
 
-        var lease = await _leaseStore
+        var lease = await leaseStore
             .TryAcquireAsync(item.WorkItemId, _workerId, leaseTtl, now, cancellationToken)
             .ConfigureAwait(false);
 
         if (lease == LeaseAcquireOutcome.Contested)
         {
-            await _queueStore.ReleaseClaimAsync(item.WorkItemId, _workerId, _clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            await queueStore.ReleaseClaimAsync(item.WorkItemId, _workerId, _clock.UtcNow, cancellationToken).ConfigureAwait(false);
             return false;
         }
 
         try
         {
-            await ProcessOneAsync(item, cancellationToken).ConfigureAwait(false);
+            await ProcessOneAsync(item, queueStore, scopedServices, cancellationToken).ConfigureAwait(false);
             return true;
         }
         finally
         {
-            await _leaseStore.ReleaseAsync(item.WorkItemId, _workerId, cancellationToken).ConfigureAwait(false);
+            await leaseStore.ReleaseAsync(item.WorkItemId, _workerId, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private async Task ProcessOneAsync(RunQueueRecord item, CancellationToken cancellationToken)
+    private async Task ProcessOneAsync(
+        RunQueueRecord item,
+        IDurableRunQueue queueStore,
+        IServiceProvider scopedServices,
+        CancellationToken cancellationToken)
     {
         try
         {
-            await using var scope = _scopeFactory.CreateAsyncScope();
-            var handler = scope.ServiceProvider.GetRequiredService<StartAgentRunHandler>();
-            var run = await handler.HandleAsync(item.Command, cancellationToken).ConfigureAwait(false);
-            await _queueStore
+            var orchestrator = scopedServices.GetRequiredService<IAgentRunOrchestrator>();
+            var publicRuns = scopedServices.GetRequiredService<IOptionsMonitor<AgentorPublicRunOptions>>();
+            if (!StartAgentRunRouting.TryBuildRequest(item.Command, publicRuns.CurrentValue, out var request, out var errors)
+                || request is null)
+            {
+                throw new RunOrchestrationValidationException(errors ?? Array.Empty<string>());
+            }
+
+            var run = await orchestrator.StartAsync(request, cancellationToken).ConfigureAwait(false);
+            await queueStore
                 .MarkCompletedAsync(item.WorkItemId, run.Id, _workerId, _clock.UtcNow, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await _queueStore
+            await queueStore
                 .MarkFailedAsync(item.WorkItemId, ex.Message, _workerId, _clock.UtcNow, cancellationToken)
                 .ConfigureAwait(false);
         }

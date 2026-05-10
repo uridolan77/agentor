@@ -10,7 +10,11 @@ public sealed record CreatePolicyRuleDto(
     PolicyRuleEffect Effect,
     string? TargetKey = null,
     string? ThresholdValue = null,
-    string Description = "");
+    string Description = "",
+    Guid? ScopeTenantId = null,
+    Guid? ScopeWorkspaceId = null,
+    Guid? ScopeProjectId = null,
+    Guid? ScopeKnowledgeScopeId = null);
 
 public sealed record CreatePolicyBundleRequestDto(
     string Name,
@@ -30,7 +34,11 @@ public sealed record PolicyRuleDto(
     PolicyRuleEffect Effect,
     string? TargetKey,
     string? ThresholdValue,
-    string Description);
+    string Description,
+    Guid? ScopeTenantId = null,
+    Guid? ScopeWorkspaceId = null,
+    Guid? ScopeProjectId = null,
+    Guid? ScopeKnowledgeScopeId = null);
 
 public sealed record PolicyBundleSummaryDto(
     Guid Id,

@@ -52,20 +52,23 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
                 "UNKNOWN_TOOL", $"Tool '{request.ToolKey}' is not registered.");
         }
 
-        var profile = await ResolveEffectiveProfileAsync(cancellationToken);
+        var effectiveScope = request.Scope ?? new AgentRunScope(null, null, null, null);
+        var profile = await ResolveEffectiveProfileAsync(effectiveScope, cancellationToken).ConfigureAwait(false);
         return EvaluateWithProfile(request, reg.Definition, profile);
     }
 
     // Prefer the active bundle-derived profile over the config-level ActiveProfile.
-    private async Task<PolicyProfileRules?> ResolveEffectiveProfileAsync(CancellationToken cancellationToken)
+    private async Task<PolicyProfileRules?> ResolveEffectiveProfileAsync(
+        AgentRunScope runScope,
+        CancellationToken cancellationToken)
     {
-        var active = await _profileRepo.GetActiveAsync(cancellationToken);
+        var active = await _profileRepo.GetActiveAsync(cancellationToken).ConfigureAwait(false);
         if (active is not null)
         {
-            var bundle = await _bundleRepo.GetAsync(active.BundleId, cancellationToken);
+            var bundle = await _bundleRepo.GetAsync(active.BundleId, cancellationToken).ConfigureAwait(false);
             if (bundle is not null)
             {
-                return PolicyBundleRulesAdapter.ToProfileRules(bundle);
+                return PolicyBundleRulesAdapter.ToProfileRules(bundle, runScope);
             }
         }
 

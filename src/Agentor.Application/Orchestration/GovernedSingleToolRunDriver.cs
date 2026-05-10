@@ -92,7 +92,7 @@ public sealed class GovernedSingleToolRunDriver
             var resolvedKey = registration.Definition.Key;
 
             var policyDecision = await _policyEvaluator.EvaluateToolCallAsync(
-                new PolicyEvaluationRequest(run.Id, step.Id, resolvedKey, input, null),
+                new PolicyEvaluationRequest(run.Id, step.Id, resolvedKey, input, null, run.ToPolicyScope()),
                 cancellationToken).ConfigureAwait(false);
 
             step.AddPolicyDecision(policyDecision);
