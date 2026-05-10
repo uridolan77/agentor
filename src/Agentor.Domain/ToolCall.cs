@@ -50,7 +50,7 @@ public sealed class ToolCall
 
     public void Succeed(IReadOnlyDictionary<string, string> output, DateTimeOffset now)
     {
-        EnsureRunning();
+        AgentStateMachine.EnsureToolCallCanMutate(this);
         _output.Clear();
 
         foreach (var item in output)
@@ -64,7 +64,7 @@ public sealed class ToolCall
 
     public void Fail(string errorMessage, DateTimeOffset now)
     {
-        EnsureRunning();
+        AgentStateMachine.EnsureToolCallCanMutate(this);
         Status = ToolCallStatus.Failed;
         ErrorMessage = errorMessage;
         CompletedAt = now;
@@ -72,8 +72,16 @@ public sealed class ToolCall
 
     public void Deny(string reason, DateTimeOffset now)
     {
-        EnsureRunning();
+        AgentStateMachine.EnsureToolCallCanMutate(this);
         Status = ToolCallStatus.Denied;
+        ErrorMessage = reason;
+        CompletedAt = now;
+    }
+
+    public void MarkRequiresReview(string reason, DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureToolCallCanMutate(this);
+        Status = ToolCallStatus.RequiresReview;
         ErrorMessage = reason;
         CompletedAt = now;
     }
@@ -102,11 +110,4 @@ public sealed class ToolCall
         return call;
     }
 
-    private void EnsureRunning()
-    {
-        if (Status != ToolCallStatus.Running)
-        {
-            throw new InvalidOperationException($"Tool call is not running. Current status: {Status}");
-        }
-    }
 }

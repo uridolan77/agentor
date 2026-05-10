@@ -1,10 +1,12 @@
 namespace Agentor.Domain.Enums;
 
-public enum AgentRunStatus
+public enum AgentPlanStepStatus
 {
-    Queued,
+    Pending,
     Running,
     Completed,
     Failed,
+    Skipped,
+    Cancelled,
     RequiresReview
 }

@@ -8,6 +8,6 @@
   "expectations": {
     "status": "Completed",
     "toolKey": "pr1.fake-tool",
-    "minTraceEventCount": 5
+    "minTraceEventCount": 9
   }
 }

@@ -5,5 +5,6 @@ public enum AgentStepStatus
     Pending,
     Running,
     Completed,
-    Failed
+    Failed,
+    RequiresReview
 }

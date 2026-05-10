@@ -74,7 +74,12 @@ public sealed class AgentRun
 
     public AgentStep StartStep(string name, DateTimeOffset now)
     {
-        EnsureRunning();
+        AgentStateMachine.EnsureRunCanMutate(this);
+        if (Status != AgentRunStatus.Running)
+        {
+            throw new InvalidOperationException($"Run is not running. Current status: {Status}");
+        }
+
         var step = AgentStep.Start(Id, _steps.Count + 1, name, now);
         _steps.Add(step);
         RecordTrace(TraceEventKind.StepStarted, $"Step started: {name}", now, new Dictionary<string, string>
@@ -97,12 +102,7 @@ public sealed class AgentRun
 
     public void Complete(DateTimeOffset now)
     {
-        EnsureRunning();
-
-        if (_steps.Count == 0)
-        {
-            throw new InvalidOperationException("Cannot complete a run with no steps.");
-        }
+        AgentStateMachine.EnsureRunCanComplete(this);
 
         Status = AgentRunStatus.Completed;
         CompletedAt = now;
@@ -111,13 +111,25 @@ public sealed class AgentRun
 
     public void Fail(string errorMessage, DateTimeOffset now)
     {
-        EnsureRunning();
+        AgentStateMachine.EnsureRunCanFail(this);
         Status = AgentRunStatus.Failed;
         ErrorMessage = errorMessage;
         CompletedAt = now;
         RecordTrace(TraceEventKind.RunFailed, "Agent run failed.", now, new Dictionary<string, string>
         {
             ["error"] = errorMessage
+        });
+    }
+
+    public void EnterRequiresReview(string reason, DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureRunCanEnterReview(this);
+        Status = AgentRunStatus.RequiresReview;
+        ErrorMessage = reason;
+        CompletedAt = now;
+        RecordTrace(TraceEventKind.RunRequiresReview, "Agent run requires review before continuing.", now, new Dictionary<string, string>
+        {
+            ["reason"] = reason
         });
     }
 
@@ -141,14 +153,6 @@ public sealed class AgentRun
         run._steps.AddRange(steps);
         run._trace.AddRange(trace);
         return run;
-    }
-
-    private void EnsureRunning()
-    {
-        if (Status != AgentRunStatus.Running)
-        {
-            throw new InvalidOperationException($"Run is not running. Current status: {Status}");
-        }
     }
 }
 

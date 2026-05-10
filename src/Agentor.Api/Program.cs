@@ -54,6 +54,9 @@ builder.Services
 builder.Services.Configure<RuntimePolicyOptions>(
     builder.Configuration.GetSection(RuntimePolicyOptions.SectionName));
 
+builder.Services.Configure<ToolExecutionOptions>(
+    builder.Configuration.GetSection(ToolExecutionOptions.SectionName));
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();

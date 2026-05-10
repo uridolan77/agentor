@@ -49,7 +49,7 @@ public sealed class EvalBaselineFixtureTests
         var fake = new FakeToolExecutor();
         var registry = ToolRegistry.CreateDefault(fake);
         var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
-        var handler = new StartAgentRunHandler(repository, policy, registry, clock);
+        var handler = AgentorTestComposition.CreateStartAgentRunHandler(repository, policy, registry, clock);
 
         var cmd = new StartAgentRunCommand(
             root.Command!.AgentName ?? "PR1 Agent",

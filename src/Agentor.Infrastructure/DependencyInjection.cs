@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<IToolExecutor>(sp => sp.GetRequiredService<FakeToolExecutor>());
         services.AddSingleton<IToolRegistry>(sp => ToolRegistry.CreateDefault(sp.GetRequiredService<FakeToolExecutor>()));
         services.AddScoped<IPolicyEvaluator, RuntimePolicyEvaluator>();
+        services.AddSingleton<IToolExecutionPipeline, ToolExecutionPipeline>();
 
         return services;
     }

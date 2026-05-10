@@ -6,5 +6,6 @@ public enum ToolCallStatus
     Running,
     Succeeded,
     Failed,
-    Denied
+    Denied,
+    RequiresReview
 }

@@ -109,7 +109,8 @@ public sealed class EfCoreAgentRunRepositoryTests
         var fake = new FakeToolExecutor();
         var registry = ToolRegistry.CreateDefault(fake);
         var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
-        var handler = new StartAgentRunHandler(repo, policy, registry, clock);
+        var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
+        var handler = new StartAgentRunHandler(repo, policy, registry, pipeline, clock);
 
         var run = await handler.HandleAsync(
             new StartAgentRunCommand("Handler EF Agent", "Policy/tool EF round-trip.", "handler-ef-trace"),

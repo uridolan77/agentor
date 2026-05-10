@@ -67,15 +67,22 @@ public sealed class AgentStep
 
     public void Complete(DateTimeOffset now)
     {
-        EnsureRunning();
+        AgentStateMachine.EnsureStepCanMutate(this);
         Status = AgentStepStatus.Completed;
         CompletedAt = now;
     }
 
     public void Fail(DateTimeOffset now)
     {
-        EnsureRunning();
+        AgentStateMachine.EnsureStepCanMutate(this);
         Status = AgentStepStatus.Failed;
+        CompletedAt = now;
+    }
+
+    public void MarkRequiresReview(DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureStepCanMutate(this);
+        Status = AgentStepStatus.RequiresReview;
         CompletedAt = now;
     }
 
@@ -98,11 +105,4 @@ public sealed class AgentStep
         return step;
     }
 
-    private void EnsureRunning()
-    {
-        if (Status != AgentStepStatus.Running)
-        {
-            throw new InvalidOperationException($"Step is not running. Current status: {Status}");
-        }
-    }
 }

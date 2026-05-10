@@ -10,17 +10,20 @@ public sealed class StartAgentRunHandler
     private readonly IAgentRunRepository _repository;
     private readonly IPolicyEvaluator _policyEvaluator;
     private readonly IToolRegistry _toolRegistry;
+    private readonly IToolExecutionPipeline _toolExecutionPipeline;
     private readonly IClock _clock;
 
     public StartAgentRunHandler(
         IAgentRunRepository repository,
         IPolicyEvaluator policyEvaluator,
         IToolRegistry toolRegistry,
+        IToolExecutionPipeline toolExecutionPipeline,
         IClock clock)
     {
         _repository = repository;
         _policyEvaluator = policyEvaluator;
         _toolRegistry = toolRegistry;
+        _toolExecutionPipeline = toolExecutionPipeline;
         _clock = clock;
     }
 
@@ -81,7 +84,7 @@ public sealed class StartAgentRunHandler
 
             var toolCall = ToolCall.Start(run.Id, step.Id, toolKey, input, _clock.UtcNow);
 
-            if (!policyDecision.AllowsExecution)
+            if (policyDecision.Outcome == PolicyDecisionOutcome.Deny)
             {
                 toolCall.Deny(policyDecision.Reason, _clock.UtcNow);
                 step.AddToolCall(toolCall);
@@ -91,23 +94,40 @@ public sealed class StartAgentRunHandler
                 return run;
             }
 
+            if (policyDecision.Outcome == PolicyDecisionOutcome.RequiresReview)
+            {
+                toolCall.MarkRequiresReview(policyDecision.Reason, _clock.UtcNow);
+                step.AddToolCall(toolCall);
+                step.MarkRequiresReview(_clock.UtcNow);
+                run.EnterRequiresReview(policyDecision.Reason, _clock.UtcNow);
+                await _repository.SaveAsync(run, cancellationToken);
+                return run;
+            }
+
             run.RecordTrace(TraceEventKind.ToolCallStarted, "Tool call started.", _clock.UtcNow, new Dictionary<string, string>
             {
                 ["stepId"] = step.Id.ToString(),
+                ["toolCallId"] = toolCall.Id.ToString(),
                 ["toolKey"] = toolKey
             });
 
-            var toolResult = await registration.Executor.ExecuteAsync(
+            var pipelineResult = await _toolExecutionPipeline.ExecuteAsync(
+                run,
+                step.Id,
+                toolCall.Id,
+                registration.Executor,
                 new ToolExecutionRequest(run.Id, step.Id, toolKey, input),
                 cancellationToken);
 
-            if (toolResult.Success)
+            if (pipelineResult.Success)
             {
-                toolCall.Succeed(toolResult.Output, _clock.UtcNow);
+                toolCall.Succeed(pipelineResult.Output!, _clock.UtcNow);
                 run.RecordTrace(TraceEventKind.ToolCallCompleted, "Tool call completed.", _clock.UtcNow, new Dictionary<string, string>
                 {
                     ["toolCallId"] = toolCall.Id.ToString(),
-                    ["status"] = toolCall.Status.ToString()
+                    ["status"] = toolCall.Status.ToString(),
+                    ["attemptsUsed"] = pipelineResult.AttemptsUsed.ToString(),
+                    ["totalDurationMs"] = ((long)pipelineResult.TotalDuration.TotalMilliseconds).ToString()
                 });
 
                 step.AddToolCall(toolCall);
@@ -121,10 +141,10 @@ public sealed class StartAgentRunHandler
             }
             else
             {
-                toolCall.Fail(toolResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
+                toolCall.Fail(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
                 step.AddToolCall(toolCall);
                 step.Fail(_clock.UtcNow);
-                run.Fail(toolResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
+                run.Fail(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
             }
 
             await _repository.SaveAsync(run, cancellationToken);
