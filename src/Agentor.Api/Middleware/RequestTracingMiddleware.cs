@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using Agentor.Api.Observability;
+
 namespace Agentor.Api.Middleware;
 
 public sealed class RequestTracingMiddleware
@@ -19,6 +22,15 @@ public sealed class RequestTracingMiddleware
 
         context.Items[HeaderName] = traceId;
         context.Response.Headers[HeaderName] = traceId;
+
+        using var activity = AgentorDiagnostics.ActivitySource.StartActivity("http.request", ActivityKind.Server);
+        activity?.SetTag("agentor.trace_id", traceId);
+        activity?.SetTag("http.request.method", context.Request.Method);
+        activity?.SetTag("http.route", context.GetEndpoint()?.DisplayName ?? context.Request.Path.Value);
+
+        AgentorDiagnostics.HttpServerRequestCount.Add(
+            1,
+            new KeyValuePair<string, object?>("method", context.Request.Method));
 
         await _next(context);
     }

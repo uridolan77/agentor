@@ -1,2 +1,2 @@
-Completed: Phase 7 PR31–PR35 + PR35.5.
-Next: Phase 8 — MCP, observability, and release
+Completed: Phase 8 PR36–PR40 (full harness session).
+Next: post-v0.1 work per roadmap.

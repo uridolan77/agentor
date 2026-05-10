@@ -3,6 +3,7 @@ using Agentor.Application.Abstractions;
 using Agentor.Domain.Enums;
 using Agentor.Infrastructure;
 using Agentor.Infrastructure.Conexus;
+using Agentor.Infrastructure.Mcp;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -14,7 +15,7 @@ public sealed class RuntimePolicyEvaluatorTests
     public async Task Evaluate_AllowsDefaultLowRiskTool()
     {
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
         var clock = new SystemClock();
         var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
 
@@ -29,7 +30,7 @@ public sealed class RuntimePolicyEvaluatorTests
     public async Task Evaluate_DeniesWhenToolOnDenyList()
     {
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
         var clock = new SystemClock();
         var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
         {
@@ -48,7 +49,7 @@ public sealed class RuntimePolicyEvaluatorTests
     public async Task Evaluate_RequiresReviewWhenRiskExceedsMaxAutoApprove()
     {
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
         var clock = new SystemClock();
         var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
         {
@@ -67,7 +68,7 @@ public sealed class RuntimePolicyEvaluatorTests
     public async Task Evaluate_DeniesUnknownToolKey()
     {
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
         var clock = new SystemClock();
         var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
 
@@ -82,7 +83,7 @@ public sealed class RuntimePolicyEvaluatorTests
     public async Task Evaluate_DeniesModelCallWhenDeclaredCostExceedsCap()
     {
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
         var clock = new SystemClock();
         var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
         {
@@ -109,7 +110,7 @@ public sealed class RuntimePolicyEvaluatorTests
     public async Task Evaluate_DeniesModelCallWhenDeclaredLatencyExceedsCap()
     {
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
         var clock = new SystemClock();
         var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
         {
@@ -136,7 +137,7 @@ public sealed class RuntimePolicyEvaluatorTests
     public async Task Evaluate_AllowsModelCallWhenDeclaredBudgetKeysAbsentEvenIfCapsConfigured()
     {
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
         var clock = new SystemClock();
         var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
         {

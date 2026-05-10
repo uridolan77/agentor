@@ -4,6 +4,7 @@ using Agentor.Application.Abstractions;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Conexus;
+using Agentor.Infrastructure.Mcp;
 
 namespace Agentor.Infrastructure;
 
@@ -33,7 +34,10 @@ public sealed class ToolRegistry : IToolRegistry
         _registrations[definition.Key] = new ToolInvocationRegistration(definition, executor);
     }
 
-    public static ToolRegistry CreateDefault(FakeToolExecutor fakeExecutor, IModelGatewayClient modelGateway)
+    public static ToolRegistry CreateDefault(
+        FakeToolExecutor fakeExecutor,
+        IModelGatewayClient modelGateway,
+        IMcpRegistryClient mcpRegistry)
     {
         var registry = new ToolRegistry();
         registry.Register(
@@ -57,6 +61,27 @@ public sealed class ToolRegistry : IToolRegistry
                 "Text completion via IModelGatewayClient (Conexus port; fake in default infrastructure).",
                 ToolRiskLevel.Medium),
             new ModelGatewayToolExecutor(modelGateway));
+        RegisterDiscoveredMcpTools(registry, mcpRegistry);
         return registry;
+    }
+
+    private static void RegisterDiscoveredMcpTools(ToolRegistry registry, IMcpRegistryClient mcpRegistry)
+    {
+        var servers = mcpRegistry.ListServersAsync(CancellationToken.None).GetAwaiter().GetResult();
+        foreach (var server in servers)
+        {
+            var tools = mcpRegistry.ListToolsAsync(server.Id, CancellationToken.None).GetAwaiter().GetResult();
+            foreach (var tool in tools)
+            {
+                var key = McpToolKeys.Format(server.Id, tool.Name);
+                registry.Register(
+                    new ToolDefinition(
+                        key,
+                        $"MCP tool '{tool.Name}'",
+                        tool.Description,
+                        tool.NominalRisk),
+                    new McpToolExecutor(mcpRegistry, server.Id, tool.Name));
+            }
+        }
     }
 }

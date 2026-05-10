@@ -1,22 +1,19 @@
-﻿# Session handoff
+# Session handoff
 
-Prior Phase 6 (Conexus) notes remain earlier in `verification-log.md`.
+## Completed this session
 
-## Done (Phase 7)
+- **Phase 8 (PR36–PR40)**: MCP (`IMcpRegistryClient`, `FakeMcpRegistryClient`, `McpToolExecutor`, registry binding); observability (`AgentorDiagnostics`, middleware, JSON logging, tests); deployment (`Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml`, `scripts/smoke.ps1`); RC defaults (`0.1.0-rc.1`) and `docs/ROADMAP.md`.
 
-- PR31 Skill package model (domain validation + tests).
-- PR32 Skill invocation (recipe skill step, catalog, executor, application tests).
-- PR33 Session memory (bounded writes, traces, plan BuildInput `session:` keys, EF `session_memory_json` + mapper).
-- PR34 Evaluation harness (`RunEvaluationHarness`).
-- PR35 Quality gates (RunQualityGateEvaluator).
-- PR35.5 Phase 7 hardening (harness rows, eval fixture, quality gate expansion, skill audit traces, SESSION_MEMORY_BOUNDARY.md, PlanInputBuilder).
+## Harness
 
-## Next
+- `.agentor-harness/feature-list.json` — Phase 8 acceptance rows; `harnessPass`: PR40.
+- `.agentor-harness/verification-log.md` — per-PR verification blocks.
 
-- Phase 8 per `docs/planning/pr1-pr40/PR_INDEX.md` (MCP, observability, release) when scheduled — not started in this pass.
+## Note on source encoding
 
-## Harness files
+Several `.cs` files must remain **UTF-8** (not UTF-16). If the IDE saves UTF-16, run the UTF-16-to-UTF-8 conversion script or rewrite affected files.
 
-- `.agentor-harness/progress.md`
-- `.agentor-harness/verification-log.md`
-- `.agentor-harness/feature-list.json`
+## Next agent
+
+- Optional: run `docker build` locally; wire OTLP exporter when infrastructure is chosen.
+- Post-v0.1 planning only after tag.

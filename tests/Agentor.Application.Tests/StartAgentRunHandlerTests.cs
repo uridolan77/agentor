@@ -5,6 +5,7 @@ using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Infrastructure;
 using Agentor.Infrastructure.Conexus;
+using Agentor.Infrastructure.Mcp;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -29,7 +30,7 @@ public sealed class StartAgentRunHandlerTests
         var clock = new SystemClock();
         var repository = new InMemoryAgentRunRepository();
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
         var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
         var handler = AgentorTestComposition.CreateStartAgentRunHandler(repository, policy, registry, clock);
 

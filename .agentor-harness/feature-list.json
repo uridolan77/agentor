@@ -1,7 +1,7 @@
-﻿{
-    "phase":  7,
-    "title":  "Skills, memory, and evaluation",
-    "harnessPass":  "PR31-PR35 + PR35.5",
+{
+    "phase":  8,
+    "title":  "MCP, observability, and release",
+    "harnessPass":  "PR40",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
@@ -10,7 +10,12 @@
                   "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
                   "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests).",
                   "Phase 7 PR31-PR35: SkillPackage model; RecipeStepKind.Skill + ISkillPackageCatalog + plan executor skill traces; bounded session memory on AgentRun + EF session_memory_json; RunEvaluationHarness; RunQualityGateEvaluator.",
-                  "PR35.5 (Phase 7 hardening): granular harness acceptance rows for PR31-PR35; evaluation JSON fixture for RunEvaluationSnapshot; stronger quality gate codes + plan warning; skill audit trace assertions; session memory boundary doc; PlanInputBuilder extracted from SequentialAgentPlanExecutor."
+                  "PR35.5 (Phase 7 hardening): granular harness acceptance rows for PR31-PR35; evaluation JSON fixture for RunEvaluationSnapshot; stronger quality gate codes + plan warning; skill audit trace assertions; session memory boundary doc; PlanInputBuilder extracted from SequentialAgentPlanExecutor.",
+                  "Phase 8 PR36: IMcpRegistryClient port; FakeMcpRegistryClient (in-memory catalog + deterministic invoke); DI registration; docs/MCP_BOUNDARY.md; Infrastructure tests.",
+                  "Phase 8 PR37: McpToolKeys + McpToolExecutor; ToolRegistry.CreateDefault registers discovered MCP tools; ToolRegistryMcpBindingTests.",
+                  "Phase 8 PR38: ActivitySource + request counter; JSON console logging in Development; docs/OBSERVABILITY.md; ObservabilityTests.",
+                  "Phase 8 PR39: Dockerfile (publish Agentor.Api), docker-compose.yml, .github/workflows/ci.yml, scripts/smoke.ps1, .dockerignore.",
+                  "Phase 8 PR40: appsettings + AgentorRuntimeOptions default version 0.1.0-rc.1; docs/ROADMAP.md v0.1 RC note."
               ],
     "acceptanceItems":  [
                             {
@@ -383,6 +388,118 @@
                                 "description":  "PR35.5: Session memory boundary documented as run-scratch, non-canon, not Athanor",
                                 "passes":  true,
                                 "evidence":  "docs/SESSION_MEMORY_BOUNDARY.md; AgentRun XML comments"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "IMcpRegistryClient lists servers/tools and invokes tools via port (no network)",
+                                "pr":  36,
+                                "id":  "PR36-001",
+                                "evidence":  "src/Agentor.Application/Abstractions/IMcpRegistryClient.cs; src/Agentor.Application/Mcp/McpDescriptors.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "FakeMcpRegistryClient seeds demo-server with echo/stats tools",
+                                "pr":  36,
+                                "id":  "PR36-002",
+                                "evidence":  "src/Agentor.Infrastructure/Mcp/FakeMcpRegistryClient.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "DI registers IMcpRegistryClient to FakeMcpRegistryClient",
+                                "pr":  36,
+                                "id":  "PR36-003",
+                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "MCP boundary documented",
+                                "pr":  36,
+                                "id":  "PR36-004",
+                                "evidence":  "docs/MCP_BOUNDARY.md"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "McpToolKeys.Format produces stable mcp.{server}.{tool} keys",
+                                "pr":  37,
+                                "id":  "PR37-001",
+                                "evidence":  "src/Agentor.Application/McpToolKeys.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "ToolRegistry.CreateDefault binds IMcpRegistryClient tools with McpToolExecutor",
+                                "pr":  37,
+                                "id":  "PR37-002",
+                                "evidence":  "src/Agentor.Infrastructure/ToolRegistry.cs; DependencyInjection.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "MCP tool execution routes through IToolExecutor to fake registry",
+                                "pr":  37,
+                                "id":  "PR37-003",
+                                "evidence":  "tests/Agentor.Infrastructure.Tests/ToolRegistryMcpBindingTests.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "RequestTracingMiddleware starts Activity with agentor.trace_id and increments HTTP counter",
+                                "pr":  38,
+                                "id":  "PR38-001",
+                                "evidence":  "src/Agentor.Api/Middleware/RequestTracingMiddleware.cs; src/Agentor.Api/Observability/AgentorDiagnostics.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Development logging uses JSON console formatter with scopes",
+                                "pr":  38,
+                                "id":  "PR38-002",
+                                "evidence":  "src/Agentor.Api/appsettings.Development.json"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "API test observes agentor.http.server.request.count on /health",
+                                "pr":  38,
+                                "id":  "PR38-003",
+                                "evidence":  "tests/Agentor.Api.Tests/ObservabilityTests.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Multi-stage Dockerfile publishes Agentor.Api to aspnet runtime",
+                                "pr":  39,
+                                "id":  "PR39-001",
+                                "evidence":  "Dockerfile"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "docker-compose exposes agentor-api on 8080",
+                                "pr":  39,
+                                "id":  "PR39-002",
+                                "evidence":  "docker-compose.yml"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "GitHub Actions CI restores/builds/tests Agentor.sln",
+                                "pr":  39,
+                                "id":  "PR39-003",
+                                "evidence":  ".github/workflows/ci.yml"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "scripts/smoke.ps1 hits GET /health",
+                                "pr":  39,
+                                "id":  "PR39-004",
+                                "evidence":  "scripts/smoke.ps1"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Runtime version defaults to 0.1.0-rc.1",
+                                "pr":  40,
+                                "id":  "PR40-001",
+                                "evidence":  "src/Agentor.Api/appsettings.json; AgentorRuntimeOptions.cs; AgentorRuntimeOptionsTests.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "ROADMAP documents Phase 8 / v0.1 RC hardening",
+                                "pr":  40,
+                                "id":  "PR40-002",
+                                "evidence":  "docs/ROADMAP.md"
                             }
                         ]
 }

@@ -16,7 +16,7 @@ PR16–PR20   Plans, recipes, and execution orchestration
 PR21–PR25   Athanor integration
 PR26–PR30   Conexus integration
 PR31–PR35   Skills, memory, and evaluation
-PR36–PR40   MCP boundary, observability, deployment, release
+PR36–PR40   MCP boundary, observability, deployment, v0.1 RC hardening
 PR41+       A2A / external-agent protocols and optional framework adapters
 ```
 
@@ -26,3 +26,7 @@ PR41+       A2A / external-agent protocols and optional framework adapters
 - Agentor owns governed coordination as a runtime layer (see `docs/COORDINATION_LAYER.md`, ADR-008); runtime policy is part of coordination, not the whole layer.
 - External frameworks are adapters, not Agentor core.
 - Evaluation fixtures appear early and mature over time.
+
+## v0.1 release candidate (Phase 8)
+
+Phase 8 (PR36–PR40) lands the MCP adapter boundary (fake registry + tool binding), API observability hooks, container/CI packaging, and RC versioning. Acceptance is tracked in `.agentor-harness/feature-list.json` with verification in `.agentor-harness/verification-log.md`.
