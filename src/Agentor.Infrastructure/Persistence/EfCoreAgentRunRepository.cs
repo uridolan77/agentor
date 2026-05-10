@@ -1,5 +1,6 @@
 using Agentor.Application.Abstractions;
 using Agentor.Domain;
+using Agentor.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Agentor.Infrastructure.Persistence;
@@ -43,10 +44,20 @@ public sealed class EfCoreAgentRunRepository : IAgentRunRepository
         return record is null ? null : RecordMapper.ToDomain(record);
     }
 
-    public async Task<AgentRunListPage> ListSummariesAsync(int skip, int take, CancellationToken cancellationToken)
+    public async Task<AgentRunListPage> ListSummariesAsync(
+        int skip,
+        int take,
+        CancellationToken cancellationToken,
+        AgentRunStatus? statusFilter = null)
     {
-        var query = _context.AgentRuns
-            .AsNoTracking()
+        var query = _context.AgentRuns.AsNoTracking();
+        if (statusFilter is not null)
+        {
+            var statusString = statusFilter.Value.ToString();
+            query = query.Where(r => r.Status == statusString);
+        }
+
+        query = query
             .OrderByDescending(r => r.StartedAt)
             .ThenBy(r => r.Id);
 

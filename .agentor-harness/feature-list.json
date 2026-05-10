@@ -1,7 +1,7 @@
 {
-    "phase": 12,
-    "title": "Durable execution & reliability (Phase 12 PR56-PR60) + PR60.6 HTTP retry hardening",
-    "harnessPass": "PR60.6",
+    "phase": 13,
+    "title": "Product & operator surface (Phase 13 PR61-PR65) + PR65.5 harness reconciliation",
+    "harnessPass": "PR65.5",
     "encoding": "utf-8",
     "lastVerified": "2026-05-10",
     "notes": [
@@ -22,7 +22,9 @@
         "Phase 10 PR46-PR50: Agentor:Integrations modes Fake|Http|Disabled; HTTP adapters (Athanor knowledge state, Conexus model gateway, MCP registry, ExternalAgents protocol); named HttpClients; /health liveness-only; /ready and GET /api/v1/integrations/status via IntegrationSurfaceService.",
         "PR50.5: HTTP readiness probes fail on non-2xx; Disabled adapters report detail=disabled while Ready=true; API + Infrastructure tests; harness bumped to phase 10.",
         "PR55.5: Phase 11 harness reconciliation: granular acceptance rows, expanded tests (scope, Athanor project id, policy profile, human review, actor accessor, audit export, persistence), docs/GOVERNANCE_BOUNDARY.md, verification log updated.",
-        "Phase 11 code (PR51-PR55) is implemented in-tree; PR55.5 records harness acceptance only for behaviors covered by automated tests or explicit harness notes."
+        "Phase 11 code (PR51-PR55) is implemented in-tree; PR55.5 records harness acceptance only for behaviors covered by automated tests or explicit harness notes.",
+        "Phase 13 PR61-PR65: /api/v1 product surface (management CRUD: recipes, plans, skills, policy-profiles; run aliases: timeline, coordination-view, audit-packet; operator dashboard; review inbox aliases). Phase13ProductSurfaceApiTests; domain/application human-review tests.",
+        "PR65.5: docs under docs/api|operator|developer|examples; harness phase 13; verify-harness PR65.5."
     ],
     "acceptanceItems": [
         {
@@ -927,6 +929,41 @@
             "description": "Open transport circuit returns synthetic 503 without invoking inner handler.",
             "passes": true,
             "evidence": "ResilientIntegrationDelegatingHandlerTests.CircuitOpen_ReturnsSynthetic503_WithoutCallingInner"
+        },
+        {
+            "id": "PR61-001",
+            "pr": 61,
+            "description": "Management APIs under /api/v1 for recipes, plans from recipe, skill packages, policy profiles; structured validation errors (ApiErrorDto); create never executes plans.",
+            "passes": true,
+            "evidence": "src/Agentor.Api/Phase13ProductEndpoints.cs; tests/Agentor.Api.Tests/Phase13ProductSurfaceApiTests.cs (PostRecipes_*, PostSkillPackage_Duplicate_ReturnsConflict)"
+        },
+        {
+            "id": "PR62-001",
+            "pr": 62,
+            "description": "Run product inspection: GET /runs/{id}/timeline, coordination-view, audit-packet mirrors audit export SHA-256 header.",
+            "passes": true,
+            "evidence": "src/Agentor.Application/Queries/RunProductInspectionQueryHandlers.cs; Phase13ProductSurfaceApiTests (GetRunTimeline_UnknownRun_ReturnsNotFound; GetRunAuditPacket_MatchesAuditExportHeader_ForSameRun)"
+        },
+        {
+            "id": "PR63-001",
+            "pr": 63,
+            "description": "Read-only operator dashboard DTO with module hrefs and counts from query handlers.",
+            "passes": true,
+            "evidence": "src/Agentor.Application/Queries/OperatorDashboardQueryHandler.cs; Phase13ProductSurfaceApiTests::GetOperatorDashboard_ReturnsModulesWithLinks"
+        },
+        {
+            "id": "PR64-001",
+            "pr": 64,
+            "description": "GET /reviews/pending returns paged RequiresReview inbox; POST /reviews/{runId}/decisions aliases human-review (409 when run not in review).",
+            "passes": true,
+            "evidence": "src/Agentor.Api/Phase13ProductEndpoints.cs; Phase13ProductSurfaceApiTests (GetReviewsPending_ReturnsOk_WithItemsArray; PostReviewDecision_CompletedRun_ReturnsConflict); ApplyHumanReviewDecisionHandler.cs; tests/Agentor.Domain.Tests/AgentRunTests.cs::ApplyHumanReview_Approve_ResumesRunAndToolFromRequiresReview; tests/Agentor.Application.Tests/ApplyHumanReviewDecisionHandlerTests.cs"
+        },
+        {
+            "id": "PR65-001",
+            "pr": 65,
+            "description": "Phase 13 documentation set (API, operator, developer, examples) states Athanor/Conexus boundaries and non-canonization.",
+            "passes": true,
+            "evidence": "docs/api/phase13-product-surface.md; docs/operator/dashboard-and-inbox.md; docs/developer/phase13-workflows.md; docs/examples/phase13-workflows.md"
         }
     ]
 }

@@ -1,5 +1,27 @@
 ﻿# Agentor harness - verification log
 
+## Phase 13 + PR65.5 verification (2026-05-10)
+
+Commands (repository root):
+
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results: restore OK; build OK; test OK.
+
+Counts: **Domain 38**, **Application 76**, **Infrastructure 59**, **Api 53** (total **226**).
+
+Scope: Phase 13 product surface harness closeout (PR65.5): `feature-list.json` phase **13**, harnessPass **PR65.5**; extended `Phase13ProductSurfaceApiTests` (reviews pending, review decision conflict on completed run); docs `docs/api/phase13-product-surface.md`, `docs/operator/dashboard-and-inbox.md`, `docs/developer/phase13-workflows.md`, `docs/examples/phase13-workflows.md`. Phase 14 not started.
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 13 -ExpectedHarnessPass PR65.5
+```
+
+Result: Harness verification passed.
+
 ## Phase 12 + PR60.6 verification (2026-05-10)
 
 Commands (repository root):

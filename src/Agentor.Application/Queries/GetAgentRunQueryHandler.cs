@@ -47,7 +47,7 @@ public sealed class ListAgentRunsQueryHandler
             take = MaxTake;
         }
 
-        return _repository.ListSummariesAsync(skip, take, cancellationToken);
+        return _repository.ListSummariesAsync(skip, take, cancellationToken, null);
     }
 }
 

@@ -587,6 +587,8 @@ v1.MapGet("/agent-runs/{runId:guid}/audit-export", async (
 .WithTags("Governance")
 .WithSummary("Deterministic JSON audit packet for a run with redaction boundaries (PR55).");
 
+Phase13ProductEndpoints.MapProductSurface(v1);
+
 app.Run();
 
 public partial class Program

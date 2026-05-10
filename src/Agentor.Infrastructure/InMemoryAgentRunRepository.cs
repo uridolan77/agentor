@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Agentor.Application.Abstractions;
 using Agentor.Domain;
+using Agentor.Domain.Enums;
 
 namespace Agentor.Infrastructure;
 
@@ -20,9 +21,19 @@ public sealed class InMemoryAgentRunRepository : IAgentRunRepository
         return Task.FromResult(run);
     }
 
-    public Task<AgentRunListPage> ListSummariesAsync(int skip, int take, CancellationToken cancellationToken)
+    public Task<AgentRunListPage> ListSummariesAsync(
+        int skip,
+        int take,
+        CancellationToken cancellationToken,
+        AgentRunStatus? statusFilter = null)
     {
-        var ordered = _runs.Values
+        IEnumerable<AgentRun> query = _runs.Values;
+        if (statusFilter is not null)
+        {
+            query = query.Where(r => r.Status == statusFilter);
+        }
+
+        var ordered = query
             .OrderByDescending(r => r.StartedAt)
             .ThenBy(r => r.Id)
             .ToList();

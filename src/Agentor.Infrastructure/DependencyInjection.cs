@@ -7,6 +7,7 @@ using Agentor.Infrastructure.IntegrationStatus;
 using Agentor.Application.Options;
 using Agentor.Application.Reliability;
 using Agentor.Infrastructure.HttpResilience;
+using Agentor.Infrastructure.Management;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
 using Agentor.Infrastructure.Persistence;
@@ -116,6 +117,13 @@ public static class DependencyInjection
         services.AddSingleton<InMemorySkillPackageCatalog>();
         services.AddSingleton<ISkillPackageCatalog>(sp => sp.GetRequiredService<InMemorySkillPackageCatalog>());
         services.AddSingleton<IntegrationSurfaceService>();
+
+        services.AddSingleton<InMemoryManagementRecipeStore>();
+        services.AddSingleton<IManagementRecipeStore>(sp => sp.GetRequiredService<InMemoryManagementRecipeStore>());
+        services.AddSingleton<InMemoryManagementPlanStore>();
+        services.AddSingleton<IManagementPlanStore>(sp => sp.GetRequiredService<InMemoryManagementPlanStore>());
+        services.AddSingleton<InMemoryManagementPolicyProfileStore>();
+        services.AddSingleton<IManagementPolicyProfileStore>(sp => sp.GetRequiredService<InMemoryManagementPolicyProfileStore>());
 
         services.AddSingleton<InMemoryRunQueue>();
         services.AddSingleton<IRunQueue>(sp => sp.GetRequiredService<InMemoryRunQueue>());

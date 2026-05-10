@@ -1,4 +1,4 @@
-# Current PR - harness marker
+﻿# Current PR - harness marker
 
 Completed: **Phase 10 PR46-PR50** - integration modes (Fake / Http / Disabled), HTTP adapters for Athanor (`IKnowledgeStateClient`), Conexus (`IModelGatewayClient`), MCP (`IMcpRegistryClient`), and external agents (`IExternalAgentProtocolClient`), named `HttpClient` wiring, liveness `/health`, readiness `/ready`, and `GET /api/v1/integrations/status`.
 
@@ -14,4 +14,8 @@ Completed: **PR60.5** - Phase 12 harness reconciliation: `feature-list.json` pha
 
 Completed: **PR60.6** - Phase 12 reliability hardening before Phase 13: `ResilientIntegrationDelegatingHandler` clones `HttpRequestMessage` per attempt with buffered POST bodies; `ResilientIntegrationDelegatingHandlerTests` (POST JSON retries, max attempts, non-retryable status, circuit-open short-circuit); harness note punctuation cleanup; session-handoff clarifies in-memory queue vs durable queue and outbox worker scope.
 
-Next: **Phase 13** - Product operator surface (`docs/planning/pr41-pr75/PHASE_13_PRODUCT_OPERATOR_SURFACE.md`) - do not implement until that scope is opened.
+Completed: **Phase 13 PR61-PR65** - Product and operator surface under `/api/v1`: management stores and endpoints for recipes, plans (from recipe), skill packages, policy profiles; run read aliases (`/runs/{id}/timeline`, `coordination-view`, `audit-packet`); read-only operator dashboard DTO; human-review inbox aliases (`/reviews/pending`, `/reviews/{id}/decisions`); wiring in `Phase13ProductEndpoints.cs`, query handlers, in-memory management DI.
+
+Completed: **PR65.5** - Phase 13 harness reconciliation: `feature-list.json` phase **13** / harnessPass **PR65.5**; Phase 13 acceptance rows; `Phase13ProductSurfaceApiTests` extended for reviews pending and review decision conflict; docs `docs/api/phase13-product-surface.md`, `docs/operator/dashboard-and-inbox.md`, `docs/developer/phase13-workflows.md`, `docs/examples/phase13-workflows.md`; verification log refresh.
+
+Next: **Phase 14** - Advanced evaluation (`docs/planning/pr41-pr75/PHASE_14_ADVANCED_EVALUATION.md`) - do not implement until that scope is opened.

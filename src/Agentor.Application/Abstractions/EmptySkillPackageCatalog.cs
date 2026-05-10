@@ -15,4 +15,9 @@ public sealed class EmptySkillPackageCatalog : ISkillPackageCatalog
         package = null;
         return false;
     }
+
+    public IReadOnlyList<SkillPackage> ListRegisteredPackages() => [];
+
+    public void RegisterPackage(SkillPackage package) =>
+        throw new NotSupportedException("Skill registration is not available for EmptySkillPackageCatalog.");
 }

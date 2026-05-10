@@ -22,4 +22,13 @@ public sealed class InMemorySkillPackageCatalog : ISkillPackageCatalog
     {
         return _packages.TryGetValue((skillKey.Trim(), version.Value), out package);
     }
+
+    public IReadOnlyList<SkillPackage> ListRegisteredPackages() =>
+        _packages.Values
+            .OrderBy(p => p.SkillKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.Version.Value, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.Id)
+            .ToList();
+
+    public void RegisterPackage(SkillPackage package) => Register(package);
 }

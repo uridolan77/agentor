@@ -23,6 +23,11 @@ public static class DependencyInjection
         services.AddScoped<ApplyHumanReviewDecisionHandler>();
         services.AddScoped<GetRunAuditExportQueryHandler>();
 
+        services.AddScoped<GetRunTimelineQueryHandler>();
+        services.AddScoped<GetRunCoordinationViewQueryHandler>();
+        services.AddScoped<ListPendingHumanReviewsQueryHandler>();
+        services.AddScoped<OperatorDashboardQueryHandler>();
+
         services.AddSingleton<OutboxDispatcher>();
 
         services.AddScoped<GetLatestAthanorSnapshotForRunQueryHandler>();
