@@ -101,6 +101,15 @@ public static class DtoMappings
             manifest.ToolCallCount,
             manifest.PolicyDecisionCount,
             manifest.TraceEventCount,
+            manifest.ModelCallCount,
+            manifest.TotalModelPromptTokens,
+            manifest.TotalModelCompletionTokens,
+            manifest.TotalModelEstimatedCostUnits,
+            manifest.TotalModelLatencyMs,
+            manifest.PrimaryModelProviderName,
+            manifest.PrimaryModelId,
+            manifest.PrimaryPromptProfileRef,
+            manifest.PrimaryModelProfileRef,
             manifest.ManifestVersion,
             manifest.ContentHash);
     }

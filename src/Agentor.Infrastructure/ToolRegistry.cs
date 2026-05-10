@@ -3,6 +3,7 @@ using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Infrastructure.Conexus;
 
 namespace Agentor.Infrastructure;
 
@@ -32,7 +33,7 @@ public sealed class ToolRegistry : IToolRegistry
         _registrations[definition.Key] = new ToolInvocationRegistration(definition, executor);
     }
 
-    public static ToolRegistry CreateDefault(FakeToolExecutor fakeExecutor)
+    public static ToolRegistry CreateDefault(FakeToolExecutor fakeExecutor, IModelGatewayClient modelGateway)
     {
         var registry = new ToolRegistry();
         registry.Register(
@@ -49,6 +50,13 @@ public sealed class ToolRegistry : IToolRegistry
                 "Same executor; higher nominal risk for policy tests.",
                 ToolRiskLevel.High),
             fakeExecutor);
+        registry.Register(
+            new ToolDefinition(
+                WellKnownToolKeys.ConexusModelComplete,
+                "Conexus model completion",
+                "Text completion via IModelGatewayClient (Conexus port; fake in default infrastructure).",
+                ToolRiskLevel.Medium),
+            new ModelGatewayToolExecutor(modelGateway));
         return registry;
     }
 }

@@ -102,7 +102,8 @@ public sealed class ApiContractTests : IClassFixture<WebApplicationFactory<Progr
         Assert.True(manifest.ToolCallCount >= 1);
         Assert.True(manifest.PolicyDecisionCount >= 1);
         Assert.True(manifest.TraceEventCount >= 1);
-        Assert.Equal("1.0", manifest.ManifestVersion);
+        Assert.Equal("1.1", manifest.ManifestVersion);
+        Assert.Equal(0, manifest.ModelCallCount);
         Assert.Matches("^[0-9a-f]{64}$", manifest.ContentHash);
     }
 

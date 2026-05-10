@@ -1,3 +1,5 @@
+using System.Globalization;
+using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
@@ -62,6 +64,37 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
                 _clock.UtcNow));
         }
 
+        if (string.Equals(request.ToolKey, WellKnownToolKeys.ConexusModelComplete, StringComparison.OrdinalIgnoreCase))
+        {
+            if (_options.MaxDeclaredModelCallCostUnits is { } maxCost
+                && TryParseDecimal(request.Input, "declaredCostUnits", out var declaredCost)
+                && declaredCost > maxCost)
+            {
+                return Task.FromResult(new PolicyDecision(
+                    Guid.NewGuid(),
+                    request.RunId,
+                    request.StepId,
+                    PolicyDecisionOutcome.Deny,
+                    "BUDGET_DECLARED_COST",
+                    $"Declared model-call cost {declaredCost} exceeds policy maximum {maxCost}.",
+                    _clock.UtcNow));
+            }
+
+            if (_options.MaxDeclaredModelCallLatencyMs is { } maxLatency
+                && TryParseInt(request.Input, "declaredLatencyMs", out var declaredLatency)
+                && declaredLatency > maxLatency)
+            {
+                return Task.FromResult(new PolicyDecision(
+                    Guid.NewGuid(),
+                    request.RunId,
+                    request.StepId,
+                    PolicyDecisionOutcome.Deny,
+                    "BUDGET_DECLARED_LATENCY",
+                    $"Declared model-call latency {declaredLatency} ms exceeds policy maximum {maxLatency} ms.",
+                    _clock.UtcNow));
+            }
+        }
+
         var maxRisk = ParseRisk(_options.MaxAutoApproveRisk);
         if (CompareRisk(definition.RiskLevel, maxRisk) > 0)
         {
@@ -103,5 +136,27 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
         };
 
         return Rank(tool) - Rank(maxApproved);
+    }
+
+    private static bool TryParseDecimal(IReadOnlyDictionary<string, string> input, string key, out decimal value)
+    {
+        value = default;
+        if (!input.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        return decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool TryParseInt(IReadOnlyDictionary<string, string> input, string key, out int value)
+    {
+        value = default;
+        if (!input.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+        {
+            return false;
+        }
+
+        return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
     }
 }

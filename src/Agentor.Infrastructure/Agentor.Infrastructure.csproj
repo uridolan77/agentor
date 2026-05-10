@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Agentor.Application\Agentor.Application.csproj" />
+    <ProjectReference Include="..\Agentor.Contracts\Agentor.Contracts.csproj" />
     <ProjectReference Include="..\Agentor.Domain\Agentor.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>

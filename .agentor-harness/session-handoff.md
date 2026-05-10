@@ -1,16 +1,20 @@
 # Session handoff - Agentor harness
 
-## Done (PR25.5)
+## Done (Phase 6 — PR26–PR30)
 
-- feature-list.json: audit-style acceptance items with passes + evidence; PR23-API-003 and PR24-API-003 explicitly false with TODO.
-- Tests: API 409 for candidates and review-queue on completed runs; canonical 404/400; application tests for lookup and not-running submit/queue.
-- docs/ATHANOR_INTEGRATION_BOUNDARY.md: port is implemented (fake); ProfileId as projectId is a temporary harness convention.
+- Conexus port (IModelGatewayClient), Contracts gateway DTOs, FakeModelGatewayClient, DI registration.
+- Tool conexus.model-complete via ModelGatewayToolExecutor (policy-governed; routes through gateway only).
+- Optional promptProfileRef / modelProfileRef on calls and echoed in tool outputs for manifests.
+- Declared budget gates: optional tool inputs declaredCostUnits, declaredLatencyMs vs RuntimePolicyOptions caps.
+- Run manifest v1.1 aggregates successful Conexus model-call tool outputs into RunManifest / RunManifestDto.
+
+Harness files updated: progress.md, verification-log.md, feature-list.json, session-handoff.md.
 
 ## Next
 
-- PR26 Conexus per PR_INDEX.md (not started in this repo).
+- PR31 Skill package model (Phase 7) per docs/planning/pr1-pr40/PR_INDEX.md.
 
 ## Read first
 
 - .agentor-harness/feature-list.json
-- docs/ATHANOR_INTEGRATION_BOUNDARY.md
+- docs/CONEXUS_INTEGRATION_BOUNDARY.md

@@ -1,6 +1,7 @@
 using System.Linq;
 using Agentor.Application.Abstractions;
 using Agentor.Infrastructure.Athanor;
+using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,10 +21,13 @@ public static class DependencyInjection
         services.AddSingleton<IAgentRunIdempotencyLedger, InMemoryAgentRunIdempotencyLedger>();
         services.AddSingleton<FakeToolExecutor>();
         services.AddSingleton<IToolExecutor>(sp => sp.GetRequiredService<FakeToolExecutor>());
-        services.AddSingleton<IToolRegistry>(sp => ToolRegistry.CreateDefault(sp.GetRequiredService<FakeToolExecutor>()));
+        services.AddSingleton<IToolRegistry>(sp => ToolRegistry.CreateDefault(
+            sp.GetRequiredService<FakeToolExecutor>(),
+            sp.GetRequiredService<IModelGatewayClient>()));
         services.AddScoped<IPolicyEvaluator, RuntimePolicyEvaluator>();
         services.AddSingleton<IToolExecutionPipeline, ToolExecutionPipeline>();
         services.AddSingleton<IKnowledgeStateClient, FakeKnowledgeStateClient>();
+        services.AddSingleton<IModelGatewayClient, FakeModelGatewayClient>();
 
         return services;
     }
