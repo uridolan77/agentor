@@ -11,6 +11,7 @@ using Agentor.Infrastructure.Management;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
 using Agentor.Infrastructure.Persistence;
+using Agentor.Infrastructure.Policy;
 using Agentor.Infrastructure.RunQueue;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -124,6 +125,12 @@ public static class DependencyInjection
         services.AddSingleton<IManagementPlanStore>(sp => sp.GetRequiredService<InMemoryManagementPlanStore>());
         services.AddSingleton<InMemoryManagementPolicyProfileStore>();
         services.AddSingleton<IManagementPolicyProfileStore>(sp => sp.GetRequiredService<InMemoryManagementPolicyProfileStore>());
+
+        // PR83: versioned policy bundle + active profile repos
+        services.AddSingleton<InMemoryPolicyBundleRepository>();
+        services.AddSingleton<IPolicyBundleRepository>(sp => sp.GetRequiredService<InMemoryPolicyBundleRepository>());
+        services.AddSingleton<InMemoryPolicyProfileRepository>();
+        services.AddSingleton<IPolicyProfileRepository>(sp => sp.GetRequiredService<InMemoryPolicyProfileRepository>());
 
         services.AddSingleton<InMemoryRunQueue>();
         services.AddSingleton<IRunQueue>(sp => sp.GetRequiredService<InMemoryRunQueue>());

@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using Agentor.Api;
 using Agentor.Api.Endpoints;
-using Agentor.Api.Mapping;
 using Agentor.Api.Middleware;
 using Agentor.Api.Security;
 using Agentor.Application;
@@ -74,6 +73,7 @@ v1.MapAgentRunEndpoints();
 v1.MapRunQueueEndpoints();
 v1.MapAthanorEndpoints();
 v1.MapGovernanceEndpoints();
+v1.MapPolicyBundleEndpoints();
 Phase13ProductEndpoints.MapProductSurface(v1);
 
 app.Run();

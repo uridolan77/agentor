@@ -1,8 +1,30 @@
 # Verification log
 
-Date (UTC): 2026-05-10
+## Phase 17 PR81–PR85 (2026-05-10)
 
-## Commands
+```bash
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded — 0 warnings, 0 errors
+- Tests:
+  - Agentor.Domain.Tests:       Passed  58 / Total  58 (+20 new policy domain tests)
+  - Agentor.Application.Tests:  Passed 113 / Total 113 (+13 new bundle evaluation tests)
+  - Agentor.Contracts.Tests:    Passed  13 / Total  13
+  - Agentor.Infrastructure.Tests: Passed 59 / Total 59
+  - Agentor.Api.Tests:          Passed  55 / Total  55
+  - **Grand total: 298 passed, 0 failed, 0 skipped**
+
+Evidence files: `artifacts/verification/dotnet-{info,restore,build,test}.txt`
+
+---
+
+## Phase 15 PR71–PR75 + PR75.5–PR75.8 (legacy)
 
 ```powershell
 dotnet restore Agentor.sln

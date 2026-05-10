@@ -1,0 +1,39 @@
+{
+  "fixtureName": "deny-bundle",
+  "description": "Bundle that denies a specific tool and caps model-call declared cost. Used to verify Effect=Deny and ModelBudget rules flow through the adapter.",
+  "bundleVersion": "1.0",
+  "rules": [
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000001",
+      "kind": "ToolAccess",
+      "scope": "Global",
+      "effect": "Deny",
+      "targetKey": "fake.tool.pr1",
+      "thresholdValue": null,
+      "description": "Deny the PR1 fake tool."
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "kind": "ModelBudget",
+      "scope": "Global",
+      "effect": "Deny",
+      "targetKey": "declaredCostUnits",
+      "thresholdValue": "1",
+      "description": "Deny model calls with declared cost > 1 cost unit."
+    }
+  ],
+  "evaluationCases": [
+    {
+      "toolKey": "fake.tool.pr1",
+      "input": {},
+      "expectedOutcome": "Deny",
+      "expectedReasonCode": "TOOL_DENIED"
+    },
+    {
+      "toolKey": "conexus.model.complete",
+      "input": { "declaredCostUnits": "99" },
+      "expectedOutcome": "Deny",
+      "expectedReasonCode": "BUDGET_DECLARED_COST"
+    }
+  ]
+}

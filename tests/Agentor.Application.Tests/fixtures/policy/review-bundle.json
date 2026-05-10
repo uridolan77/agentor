@@ -1,0 +1,40 @@
+{
+  "fixtureName": "review-bundle",
+  "description": "Bundle that marks a low-risk tool as requiring review and denies an MCP tool. Used to verify Effect=RequiresReview is distinct from Deny.",
+  "bundleVersion": "1.0",
+  "rules": [
+    {
+      "id": "a1b2c3d4-0003-4000-8000-000000000001",
+      "kind": "ToolAccess",
+      "scope": "Global",
+      "effect": "RequiresReview",
+      "targetKey": "fake.tool.pr1",
+      "thresholdValue": null,
+      "description": "Require human review for the PR1 fake tool even though it is low-risk."
+    },
+    {
+      "id": "a1b2c3d4-0003-4000-8000-000000000002",
+      "kind": "McpToolAccess",
+      "scope": "Global",
+      "effect": "Deny",
+      "targetKey": "mcp.demo-server.echo",
+      "thresholdValue": null,
+      "description": "Deny the MCP echo tool."
+    }
+  ],
+  "evaluationCases": [
+    {
+      "toolKey": "fake.tool.pr1",
+      "input": {},
+      "expectedOutcome": "RequiresReview",
+      "expectedReasonCode": "TOOL_REVIEW_REQUIRED",
+      "note": "RequiresReview is distinct from Deny — the tool is not denied, only gated for review."
+    },
+    {
+      "toolKey": "mcp.demo-server.echo",
+      "input": {},
+      "expectedOutcome": "Deny",
+      "expectedReasonCode": "MCP_TOOL_DENIED"
+    }
+  ]
+}

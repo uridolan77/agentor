@@ -1,6 +1,7 @@
 using Agentor.Contracts;
 using Agentor.Domain;
 using Agentor.Domain.Governance;
+using Agentor.Domain.Policy;
 
 namespace Agentor.Api.Mapping;
 
@@ -136,4 +137,37 @@ public static class DtoMappings
             manifest.ManifestVersion,
             manifest.ContentHash);
     }
+
+    public static PolicyBundleSummaryDto ToSummaryDto(this PolicyBundle bundle) =>
+        new(bundle.Id,
+            bundle.Name,
+            bundle.Version.ToString(),
+            bundle.IsPublished,
+            bundle.CreatedAt,
+            bundle.PublishedAt);
+
+    public static PolicyBundleDetailDto ToDetailDto(this PolicyBundle bundle) =>
+        new(bundle.Id,
+            bundle.Name,
+            bundle.Version.ToString(),
+            bundle.IsPublished,
+            bundle.CreatedAt,
+            bundle.PublishedAt,
+            bundle.Rules.Select(r => r.ToDto()).ToList());
+
+    public static PolicyRuleDto ToDto(this PolicyRule rule) =>
+        new(rule.Id,
+            rule.Kind,
+            rule.Scope,
+            rule.Effect,
+            rule.TargetKey,
+            rule.ThresholdValue,
+            rule.Description);
+
+    public static ActivePolicyProfileDto ToDto(this ActivePolicyProfile active) =>
+        new(active.ProfileId,
+            active.ProfileName,
+            active.BundleId,
+            active.BundleVersion.ToString(),
+            active.ActivatedAt);
 }

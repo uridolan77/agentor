@@ -1,7 +1,7 @@
 {
-    "phase":  15,
-    "title":  "Phase 15 v1.0 platform hardening (PR71-PR75) + PR75.7 repository tightening + PR75.8 Athanor running-run API tests",
-    "harnessPass":  "PR75.8",
+    "phase":  17,
+    "title":  "Phase 17 Enterprise policy model (PR81-PR85) — PolicyBundle, evaluation adapter, management API, fixtures, audit identity",
+    "harnessPass":  "PR85",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
@@ -28,7 +28,8 @@
                   "PR55.5: Phase 11 harness reconciliation: granular acceptance rows, expanded tests (scope, Athanor project id, policy profile, human review, actor accessor, audit export, persistence), docs/GOVERNANCE_BOUNDARY.md, verification log updated.",
                   "Phase 11 code (PR51-PR55) is implemented in-tree; PR55.5 records harness acceptance only for behaviors covered by automated tests or explicit harness notes.",
                   "Phase 13 PR61-PR65: /api/v1 product surface (management CRUD: recipes, plans, skills, policy-profiles; run aliases: timeline, coordination-view, audit-packet; operator dashboard; review inbox aliases). Phase13ProductSurfaceApiTests; domain/application human-review tests.",
-                  "PR65.5: docs under docs/api|operator|developer|examples; harness phase 13; verify-harness PR65.5."
+                  "PR65.5: docs under docs/api|operator|developer|examples; harness phase 13; verify-harness PR65.5.",
+                  "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model — PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle→PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
               ],
     "acceptanceItems":  [
                             {
@@ -1220,6 +1221,111 @@
                                 "pr":  75.8,
                                 "id":  "PR75.8-005",
                                 "evidence":  ".agentor-harness/session-handoff.md"
+                            },
+                            {
+                                "id":  "PR81-001",
+                                "pr":  81,
+                                "description":  "PolicyBundle validates identity/version/rules; duplicate rule IDs rejected",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleTests: PolicyBundle_DuplicateRuleIds_Throws, PolicyBundle_EmptyId_Throws, PolicyBundle_EmptyName_Throws, PolicyBundle_Create_ValidInput_CreatesUnpublishedBundle"
+                            },
+                            {
+                                "id":  "PR81-002",
+                                "pr":  81,
+                                "description":  "PolicyBundle is immutable after publication (Publish() throws on second call)",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleTests: PolicyBundle_PublishTwice_Throws"
+                            },
+                            {
+                                "id":  "PR81-003",
+                                "pr":  81,
+                                "description":  "PolicyRule construction and validation tests cover all factory methods",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleTests: PolicyRule_FactoryMethods_SetFieldsCorrectly, PolicyRule_EmptyId_Throws"
+                            },
+                            {
+                                "id":  "PR82-001",
+                                "pr":  82,
+                                "description":  "PolicyProfile can bind to a specific PolicyBundle version",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleTests: PolicyProfile_BindToBundle_AddsBinding, PolicyProfile_MultipleBindings_LatestBindingIsLast"
+                            },
+                            {
+                                "id":  "PR82-002",
+                                "pr":  82,
+                                "description":  "Existing RuntimePolicyOptions fallback path remains (no active bundle → options used)",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleEvaluationTests: Evaluator_NoActiveBundle_FallsBackToRuntimeOptions; all existing RuntimePolicyEvaluatorTests unchanged"
+                            },
+                            {
+                                "id":  "PR83-001",
+                                "pr":  83,
+                                "description":  "Tool risk rules work via bundle adapter",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleEvaluationTests: Evaluator_RiskRulesStillWork_WhenBundleHasNoRiskOverride"
+                            },
+                            {
+                                "id":  "PR83-002",
+                                "pr":  83,
+                                "description":  "Model budget rules work via bundle adapter",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleEvaluationTests: Evaluator_BundleDrivenModelBudget_DeniesExcessiveCost, Adapter_ModelBudgetCost_SetsMaxCostUnits"
+                            },
+                            {
+                                "id":  "PR83-003",
+                                "pr":  83,
+                                "description":  "MCP tool deny rules work via bundle adapter",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleEvaluationTests: Evaluator_BundleDrivenMcpDeny_DeniesListedMcpTool, Adapter_McpToolDeny_ProducesMcpDeniedKey"
+                            },
+                            {
+                                "id":  "PR83-004",
+                                "pr":  83,
+                                "description":  "External-agent deny rules work via bundle adapter",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleEvaluationTests: Evaluator_BundleDrivenExternalAgentDeny_DeniesListedAgent"
+                            },
+                            {
+                                "id":  "PR83-005",
+                                "pr":  83,
+                                "description":  "RequiresReview remains distinct from Deny",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleEvaluationTests: Evaluator_RequiresReviewIsDistinctFromDeny; reasonCode TOOL_REVIEW_REQUIRED vs TOOL_DENIED"
+                            },
+                            {
+                                "id":  "PR84-001",
+                                "pr":  84,
+                                "description":  "Creating a policy bundle does not activate it automatically",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleEndpoints: POST /policy-bundles creates + publishes bundle; no SetActiveAsync call; separate POST /policy-profiles/{id}/activate required"
+                            },
+                            {
+                                "id":  "PR84-002",
+                                "pr":  84,
+                                "description":  "Activation is explicit and audited (ActivatedAt, ActivatedBy)",
+                                "passes":  true,
+                                "evidence":  "PolicyBundleEndpoints: POST /policy-profiles/{id}/activate sets ActivePolicyProfile with ActivatedAt + ActivatedBy from ICurrentActorAccessor"
+                            },
+                            {
+                                "id":  "PR84-003",
+                                "pr":  84,
+                                "description":  "Existing policy-profile artifact endpoints remain compatible",
+                                "passes":  true,
+                                "evidence":  "Phase13ProductEndpoints.MapPolicyProfiles unchanged; new endpoints in separate PolicyBundleEndpoints.cs"
+                            },
+                            {
+                                "id":  "PR85-001",
+                                "pr":  85,
+                                "description":  "Evaluation fixture proves bundle-driven allow/deny/review",
+                                "passes":  true,
+                                "evidence":  "fixtures/policy/{allow,deny,review}-bundle.json; PolicyBundleEvaluationTests covers all three outcomes"
+                            },
+                            {
+                                "id":  "PR85-002",
+                                "pr":  85,
+                                "description":  "Audit export includes active policy profile/bundle identity",
+                                "passes":  true,
+                                "evidence":  "GetRunAuditExportQueryHandler: policyIdentity section added; omitted when no active profile (WhenWritingNull)"
                             }
                         ]
 }

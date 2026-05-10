@@ -10,6 +10,7 @@ using Agentor.Application.Quality;
 using Agentor.Application.Redaction;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Domain.Policy;
 using Microsoft.Extensions.Options;
 
 namespace Agentor.Application.Queries;
@@ -27,13 +28,25 @@ public sealed class GetRunAuditExportQueryHandler
 
     private readonly IAgentRunRepository _repository;
     private readonly AuditExportOptions _options;
+    private readonly IPolicyProfileRepository? _policyProfileRepository;
 
+    // 2-param constructor preserves existing test compatibility (no policy repo).
     public GetRunAuditExportQueryHandler(
         IAgentRunRepository repository,
         IOptions<AuditExportOptions> options)
+        : this(repository, options, null)
+    {
+    }
+
+    // Full constructor used by DI when the policy profile repo is registered.
+    public GetRunAuditExportQueryHandler(
+        IAgentRunRepository repository,
+        IOptions<AuditExportOptions> options,
+        IPolicyProfileRepository? policyProfileRepository)
     {
         _repository = repository;
         _options = options.Value;
+        _policyProfileRepository = policyProfileRepository;
     }
 
     public async Task<RunAuditExportResult?> HandleAsync(Guid runId, CancellationToken cancellationToken)
@@ -44,6 +57,12 @@ public sealed class GetRunAuditExportQueryHandler
             return null;
         }
 
+        ActivePolicyProfile? activePolicyProfile = null;
+        if (_policyProfileRepository is not null)
+        {
+            activePolicyProfile = await _policyProfileRepository.GetActiveAsync(cancellationToken);
+        }
+
         var manifest = RunManifest.FromRun(
             run,
             ModelCallTelemetryAggregator.Aggregate(run),
@@ -51,14 +70,18 @@ public sealed class GetRunAuditExportQueryHandler
 
         var quality = RunQualityGateEvaluator.Evaluate(run, requireCompleted: false);
 
-        var root = BuildAuditRoot(run, manifest, quality);
+        var root = BuildAuditRoot(run, manifest, quality, activePolicyProfile);
         JsonRedaction.Apply(root, RedactionPolicy.FromAuditExportOptions(_options));
         var canonical = root.ToJsonString(SerializerOptions);
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
         return new RunAuditExportResult(canonical, hash);
     }
 
-    private static JsonObject BuildAuditRoot(AgentRun run, RunManifest manifest, RunQualitySummary quality)
+    private static JsonObject BuildAuditRoot(
+        AgentRun run,
+        RunManifest manifest,
+        RunQualitySummary quality,
+        ActivePolicyProfile? activePolicyProfile = null)
     {
         var root = new JsonObject
         {
@@ -163,7 +186,16 @@ public sealed class GetRunAuditExportQueryHandler
             ["manifestVersion"] = manifest.ManifestVersion,
             ["qualitySummary"] = JsonSerializer.SerializeToNode(
                 new { quality.Passed, quality.Violations, quality.Warnings },
-                SerializerOptions)
+                SerializerOptions),
+            ["policyIdentity"] = activePolicyProfile is null ? null : new JsonObject
+            {
+                ["profileId"] = activePolicyProfile.ProfileId.ToString("D"),
+                ["profileName"] = activePolicyProfile.ProfileName,
+                ["bundleId"] = activePolicyProfile.BundleId.ToString("D"),
+                ["bundleVersion"] = activePolicyProfile.BundleVersion.ToString(),
+                ["activatedAt"] = activePolicyProfile.ActivatedAt.ToString("O"),
+                ["activatedBy"] = activePolicyProfile.ActivatedBy.ToString("D")
+            }
         };
 
         return root;

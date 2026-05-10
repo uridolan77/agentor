@@ -1,0 +1,24 @@
+{
+  "fixtureName": "allow-bundle",
+  "description": "Bundle that explicitly allows a single tool. All other registered tools are still allow-listed via the empty allow-list (allow all). Used to verify Effect=Allow flows through the adapter.",
+  "bundleVersion": "1.0",
+  "rules": [
+    {
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "kind": "ToolAccess",
+      "scope": "Global",
+      "effect": "Allow",
+      "targetKey": "fake.tool.pr1",
+      "thresholdValue": null,
+      "description": "Allow the PR1 fake tool."
+    }
+  ],
+  "evaluationCases": [
+    {
+      "toolKey": "fake.tool.pr1",
+      "input": {},
+      "expectedOutcome": "Allow",
+      "expectedReasonCode": "RUNTIME_ALLOW"
+    }
+  ]
+}

@@ -31,12 +31,15 @@ public sealed class RuntimePolicyOptions
     public PolicyProfileRules? ActiveProfile { get; set; }
 }
 
-/// <summary>Composable runtime policy profile (PR52).</summary>
+/// <summary>Composable runtime policy profile (PR52). Extended in PR83 with bundle-driven RequiresReview keys.</summary>
 public sealed class PolicyProfileRules
 {
     public List<string> AllowedToolKeys { get; set; } = [];
 
     public List<string> DeniedToolKeys { get; set; } = [];
+
+    /// <summary>Tool keys that unconditionally require human review regardless of their risk level (PR83 bundle adapter).</summary>
+    public List<string> RequiresReviewToolKeys { get; set; } = [];
 
     public string MaxAutoApproveRisk { get; set; } = nameof(ToolRiskLevel.High);
 
