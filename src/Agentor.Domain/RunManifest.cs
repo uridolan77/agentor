@@ -1,9 +1,13 @@
+using System.Security.Cryptography;
+using System.Text;
 using Agentor.Domain.Enums;
 
 namespace Agentor.Domain;
 
 public sealed class RunManifest
 {
+    public const string CurrentVersion = "1.0";
+
     public RunManifest(
         Guid runId,
         Guid profileId,
@@ -14,7 +18,9 @@ public sealed class RunManifest
         int stepCount,
         int toolCallCount,
         int policyDecisionCount,
-        int traceEventCount)
+        int traceEventCount,
+        string manifestVersion,
+        string contentHash)
     {
         RunId = runId;
         ProfileId = profileId;
@@ -26,6 +32,8 @@ public sealed class RunManifest
         ToolCallCount = toolCallCount;
         PolicyDecisionCount = policyDecisionCount;
         TraceEventCount = traceEventCount;
+        ManifestVersion = manifestVersion;
+        ContentHash = contentHash;
     }
 
     public Guid RunId { get; }
@@ -48,10 +56,27 @@ public sealed class RunManifest
 
     public int TraceEventCount { get; }
 
+    public string ManifestVersion { get; }
+
+    public string ContentHash { get; }
+
     public static RunManifest FromRun(AgentRun run)
     {
         var toolCallCount = run.Steps.Sum(step => step.ToolCalls.Count);
         var policyDecisionCount = run.Steps.Sum(step => step.PolicyDecisions.Count);
+        var traceEventCount = run.Trace.OrderBy(e => e.OccurredAt).Count();
+
+        var hash = ComputeContentHash(
+            run.Id,
+            run.ProfileId,
+            run.TraceId,
+            run.Status,
+            run.StartedAt,
+            run.CompletedAt,
+            run.Steps.Count,
+            toolCallCount,
+            policyDecisionCount,
+            traceEventCount);
 
         return new RunManifest(
             run.Id,
@@ -63,6 +88,40 @@ public sealed class RunManifest
             run.Steps.Count,
             toolCallCount,
             policyDecisionCount,
-            run.Trace.Count);
+            traceEventCount,
+            CurrentVersion,
+            hash);
+    }
+
+    public static string ComputeContentHash(
+        Guid runId,
+        Guid profileId,
+        string traceId,
+        AgentRunStatus status,
+        DateTimeOffset startedAt,
+        DateTimeOffset? completedAt,
+        int stepCount,
+        int toolCallCount,
+        int policyDecisionCount,
+        int traceEventCount)
+    {
+        var parts = new[]
+        {
+            runId.ToString("D"),
+            profileId.ToString("D"),
+            traceId,
+            status.ToString(),
+            startedAt.ToString("O"),
+            completedAt?.ToString("O") ?? "null",
+            stepCount.ToString(),
+            toolCallCount.ToString(),
+            policyDecisionCount.ToString(),
+            traceEventCount.ToString(),
+            CurrentVersion
+        };
+
+        var canonical = string.Join(":", parts);
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }

@@ -38,6 +38,8 @@ public sealed class ApiContractTests : IClassFixture<WebApplicationFactory<Progr
         Assert.NotNull(error);
         Assert.Equal("ValidationError", error!.Error);
         Assert.False(string.IsNullOrWhiteSpace(error.Message));
+        Assert.NotNull(error.Errors);
+        Assert.NotEmpty(error.Errors!);
     }
 
     [Fact]
@@ -100,6 +102,8 @@ public sealed class ApiContractTests : IClassFixture<WebApplicationFactory<Progr
         Assert.True(manifest.ToolCallCount >= 1);
         Assert.True(manifest.PolicyDecisionCount >= 1);
         Assert.True(manifest.TraceEventCount >= 1);
+        Assert.Equal("1.0", manifest.ManifestVersion);
+        Assert.Matches("^[0-9a-f]{64}$", manifest.ContentHash);
     }
 
     [Fact]

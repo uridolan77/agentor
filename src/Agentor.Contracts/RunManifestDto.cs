@@ -12,4 +12,6 @@ public sealed record RunManifestDto(
     int StepCount,
     int ToolCallCount,
     int PolicyDecisionCount,
-    int TraceEventCount);
+    int TraceEventCount,
+    string ManifestVersion,
+    string ContentHash);

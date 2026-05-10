@@ -4,6 +4,7 @@ using Agentor.Api.Middleware;
 using Agentor.Application;
 using Agentor.Application.Commands;
 using Agentor.Application.Queries;
+using Agentor.Application.Validation;
 using Agentor.Contracts;
 using Agentor.Infrastructure;
 
@@ -45,18 +46,23 @@ v1.MapPost("/agent-runs", async (
 {
     var requestTraceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
 
-    if (string.IsNullOrWhiteSpace(request.Objective))
-    {
-        return Results.BadRequest(new ApiErrorDto("ValidationError", "Objective is required.", requestTraceId));
-    }
-
     var commandTraceId = string.IsNullOrWhiteSpace(request.TraceId)
         ? requestTraceId
         : request.TraceId;
 
-    var run = await handler.HandleAsync(
-        new StartAgentRunCommand(request.AgentName, request.Objective, commandTraceId),
-        cancellationToken);
+    var command = new StartAgentRunCommand(request.AgentName, request.Objective, commandTraceId);
+    var validation = StartAgentRunValidator.Validate(command);
+
+    if (!validation.IsValid)
+    {
+        return Results.BadRequest(new ApiErrorDto(
+            "ValidationError",
+            "One or more validation errors occurred.",
+            requestTraceId,
+            validation.Errors));
+    }
+
+    var run = await handler.HandleAsync(command, cancellationToken);
 
     return Results.Accepted($"/api/v1/agent-runs/{run.Id}", run.ToDto());
 })

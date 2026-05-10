@@ -79,6 +79,8 @@ public static class DtoMappings
             manifest.StepCount,
             manifest.ToolCallCount,
             manifest.PolicyDecisionCount,
-            manifest.TraceEventCount);
+            manifest.TraceEventCount,
+            manifest.ManifestVersion,
+            manifest.ContentHash);
     }
 }
