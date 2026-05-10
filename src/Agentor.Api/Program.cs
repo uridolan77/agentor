@@ -5,7 +5,10 @@ using Agentor.Application;
 using Agentor.Application.Commands;
 using Agentor.Application.Options;
 using Agentor.Application.Queries;
+using Agentor.Application.Services;
 using Agentor.Application.Validation;
+using Agentor.Api;
+using Agentor.Domain;
 using Agentor.Contracts;
 using Agentor.Infrastructure;
 using Agentor.Infrastructure.Options;
@@ -48,6 +51,9 @@ builder.Services
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+builder.Services.Configure<RuntimePolicyOptions>(
+    builder.Configuration.GetSection(RuntimePolicyOptions.SectionName));
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -86,6 +92,7 @@ v1.MapGet("/agent-runs", async (
 v1.MapPost("/agent-runs", async (
     StartAgentRunRequestDto request,
     StartAgentRunHandler handler,
+    AgentRunIdempotencyService idempotencyService,
     HttpContext httpContext,
     CancellationToken cancellationToken) =>
 {
@@ -107,13 +114,56 @@ v1.MapPost("/agent-runs", async (
             validation.Errors));
     }
 
-    var run = await handler.HandleAsync(command, cancellationToken);
+    const int maxIdempotencyKeyLength = 256;
+    if (httpContext.Request.Headers.TryGetValue("Idempotency-Key", out var idempotencyHeaderValues))
+    {
+        var idempotencyKey = idempotencyHeaderValues.ToString().Trim();
+        if (idempotencyKey.Length > maxIdempotencyKeyLength)
+        {
+            return Results.BadRequest(new ApiErrorDto(
+                "ValidationError",
+                $"Idempotency-Key must not exceed {maxIdempotencyKeyLength} characters.",
+                requestTraceId,
+                [$"Idempotency-Key must not exceed {maxIdempotencyKeyLength} characters."]));
+        }
 
-    return Results.Accepted($"/api/v1/agent-runs/{run.Id}", run.ToDto());
+        if (idempotencyKey.Length > 0)
+        {
+            var traceIdSpecifiedInBody = !string.IsNullOrWhiteSpace(request.TraceId);
+            var fingerprint = StartAgentRunFingerprint.Compute(
+                request.AgentName,
+                command.Objective,
+                traceIdSpecifiedInBody,
+                request.TraceId);
+
+            Func<Task<AgentRun>> startRun = () => handler.HandleAsync(command, cancellationToken);
+            var outcome = await idempotencyService.ExecuteAsync(
+                idempotencyKey,
+                fingerprint,
+                startRun,
+                cancellationToken);
+
+            if (outcome.IsConflict)
+            {
+                return Results.Conflict(new ApiErrorDto(
+                    "IdempotencyKeyConflict",
+                    "The Idempotency-Key was reused with a different request payload.",
+                    requestTraceId,
+                    null));
+            }
+
+            var run = outcome.Run!;
+            return Results.Accepted($"/api/v1/agent-runs/{run.Id}", run.ToDto());
+        }
+    }
+
+    var newRun = await handler.HandleAsync(command, cancellationToken);
+
+    return Results.Accepted($"/api/v1/agent-runs/{newRun.Id}", newRun.ToDto());
 })
 .WithName("StartAgentRun")
 .WithTags("AgentRuns")
-.WithSummary("Starts a new deterministic agent run.")
+.WithSummary("Starts a new deterministic agent run. Optional Idempotency-Key replays identical payloads to the same run; mismatched payloads return 409.")
 .WithOpenApi();
 
 v1.MapGet("/agent-runs/{runId:guid}", async (

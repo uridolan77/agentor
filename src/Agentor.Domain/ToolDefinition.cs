@@ -1,19 +1,15 @@
+using Agentor.Domain.Enums;
+
 namespace Agentor.Domain;
 
 public sealed class ToolDefinition
 {
-    public ToolDefinition(string key, string displayName, string description, string version, bool isDeterministic)
+    public ToolDefinition(string key, string displayName, string description, ToolRiskLevel riskLevel)
     {
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            throw new ArgumentException("Tool key is required.", nameof(key));
-        }
-
-        Key = key.Trim();
-        DisplayName = string.IsNullOrWhiteSpace(displayName) ? Key : displayName.Trim();
-        Description = description.Trim();
-        Version = string.IsNullOrWhiteSpace(version) ? "v1" : version.Trim();
-        IsDeterministic = isDeterministic;
+        Key = key;
+        DisplayName = displayName;
+        Description = description;
+        RiskLevel = riskLevel;
     }
 
     public string Key { get; }
@@ -22,7 +18,5 @@ public sealed class ToolDefinition
 
     public string Description { get; }
 
-    public string Version { get; }
-
-    public bool IsDeterministic { get; }
+    public ToolRiskLevel RiskLevel { get; }
 }

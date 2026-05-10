@@ -1,7 +1,10 @@
+using Agentor.Application.Commands;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Infrastructure;
 using Agentor.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -96,22 +99,33 @@ public sealed class EfCoreAgentRunRepositoryTests
     }
 
     [Fact]
-    public async Task SaveAsync_PersistsPolicyDecisionsAndToolCalls()
+    public async Task SaveAsync_StartAgentRunHandler_RoundTripsPolicyAndToolCalls()
     {
-        await using var ctx = CreateContext("policy-toolcall-test");
+        await using var ctx = CreateContext("handler-policy-toolcall-test");
+        await ctx.Database.EnsureCreatedAsync();
         var repo = new EfCoreAgentRunRepository(ctx);
 
-        var run = BuildCompletedRun();
-        var originalStep = run.Steps[0];
+        var clock = new SystemClock();
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake);
+        var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
+        var handler = new StartAgentRunHandler(repo, policy, registry, clock);
 
-        await repo.SaveAsync(run, CancellationToken.None);
+        var run = await handler.HandleAsync(
+            new StartAgentRunCommand("Handler EF Agent", "Policy/tool EF round-trip.", "handler-ef-trace"),
+            CancellationToken.None);
+
+        Assert.Single(run.Steps[0].PolicyDecisions);
+        Assert.Single(run.Steps[0].ToolCalls);
+        Assert.Equal(PolicyDecisionOutcome.Allow, run.Steps[0].PolicyDecisions[0].Outcome);
+
         var loaded = await repo.GetAsync(run.Id, CancellationToken.None);
-
         Assert.NotNull(loaded);
         var step = loaded!.Steps[0];
-
-        Assert.Equal(originalStep.PolicyDecisions.Count, step.PolicyDecisions.Count);
-        Assert.Equal(originalStep.ToolCalls.Count, step.ToolCalls.Count);
+        Assert.Single(step.PolicyDecisions);
+        Assert.Single(step.ToolCalls);
+        Assert.Equal("pr1.fake-tool", step.ToolCalls[0].ToolKey);
+        Assert.Equal(PolicyDecisionOutcome.Allow, step.PolicyDecisions[0].Outcome);
     }
 
     [Fact]

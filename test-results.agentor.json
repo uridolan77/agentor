@@ -19,5 +19,17 @@
       "artifacts/verification/dotnet-test.txt"
     ],
     "notes": "Solution build/test green; Api.Tests also run to api-smoke.txt."
+  },
+  "pr09-pr12-batch": {
+    "passes": true,
+    "evidence": [
+      "artifacts/verification/dotnet-info.txt",
+      "artifacts/verification/dotnet-restore.txt",
+      "artifacts/verification/dotnet-build.txt",
+      "artifacts/verification/dotnet-test.txt",
+      "artifacts/verification/api-smoke.txt",
+      "artifacts/verification/eval-fixtures.txt"
+    ],
+    "notes": "PR09 idempotency; PR10 contract/integration/eval baseline; PR11 tool registry; PR12 runtime policy. Evidence read after capture (2026-05-10)."
   }
 }

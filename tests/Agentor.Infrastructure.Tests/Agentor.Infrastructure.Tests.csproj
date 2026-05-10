@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Agentor.Infrastructure\Agentor.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Agentor.Application\Agentor.Application.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />

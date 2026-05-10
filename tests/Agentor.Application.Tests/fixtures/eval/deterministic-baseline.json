@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "command": {
+    "agentName": "PR1 Agent",
+    "objective": "Eval baseline objective.",
+    "traceId": "eval-baseline-trace"
+  },
+  "expectations": {
+    "status": "Completed",
+    "toolKey": "pr1.fake-tool",
+    "minTraceEventCount": 5
+  }
+}

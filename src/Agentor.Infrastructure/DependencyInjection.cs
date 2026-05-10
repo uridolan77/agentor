@@ -1,3 +1,4 @@
+using System.Linq;
 using Agentor.Application.Abstractions;
 using Agentor.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -15,8 +16,11 @@ public static class DependencyInjection
     {
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IAgentRunRepository, InMemoryAgentRunRepository>();
-        services.AddScoped<IPolicyEvaluator, AllowAllPolicyEvaluator>();
-        services.AddScoped<IToolExecutor, FakeToolExecutor>();
+        services.AddSingleton<IAgentRunIdempotencyLedger, InMemoryAgentRunIdempotencyLedger>();
+        services.AddSingleton<FakeToolExecutor>();
+        services.AddSingleton<IToolExecutor>(sp => sp.GetRequiredService<FakeToolExecutor>());
+        services.AddSingleton<IToolRegistry>(sp => ToolRegistry.CreateDefault(sp.GetRequiredService<FakeToolExecutor>()));
+        services.AddScoped<IPolicyEvaluator, RuntimePolicyEvaluator>();
 
         return services;
     }
@@ -31,6 +35,13 @@ public static class DependencyInjection
     {
         services.AddDbContext<AgentorDbContext>(configureDb);
         services.AddScoped<IAgentRunRepository, EfCoreAgentRunRepository>();
+
+        foreach (var d in services.Where(x => x.ServiceType == typeof(IAgentRunIdempotencyLedger)).ToList())
+        {
+            services.Remove(d);
+        }
+
+        services.AddScoped<IAgentRunIdempotencyLedger, EfAgentRunIdempotencyLedger>();
 
         return services;
     }

@@ -325,4 +325,72 @@ public sealed class AgentRunQueryEndpointsTests
         Assert.Equal(runB!.Id, list.Items[0].Id);
         Assert.Equal(runA!.Id, list.Items[1].Id);
     }
+
+    [Fact]
+    public async Task PostAgentRuns_WithoutIdempotencyKey_CreatesNewRunEachTime()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        var body = new StartAgentRunRequestDto("X", "Same objective.", "trace-no-idem");
+        var r1 = await client.PostAsJsonAsync("/api/v1/agent-runs", body);
+        var r2 = await client.PostAsJsonAsync("/api/v1/agent-runs", body);
+        Assert.Equal(HttpStatusCode.Accepted, r1.StatusCode);
+        Assert.Equal(HttpStatusCode.Accepted, r2.StatusCode);
+        var run1 = await r1.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        var run2 = await r2.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(run1);
+        Assert.NotNull(run2);
+        Assert.NotEqual(run1!.Id, run2!.Id);
+    }
+
+    [Fact]
+    public async Task PostAgentRuns_WithIdempotencyKey_SameBody_ReplaysSameRun()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        var body = new StartAgentRunRequestDto("Y", "Idempotent objective.", "idem-trace");
+
+        using var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent-runs")
+        {
+            Content = JsonContent.Create(body)
+        };
+        req1.Headers.TryAddWithoutValidation("Idempotency-Key", "idem-key-abc");
+        var r1 = await client.SendAsync(req1);
+        Assert.Equal(HttpStatusCode.Accepted, r1.StatusCode);
+        var run1 = await r1.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(run1);
+
+        using var req2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent-runs")
+        {
+            Content = JsonContent.Create(body)
+        };
+        req2.Headers.TryAddWithoutValidation("Idempotency-Key", "idem-key-abc");
+        var r2 = await client.SendAsync(req2);
+        Assert.Equal(HttpStatusCode.Accepted, r2.StatusCode);
+        var run2 = await r2.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(run2);
+        Assert.Equal(run1!.Id, run2!.Id);
+        Assert.Equal(run1.TraceId, run2!.TraceId);
+    }
+
+    [Fact]
+    public async Task PostAgentRuns_WithIdempotencyKey_DifferentBody_ReturnsConflict()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+        const string key = "idem-conflict-key";
+        var body1 = new StartAgentRunRequestDto("Z", "First.", "t1");
+        using (var req1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent-runs") { Content = JsonContent.Create(body1) })
+        {
+            req1.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+            var r1 = await client.SendAsync(req1);
+            Assert.Equal(HttpStatusCode.Accepted, r1.StatusCode);
+        }
+
+        var body2 = new StartAgentRunRequestDto("Z", "Second.", "t1");
+        using var req2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agent-runs") { Content = JsonContent.Create(body2) };
+        req2.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+        var r2 = await client.SendAsync(req2);
+        Assert.Equal(HttpStatusCode.Conflict, r2.StatusCode);
+    }
 }

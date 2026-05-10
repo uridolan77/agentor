@@ -257,6 +257,33 @@ namespace Agentor.Infrastructure.Persistence.Migrations
                     b.ToTable("trace_events", (string)null);
                 });
 
+            modelBuilder.Entity("Agentor.Infrastructure.Persistence.Records.AgentRunIdempotencyRecord", b =>
+                {
+                    b.Property<Guid>("AgentRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_run_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("idempotency_key");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("request_fingerprint");
+
+                    b.HasKey("IdempotencyKey");
+
+                    b.ToTable("agent_run_idempotency_keys", (string)null);
+                });
+
             modelBuilder.Entity("Agentor.Infrastructure.Persistence.Records.AgentStepRecord", b =>
                 {
                     b.HasOne("Agentor.Infrastructure.Persistence.Records.AgentRunRecord", "Run")

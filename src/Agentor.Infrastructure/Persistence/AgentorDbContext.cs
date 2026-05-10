@@ -14,6 +14,7 @@ public sealed class AgentorDbContext : DbContext
     public DbSet<ToolCallRecord> ToolCalls => Set<ToolCallRecord>();
     public DbSet<PolicyDecisionRecord> PolicyDecisions => Set<PolicyDecisionRecord>();
     public DbSet<TraceEventRecord> TraceEvents => Set<TraceEventRecord>();
+    public DbSet<AgentRunIdempotencyRecord> AgentRunIdempotencyKeys => Set<AgentRunIdempotencyRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -104,6 +105,16 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(e => e.Message).HasColumnName("message").IsRequired().HasMaxLength(2000);
             entity.Property(e => e.OccurredAt).HasColumnName("occurred_at");
             entity.Property(e => e.DataJson).HasColumnName("data_json").IsRequired();
+        });
+
+        modelBuilder.Entity<AgentRunIdempotencyRecord>(entity =>
+        {
+            entity.ToTable("agent_run_idempotency_keys");
+            entity.HasKey(r => r.IdempotencyKey);
+            entity.Property(r => r.IdempotencyKey).HasColumnName("idempotency_key").HasMaxLength(256);
+            entity.Property(r => r.RequestFingerprint).HasColumnName("request_fingerprint").IsRequired().HasMaxLength(128);
+            entity.Property(r => r.AgentRunId).HasColumnName("agent_run_id");
+            entity.Property(r => r.CreatedAt).HasColumnName("created_at");
         });
     }
 }

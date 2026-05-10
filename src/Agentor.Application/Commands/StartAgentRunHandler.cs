@@ -1,3 +1,4 @@
+using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
@@ -6,22 +7,20 @@ namespace Agentor.Application.Commands;
 
 public sealed class StartAgentRunHandler
 {
-    private const string FakeToolKey = "pr1.fake-tool";
-
     private readonly IAgentRunRepository _repository;
     private readonly IPolicyEvaluator _policyEvaluator;
-    private readonly IToolExecutor _toolExecutor;
+    private readonly IToolRegistry _toolRegistry;
     private readonly IClock _clock;
 
     public StartAgentRunHandler(
         IAgentRunRepository repository,
         IPolicyEvaluator policyEvaluator,
-        IToolExecutor toolExecutor,
+        IToolRegistry toolRegistry,
         IClock clock)
     {
         _repository = repository;
         _policyEvaluator = policyEvaluator;
-        _toolExecutor = toolExecutor;
+        _toolRegistry = toolRegistry;
         _clock = clock;
     }
 
@@ -48,8 +47,28 @@ public sealed class StartAgentRunHandler
                 ["agentName"] = profile.Name
             };
 
+            if (!_toolRegistry.TryGetRegistration(WellKnownToolKeys.Pr1FakeTool, out var registration)
+                || registration is null)
+            {
+                run.RecordTrace(
+                    TraceEventKind.PolicyEvaluated,
+                    "Unknown tool; run cannot proceed.",
+                    _clock.UtcNow,
+                    new Dictionary<string, string>
+                    {
+                        ["stepId"] = step.Id.ToString(),
+                        ["toolKey"] = WellKnownToolKeys.Pr1FakeTool
+                    });
+                step.Fail(_clock.UtcNow);
+                run.Fail($"Unknown tool '{WellKnownToolKeys.Pr1FakeTool}'.", _clock.UtcNow);
+                await _repository.SaveAsync(run, cancellationToken);
+                return run;
+            }
+
+            var toolKey = registration.Definition.Key;
+
             var policyDecision = await _policyEvaluator.EvaluateToolCallAsync(
-                new PolicyEvaluationRequest(run.Id, step.Id, FakeToolKey, input),
+                new PolicyEvaluationRequest(run.Id, step.Id, toolKey, input),
                 cancellationToken);
 
             step.AddPolicyDecision(policyDecision);
@@ -60,7 +79,7 @@ public sealed class StartAgentRunHandler
                 ["reasonCode"] = policyDecision.ReasonCode
             });
 
-            var toolCall = ToolCall.Start(run.Id, step.Id, FakeToolKey, input, _clock.UtcNow);
+            var toolCall = ToolCall.Start(run.Id, step.Id, toolKey, input, _clock.UtcNow);
 
             if (!policyDecision.AllowsExecution)
             {
@@ -72,20 +91,20 @@ public sealed class StartAgentRunHandler
                 return run;
             }
 
-            run.RecordTrace(TraceEventKind.ToolCallStarted, "Fake tool call started.", _clock.UtcNow, new Dictionary<string, string>
+            run.RecordTrace(TraceEventKind.ToolCallStarted, "Tool call started.", _clock.UtcNow, new Dictionary<string, string>
             {
                 ["stepId"] = step.Id.ToString(),
-                ["toolKey"] = FakeToolKey
+                ["toolKey"] = toolKey
             });
 
-            var toolResult = await _toolExecutor.ExecuteAsync(
-                new ToolExecutionRequest(run.Id, step.Id, FakeToolKey, input),
+            var toolResult = await registration.Executor.ExecuteAsync(
+                new ToolExecutionRequest(run.Id, step.Id, toolKey, input),
                 cancellationToken);
 
             if (toolResult.Success)
             {
                 toolCall.Succeed(toolResult.Output, _clock.UtcNow);
-                run.RecordTrace(TraceEventKind.ToolCallCompleted, "Fake tool call completed.", _clock.UtcNow, new Dictionary<string, string>
+                run.RecordTrace(TraceEventKind.ToolCallCompleted, "Tool call completed.", _clock.UtcNow, new Dictionary<string, string>
                 {
                     ["toolCallId"] = toolCall.Id.ToString(),
                     ["status"] = toolCall.Status.ToString()
