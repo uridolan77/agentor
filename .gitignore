@@ -18,3 +18,4 @@ artifacts/
 artifacts/verification/
 .claude/.evidence-reads
 AGENT_STOP
+agentor_cwc_long_running_coding_harness.zip
