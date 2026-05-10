@@ -1,3 +1,4 @@
+using Agentor.Application.Athanor;
 using Agentor.Application.Commands;
 using Agentor.Application.Queries;
 using Agentor.Application.Services;
@@ -17,6 +18,12 @@ public static class DependencyInjection
         services.AddScoped<GetAgentRunTraceQueryHandler>();
         services.AddScoped<GetAgentRunStepsQueryHandler>();
         services.AddScoped<GetAgentRunToolCallsQueryHandler>();
+
+        services.AddScoped<GetLatestAthanorSnapshotForRunQueryHandler>();
+        services.AddScoped<LookupAthanorCanonicalForRunQueryHandler>();
+        services.AddScoped<AttachAthanorEvidenceProvenanceHandler>();
+        services.AddScoped<SubmitAthanorCandidateHandler>();
+        services.AddScoped<QueueAthanorReviewHandler>();
 
         return services;
     }

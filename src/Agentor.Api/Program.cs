@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Agentor.Api.Mapping;
 using Agentor.Api.Middleware;
 using Agentor.Application;
+using Agentor.Application.Athanor;
 using Agentor.Application.Commands;
 using Agentor.Application.Options;
 using Agentor.Application.Queries;
@@ -268,6 +269,157 @@ v1.MapGet("/agent-runs/{runId:guid}/manifest", async (
 .WithTags("AgentRuns")
 .WithSummary("Returns the run manifest for a completed agent run.")
 .WithOpenApi();
+
+v1.MapGet("/agent-runs/{runId:guid}/athanor/latest-snapshot", async (
+    Guid runId,
+    GetLatestAthanorSnapshotForRunQueryHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    var outcome = await handler.HandleAsync(runId, cancellationToken);
+    if (!outcome.RunExists)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    return Results.Ok(outcome.Snapshot);
+})
+.WithName("GetAthanorLatestSnapshotForRun")
+.WithTags("Athanor")
+.WithSummary("Returns the latest Athanor canonical snapshot for the run's project (read-only).");
+
+v1.MapGet("/agent-runs/{runId:guid}/athanor/canonical", async (
+    Guid runId,
+    string key,
+    LookupAthanorCanonicalForRunQueryHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    AthanorCanonicalLookupResult outcome;
+    try
+    {
+        outcome = await handler.HandleAsync(runId, key, cancellationToken);
+    }
+    catch (ArgumentException ex)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.BadRequest(new ApiErrorDto("ValidationError", ex.Message, traceId, [ex.Message]));
+    }
+
+    if (!outcome.RunExists)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    if (outcome.Entry is null)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("CanonicalEntryNotFound", "No canonical entry matched the key for this project.", traceId));
+    }
+
+    return Results.Ok(outcome.Entry);
+})
+.WithName("LookupAthanorCanonicalForRun")
+.WithTags("Athanor")
+.WithSummary("Looks up a canonical state entry by key query parameter for the run's project (read-only).");
+
+v1.MapPost("/agent-runs/{runId:guid}/athanor/evidence-provenance", async (
+    Guid runId,
+    AttachEvidenceProvenanceRequestDto request,
+    AttachAthanorEvidenceProvenanceHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Query))
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.BadRequest(new ApiErrorDto("ValidationError", "Query is required.", traceId, ["Query is required."]));
+    }
+
+    var outcome = await handler.HandleAsync(runId, request.Query, cancellationToken);
+    if (outcome is null)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    if (outcome == false)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.Conflict(new ApiErrorDto("RunNotRunning", "Evidence provenance can only be attached while the run is Running.", traceId));
+    }
+
+    return Results.NoContent();
+})
+.WithName("AttachAthanorEvidenceProvenance")
+.WithTags("Athanor")
+.WithSummary("Runs an Athanor evidence search and records result identifiers on the run trace as provenance (non-canon).");
+
+v1.MapPost("/agent-runs/{runId:guid}/athanor/candidates", async (
+    Guid runId,
+    SubmitAthanorCandidateRequestDto request,
+    SubmitAthanorCandidateHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Summary))
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.BadRequest(new ApiErrorDto("ValidationError", "Summary is required.", traceId, ["Summary is required."]));
+    }
+
+    var outcome = await handler.HandleAsync(runId, request.Summary, request.PayloadJson ?? "{}", cancellationToken);
+    if (outcome.Ok is null)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    if (outcome.Ok == false)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.Conflict(new ApiErrorDto("RunNotRunning", "Candidates can only be submitted while the run is Running.", traceId));
+    }
+
+    return Results.Accepted($"/api/v1/agent-runs/{runId}", new { candidateId = outcome.CandidateId });
+})
+.WithName("SubmitAthanorCandidate")
+.WithTags("Athanor")
+.WithSummary("Submits a non-canon candidate payload to Athanor and records the submission on the run trace.");
+
+v1.MapPost("/agent-runs/{runId:guid}/athanor/review-queue", async (
+    Guid runId,
+    QueueAthanorReviewRequestDto request,
+    QueueAthanorReviewHandler handler,
+    HttpContext httpContext,
+    CancellationToken cancellationToken) =>
+{
+    if (request.CandidateId == Guid.Empty || request.ActorId == Guid.Empty)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.BadRequest(new ApiErrorDto("ValidationError", "CandidateId and ActorId are required.", traceId, null));
+    }
+
+    var outcome = await handler.HandleAsync(runId, request.CandidateId, request.ActorId, cancellationToken);
+    if (outcome is null)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
+    }
+
+    if (outcome == false)
+    {
+        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        return Results.Conflict(new ApiErrorDto("RunNotRunning", "Review queue operations require a Running run.", traceId));
+    }
+
+    return Results.NoContent();
+})
+.WithName("QueueAthanorReview")
+.WithTags("Athanor")
+.WithSummary("Queues a candidate for Athanor human review and records the queue item on the run trace (non-canon).");
 
 app.Run();
 

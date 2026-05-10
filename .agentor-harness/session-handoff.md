@@ -1,28 +1,22 @@
-# Session handoff
+# Session handoff — Agentor harness
 
-## Completed before this pass
+## Completed this session
 
-- Phase 4 PR16 through PR20: sequential coordination only, deterministic guards, failure policies, state machine hardening, Application-level executor tests plus Domain tests.
-- RequiresReview is distinct from Deny on the tool path and is reflected on runs and steps where applicable.
+- **Phase 5 (PR21–PR25):** Athanor client port (`IKnowledgeStateClient`), fake implementation, read-only snapshot/canonical integration, evidence provenance attachment, candidate submission, review queue recording, and non-canonization guard tests.
+- Harness markdown/JSON was reset to UTF-8 after prior encoding corruption.
 
-## PR20.5 (harness and docs cleanup)
+## Conventions used
 
-- Harness files under `.agentor-harness/` were UTF-16 LE (no BOM); they are rewritten as UTF-8 so JSON parsers, git, and GitHub render them as normal text.
-- `feature-list.json` lists per-PR acceptance items with `passes: true` only when a concrete test name exists in the repo; gaps use `passes: false` and a TODO evidence string.
-- See `docs/planning/pr1-pr40/phase-4-evaluator-report.md` for scope summary, test inventory, gaps, and risks before PR21.
+- `ProfileId` on `AgentRun` is used as Athanor **projectId** for harness alignment.
+- Mutating Athanor endpoints require `AgentRunStatus.Running` (completed PR1 runs return 409 Conflict).
 
-## PR20.6 (test hardening only)
+## Follow-up for next agent
 
-- `SequentialAgentPlanExecutorTests.TwoStepPlanSuccess_PlanTraceKindsAppearInStrictCoordinatorOrder` — strict ordered `ExecutionTrace` kinds for two-step success (harness PR17-007).
-- `SequentialAgentPlanExecutorTests.ContinueOnFailure_CompletedRun_PlanResultSuccess_WithFailedFirstPlanStep` — coordinator `Success` with run `Completed` and `AgentPlanStatus.Failed` when the first step fails under ContinueOnFailure (harness PR20-006).
-- `SequentialAgentPlanExecutorTests.FirstStepToolFailure_OnFailurePolicyMatrix` — theory table for FailFast, ContinueOnFailure, and SkipRemaining on first-step tool failure (harness PR19-005 partial).
+- Begin **Phase 6 — Conexus** per `docs/planning/pr1-pr40/PR_INDEX.md` when ready.
+- Optional hardening: real HTTP Athanor adapter behind the same port (out of scope for this harness pass).
 
-## Explicitly not done (next boundary)
+## Files to read first
 
-- **PR21 Athanor integration** — do not start until PR20.6 is merged and the team agrees on adapter surface.
-
-## Suggested next steps after merge
-
-1. Add API-level tests for plan execution endpoints (see feature-list PR16-009, PR17-008).
-2. Add persistence round-trip tests for coordination artifacts (PR16-010).
-3. Optional: split `SequentialAgentPlanExecutor` into internal helpers when a low-risk window appears (see TODO in source).
+- `docs/ATHANOR_INTEGRATION_BOUNDARY.md`
+- `src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs`
+- `src/Agentor.Api/Program.cs` (Athanor route group)

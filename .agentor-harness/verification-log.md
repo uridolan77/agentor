@@ -1,43 +1,33 @@
-# Verification log
+# Agentor harness — verification log
 
-## Phase 4 (historical)
+## Final verification (Phase 5 complete — 2026-05-10)
 
-Per the original long-session handoff: final `dotnet restore`, `dotnet build --no-restore`, and `dotnet test --no-build` were reported green (Domain, Application, Infrastructure, API test counts from that session). Earlier per-PR gates were partially folded into that final green pass.
+Commands (repository root):
 
-## PR20.5
+```
+dotnet restore
+dotnet build
+dotnet test
+```
 
-Run after harness UTF-8 rewrite, feature-list expansion, evaluator report, and documentation-only code comments:
+Results: restore OK; build OK; test OK (Domain 23, Application 48, Infrastructure 17, Api 30 — total 118).
 
-- `dotnet restore`
-- `dotnet build --no-restore`
-- `dotnet test --no-build`
+---
 
-### PR20.5 verification (2026-05-10)
+## PR gate notes (same commit; logical ordering)
 
-Commands:
+**PR21 completion:** Port + fake + DI + `FakeKnowledgeStateClientTests`. No HTTP client; no Athanor canon paths.
 
-- dotnet restore Agentor.sln
-- dotnet build Agentor.sln --no-restore
-- dotnet test Agentor.sln --no-build
+**PR22 completion:** Added `LookupCanonicalEntryAsync`, `GetLatestAthanorSnapshotForRunQueryHandler`, `LookupAthanorCanonicalForRunQueryHandler`, GET `/agent-runs/{id}/athanor/latest-snapshot` and GET `/agent-runs/{id}/athanor/canonical?key=`.
 
-Results: all succeeded, 0 failed.
+**PR23 completion:** `AttachAthanorEvidenceProvenanceHandler`, POST `/agent-runs/{id}/athanor/evidence-provenance`, trace kind `AthanorEvidenceSearchProvenanceAttached`.
 
-Test counts: Domain 23, Application 37, Api 28, Infrastructure 12 (Total 100).
+**PR24 completion:** `SubmitAthanorCandidateHandler`, POST `/agent-runs/{id}/athanor/candidates`, trace kind `AthanorCandidateSubmitted`.
 
-## PR20.6
+**PR25 completion:** `QueueAthanorReviewHandler`, POST `/agent-runs/{id}/athanor/review-queue`, trace kind `AthanorReviewQueued`, `NonCanonizationBoundaryTests`.
 
-Phase 4 acceptance test hardening (strict plan trace order, ContinueOnFailure success semantics, partial FailureHandlingPolicy matrix). No PR21 / no Athanor.
+---
 
-Commands:
+## Policy check (PR16 prerequisite)
 
-- dotnet restore Agentor.sln
-- dotnet build Agentor.sln --no-restore
-- dotnet test Agentor.sln --no-build
-
-### PR20.6 verification (2026-05-10)
-
-Results: all succeeded, 0 failed.
-
-Test counts: Domain 23, Application 42, Api 28, Infrastructure 12 (Total 105).
-
-**PR20.6 hygiene:** Rewrote session-handoff.md from UTF-16-LE to UTF-8; dotnet test Agentor.sln --no-build — all passed (105 tests).
+`PolicyDecisionOutcome.RequiresReview` remains distinct from `Deny` in runtime policy and plan executor tests (unchanged this phase).

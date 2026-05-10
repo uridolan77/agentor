@@ -1,18 +1,15 @@
-# Agentor harness progress
+# Agentor harness — progress
 
-## Phase 4 (PR16 through PR20)
+## Phase 5 — Athanor integration (2026-05-10)
 
-- PR16: AgentRecipe and AgentPlan domain model, validation, guard metadata, failure and compensation metadata on recipe steps. Harness folder created during the original Phase 4 session (initially UTF-16 on some hosts).
-- PR17: SequentialAgentPlanExecutor with ToolRegistry, RuntimePolicyEvaluator, and ToolExecutionPipeline. RequiresReview outcomes split from Deny for tool calls, agent steps, and runs.
-- PR18: Deterministic StepGuardEvaluator and recipe guard validation; skipped plan steps traced.
-- PR19: FailureHandlingPolicy per step, compensation hook trace metadata, execution result summaries.
-- PR20: AgentStateMachine transition guards; stricter run completion preconditions; domain tests for illegal transitions.
+Executed as five logical PR gates in one change set; each gate was scoped to read / candidate / review surfaces only (no canonization from Agentor).
 
-Final verification for Phase 4 session: dotnet restore, dotnet build, dotnet test all succeeded (per session handoff).
+| PR | Scope | Status |
+|----|--------|--------|
+| PR21 | `IKnowledgeStateClient`, Contracts knowledge-state DTOs, `FakeKnowledgeStateClient`, DI | Done |
+| PR22 | Read-only snapshot + canonical lookup (`LookupCanonicalEntryAsync`), query handlers, GET API | Done |
+| PR23 | Evidence search provenance on run trace (`AthanorEvidenceSearchProvenanceAttached`) | Done |
+| PR24 | Candidate submission trace (`AthanorCandidateSubmitted`) | Done |
+| PR25 | Review queue trace (`AthanorReviewQueued`) + non-canonization guard tests | Done |
 
-## PR20.5 (this cleanup)
-
-- Rewrite `.agentor-harness/*` as UTF-8 JSON/Markdown (fix UTF-16 LE without BOM).
-- Replace coarse PR-level booleans with item-level `acceptance` entries; `passes: true` only where covered by named tests.
-- Add `docs/planning/pr1-pr40/phase-4-evaluator-report.md`.
-- Document `AgentPlanExecutionResult.Success` vs `ContinueOnFailure` (XML + report); defer optional executor split behind explicit TODO if risk remains high.
+Next planned phase: **Phase 6 — Conexus integration** (PR26+).

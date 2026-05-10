@@ -38,5 +38,14 @@ public enum TraceEventKind
     PlanStepSkipped,
     StepGuardEvaluated,
     PlanFailureDecisionRecorded,
-    CompensationHookRecorded
+    CompensationHookRecorded,
+
+    /// <summary>Run recorded Athanor evidence search identifiers as provenance input (not canon).</summary>
+    AthanorEvidenceSearchProvenanceAttached,
+
+    /// <summary>Candidate knowledge was submitted to Athanor for review (not canon).</summary>
+    AthanorCandidateSubmitted,
+
+    /// <summary>A review queue item was created in Athanor for human review (not canon).</summary>
+    AthanorReviewQueued
 }

@@ -133,6 +133,74 @@ public sealed class AgentRun
         });
     }
 
+    /// <summary>
+    /// Records Athanor evidence search result identifiers as provenance inputs. Does not canonize knowledge.
+    /// </summary>
+    public void AttachAthanorEvidenceSearchProvenance(string query, IReadOnlyList<Guid> evidenceResultIds, DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureRunCanMutate(this);
+        if (Status != AgentRunStatus.Running)
+        {
+            throw new InvalidOperationException($"Run must be Running to attach Athanor provenance. Current status: {Status}");
+        }
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            throw new ArgumentException("Query is required.", nameof(query));
+        }
+
+        RecordTrace(
+            TraceEventKind.AthanorEvidenceSearchProvenanceAttached,
+            "Athanor evidence search results recorded as provenance input (non-canon).",
+            now,
+            new Dictionary<string, string>
+            {
+                ["query"] = query.Trim(),
+                ["evidenceResultIds"] = string.Join(',', evidenceResultIds.Select(id => id.ToString("D")))
+            });
+    }
+
+    /// <summary>Records a non-canon candidate submission envelope for audit and manifest evidence.</summary>
+    public void RecordAthanorCandidateSubmission(Guid candidateId, string summary, DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureRunCanMutate(this);
+        if (Status != AgentRunStatus.Running)
+        {
+            throw new InvalidOperationException($"Run must be Running to record Athanor candidate submission. Current status: {Status}");
+        }
+
+        RecordTrace(
+            TraceEventKind.AthanorCandidateSubmitted,
+            "Candidate knowledge submitted to Athanor (non-canon).",
+            now,
+            new Dictionary<string, string>
+            {
+                ["candidateId"] = candidateId.ToString("D"),
+                ["summary"] = summary.Trim()
+            });
+    }
+
+    /// <summary>Records that a review queue item was enqueued in Athanor (human review; not canon).</summary>
+    public void RecordAthanorReviewQueued(Guid reviewItemId, Guid candidateId, Guid actorId, DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureRunCanMutate(this);
+        if (Status != AgentRunStatus.Running)
+        {
+            throw new InvalidOperationException($"Run must be Running to record Athanor review queue activity. Current status: {Status}");
+        }
+
+        RecordTrace(
+            TraceEventKind.AthanorReviewQueued,
+            "Candidate queued for Athanor human review (non-canon).",
+            now,
+            new Dictionary<string, string>
+            {
+                ["reviewItemId"] = reviewItemId.ToString("D"),
+                ["candidateId"] = candidateId.ToString("D"),
+                ["actorId"] = actorId.ToString("D")
+            });
+    }
+
     public static AgentRun Reconstitute(
         Guid id,
         Guid profileId,

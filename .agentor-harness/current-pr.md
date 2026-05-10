@@ -1,7 +1,5 @@
-# Current PR
+# Current PR — harness marker
 
-PR20.5 - Harness encoding and Phase 4 reviewability cleanup.
+Phase 5 (PR21–PR25) Athanor integration: **complete** in this workspace.
 
-Phase 4 (PR16 through PR20) is implemented in prior work. This pass fixes UTF-16 harness artifacts, expands machine-readable acceptance items, and adds the Phase 4 evaluator report.
-
-PR21 Athanor integration is not started in this branch.
+Next index item: **PR26** (Conexus integration) when the team starts Phase 6.
