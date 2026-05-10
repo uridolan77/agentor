@@ -44,6 +44,11 @@ namespace Agentor.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("error_message");
 
+                    b.Property<string>("SessionMemoryJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("session_memory_json");
+
                     b.Property<string>("Objective")
                         .IsRequired()
                         .HasMaxLength(2000)

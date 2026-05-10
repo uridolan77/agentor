@@ -28,6 +28,8 @@ public static class DependencyInjection
         services.AddSingleton<IToolExecutionPipeline, ToolExecutionPipeline>();
         services.AddSingleton<IKnowledgeStateClient, FakeKnowledgeStateClient>();
         services.AddSingleton<IModelGatewayClient, FakeModelGatewayClient>();
+        services.AddSingleton<InMemorySkillPackageCatalog>();
+        services.AddSingleton<ISkillPackageCatalog>(sp => sp.GetRequiredService<InMemorySkillPackageCatalog>());
 
         return services;
     }

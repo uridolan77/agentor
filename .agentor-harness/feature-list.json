@@ -1,14 +1,15 @@
 {
-    "phase": 6,
-    "title": "Conexus integration",
-    "harnessPass": "PR30.5",
+    "phase": 7,
+    "title": "Skills, memory, and evaluation",
+    "harnessPass": "PR31-PR35",
     "encoding": "utf-8",
     "lastVerified": "2026-05-10",
     "notes": [
         "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
         "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
         "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
-        "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests)."
+        "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests).",
+        "Phase 7 PR31-PR35: SkillPackage model; RecipeStepKind.Skill + ISkillPackageCatalog + plan executor skill traces; bounded session memory on AgentRun + EF session_memory_json; RunEvaluationHarness; RunQualityGateEvaluator."
     ],
     "acceptanceItems": [
         {
@@ -241,6 +242,41 @@
             "description": "Successful conexus.model-complete output rolls into manifest v1.1 token/cost/latency aggregates (non-zero path)",
             "passes": true,
             "evidence": "ModelCallTelemetryAggregatorTests"
+        },
+        {
+            "id": "PR31-001",
+            "pr": 31,
+            "description": "SkillPackage + SkillProcedureStepDefinition + validation",
+            "passes": true,
+            "evidence": "SkillPackageTests; src/Agentor.Domain/SkillPackage.cs"
+        },
+        {
+            "id": "PR32-001",
+            "pr": 32,
+            "description": "Skill invocation in SequentialAgentPlanExecutor with trace kinds and catalog",
+            "passes": true,
+            "evidence": "SequentialAgentPlanExecutorTests.SkillPlan_WithSegmentAndTool_RecordsSkillTraces_AndInvokesInnerTool; ISkillPackageCatalog; InMemorySkillPackageCatalog"
+        },
+        {
+            "id": "PR33-001",
+            "pr": 33,
+            "description": "Session memory TryWriteSessionMemory + plan BuildInput session: prefix + persistence column",
+            "passes": true,
+            "evidence": "AgentRunSessionMemoryTests; AgentRun; RecordMapper; migration SessionMemoryOnAgentRun"
+        },
+        {
+            "id": "PR34-001",
+            "pr": 34,
+            "description": "RunEvaluationHarness.ExecutePlanAsync snapshot metrics",
+            "passes": true,
+            "evidence": "RunEvaluationHarnessTests"
+        },
+        {
+            "id": "PR35-001",
+            "pr": 35,
+            "description": "RunQualityGateEvaluator completion/trace checks",
+            "passes": true,
+            "evidence": "RunQualityGateEvaluatorTests"
         }
     ]
 }

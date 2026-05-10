@@ -35,6 +35,15 @@ public interface IAgentPlanExecutor
     Task<AgentPlanExecutionResult> ExecuteAsync(AgentRun run, AgentPlan plan, CancellationToken cancellationToken);
 }
 
+internal sealed class PlanExecutorLoopState
+{
+    public bool SkipRemaining;
+
+    public EscalationDisposition Escalation;
+
+    public FailureReason? PrimaryFailure;
+}
+
 // TODO(PR20.5): SequentialAgentPlanExecutor mixes sequential flow, guards, policy, pipeline, failure
 // policies, tracing, and finalization. Split into focused private/static helpers when a no-behavior-change refactor is scheduled.
 public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
@@ -44,27 +53,29 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
     private readonly IToolExecutionPipeline _pipeline;
     private readonly IClock _clock;
     private readonly IStepGuardEvaluator _guards;
+    private readonly ISkillPackageCatalog _skills;
 
     public SequentialAgentPlanExecutor(
         IToolRegistry registry,
         IPolicyEvaluator policy,
         IToolExecutionPipeline pipeline,
         IClock clock,
-        IStepGuardEvaluator guards)
+        IStepGuardEvaluator guards,
+        ISkillPackageCatalog skills)
     {
         _registry = registry;
         _policy = policy;
         _pipeline = pipeline;
         _clock = clock;
         _guards = guards;
+        _skills = skills;
     }
 
     public async Task<AgentPlanExecutionResult> ExecuteAsync(AgentRun run, AgentPlan plan, CancellationToken cancellationToken)
     {
         var stepResults = new List<PlanStepResult>();
         var ctx = new PlanExecutionContext();
-        FailureReason? primaryFailure = null;
-        var escalation = EscalationDisposition.None;
+        var state = new PlanExecutorLoopState();
 
         plan.Status = AgentPlanStatus.Running;
         run.RecordTrace(
@@ -73,11 +84,9 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             _clock.UtcNow,
             TraceData(run, plan));
 
-        var skipRemaining = false;
-
         foreach (var ps in plan.Steps.OrderBy(s => s.OrderIndex))
         {
-            if (skipRemaining)
+            if (state.SkipRemaining)
             {
                 ps.Status = AgentPlanStepStatus.Skipped;
                 ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
@@ -121,162 +130,22 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             var runStep = run.StartStep($"Plan:{plan.Id:N}:{ps.SourceStepId}", _clock.UtcNow);
             var input = BuildInput(run, ps);
 
-            if (!_registry.TryGetRegistration(ps.ToolKey, out var registration) || registration is null)
+            if (ps.Kind == RecipeStepKind.Skill)
             {
-                var fr = new FailureReason("UNKNOWN_TOOL", $"Tool '{ps.ToolKey}' is not registered.", FailureCategory.Policy);
-                primaryFailure ??= fr;
-                ps.Status = AgentPlanStepStatus.Failed;
-                runStep.Fail(_clock.UtcNow);
-                run.Fail(fr.Message, _clock.UtcNow);
-                run.RecordTrace(
-                    TraceEventKind.PlanExecutionFailed,
-                    "Plan execution failed (unknown tool).",
-                    _clock.UtcNow,
-                    TraceData(run, plan, ps));
-                stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, PolicyDecisionOutcome.Deny, 0, new StepFailureSummary(fr, RetryDisposition.None), EscalationDisposition.None));
-                plan.RefreshDerivedStatus();
-                return Finalize(plan, run, stepResults, primaryFailure, escalation);
-            }
-
-            var policyDecision = await _policy.EvaluateToolCallAsync(
-                new PolicyEvaluationRequest(run.Id, runStep.Id, ps.ToolKey, input),
-                cancellationToken);
-
-            runStep.AddPolicyDecision(policyDecision);
-            run.RecordTrace(
-                TraceEventKind.PolicyEvaluated,
-                "Tool policy evaluated (plan step).",
-                _clock.UtcNow,
-                TraceData(run, plan, ps, "outcome", policyDecision.Outcome.ToString(), "reasonCode", policyDecision.ReasonCode));
-
-            var toolCall = ToolCall.Start(run.Id, runStep.Id, ps.ToolKey, input, _clock.UtcNow);
-
-            if (policyDecision.Outcome == PolicyDecisionOutcome.Deny)
-            {
-                toolCall.Deny(policyDecision.Reason, _clock.UtcNow);
-                runStep.AddToolCall(toolCall);
-                ps.Status = AgentPlanStepStatus.Failed;
-                var fr = new FailureReason(policyDecision.ReasonCode, policyDecision.Reason, FailureCategory.Policy);
-                primaryFailure ??= fr;
-                var handled = await ApplyFailurePolicyAsync(
-                    run,
-                    plan,
-                    ps,
-                    runStep,
-                    toolCall,
-                    new StepFailureSummary(fr, RetryDisposition.None),
-                    ref skipRemaining,
-                    ref escalation,
-                    cancellationToken).ConfigureAwait(false);
-
-                stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, 0, new StepFailureSummary(fr, RetryDisposition.None), escalation));
-                ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
-
-                if (!handled)
+                if (await ExecuteSkillPlanStepAsync(run, plan, ps, runStep, input, stepResults, ctx, state, cancellationToken).ConfigureAwait(false))
                 {
                     plan.RefreshDerivedStatus();
-                    return Finalize(plan, run, stepResults, primaryFailure, escalation);
+                    return Finalize(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
                 }
 
-                run.RecordTrace(
-                    TraceEventKind.PlanExecutionStepCompleted,
-                    $"Plan step coordination completed: {ps.SourceStepId}.",
-                    _clock.UtcNow,
-                    TraceData(run, plan, ps, "finalStatus", ps.Status.ToString()));
                 continue;
             }
 
-            if (policyDecision.Outcome == PolicyDecisionOutcome.RequiresReview)
-            {
-                toolCall.MarkRequiresReview(policyDecision.Reason, _clock.UtcNow);
-                runStep.AddToolCall(toolCall);
-                runStep.MarkRequiresReview(_clock.UtcNow);
-                ps.Status = AgentPlanStepStatus.RequiresReview;
-                run.EnterRequiresReview(policyDecision.Reason, _clock.UtcNow);
-                escalation = EscalationDisposition.EscalatedToReview;
-                run.RecordTrace(
-                    TraceEventKind.PlanExecutionRequiresReview,
-                    "Plan execution requires review (policy).",
-                    _clock.UtcNow,
-                    TraceData(run, plan, ps));
-                stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, 0, null, escalation));
-                ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
-                plan.RefreshDerivedStatus();
-                return Finalize(plan, run, stepResults, primaryFailure, escalation);
-            }
-
-            run.RecordTrace(
-                TraceEventKind.ToolCallStarted,
-                "Tool call started (plan step).",
-                _clock.UtcNow,
-                TraceData(run, plan, ps, "toolCallId", toolCall.Id.ToString()));
-
-            var pipelineResult = await _pipeline.ExecuteAsync(
-                run,
-                runStep.Id,
-                toolCall.Id,
-                registration.Executor,
-                new ToolExecutionRequest(run.Id, runStep.Id, ps.ToolKey, input),
-                cancellationToken).ConfigureAwait(false);
-
-            if (pipelineResult.Success)
-            {
-                toolCall.Succeed(pipelineResult.Output!, _clock.UtcNow);
-                runStep.AddToolCall(toolCall);
-                runStep.Complete(_clock.UtcNow);
-                ps.Status = AgentPlanStepStatus.Completed;
-                var snapshotOutput = SnapshotOutput(ps, pipelineResult.Output!);
-                ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, true, snapshotOutput));
-                run.RecordTrace(
-                    TraceEventKind.PlanExecutionStepCompleted,
-                    $"Plan step completed: {ps.SourceStepId}.",
-                    _clock.UtcNow,
-                    TraceData(run, plan, ps, "attemptsUsed", pipelineResult.AttemptsUsed.ToString()));
-                stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, pipelineResult.AttemptsUsed, null, EscalationDisposition.None));
-                continue;
-            }
-
-            toolCall.Fail(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
-            runStep.AddToolCall(toolCall);
-
-            var failure = new StepFailureSummary(
-                new FailureReason("TOOL_PIPELINE", pipelineResult.ErrorMessage ?? "Tool execution failed.", FailureCategory.ToolExecution),
-                ps.OnFailure == FailureHandlingPolicy.RetryViaToolPipelineOnly
-                    ? RetryDisposition.DelegatedToToolPipeline
-                    : RetryDisposition.None);
-
-            primaryFailure ??= failure.Reason;
-
-            run.RecordTrace(
-                TraceEventKind.PlanFailureDecisionRecorded,
-                "Plan step failure recorded.",
-                _clock.UtcNow,
-                TraceData(run, plan, ps, "onFailure", ps.OnFailure.ToString(), "retryDisposition", failure.RetryDisposition.ToString()));
-
-            var handledFailure = await ApplyToolFailureOutcomeAsync(
-                run,
-                plan,
-                ps,
-                runStep,
-                failure,
-                ref skipRemaining,
-                ref escalation,
-                cancellationToken).ConfigureAwait(false);
-
-            ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
-            stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, pipelineResult.AttemptsUsed, failure, escalation));
-
-            if (!handledFailure)
+            if (await ExecuteTopLevelToolPlanStepAsync(run, plan, ps, runStep, ps.ToolKey, input, stepResults, ctx, state, cancellationToken).ConfigureAwait(false))
             {
                 plan.RefreshDerivedStatus();
-                return Finalize(plan, run, stepResults, primaryFailure, escalation);
+                return Finalize(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
             }
-
-            run.RecordTrace(
-                TraceEventKind.PlanExecutionStepCompleted,
-                $"Plan step coordination completed after failure policy: {ps.SourceStepId}.",
-                _clock.UtcNow,
-                TraceData(run, plan, ps, "finalStatus", ps.Status.ToString()));
         }
 
         if (run.Status == AgentRunStatus.Running)
@@ -290,7 +159,446 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         }
 
         plan.RefreshDerivedStatus();
-        return Finalize(plan, run, stepResults, primaryFailure, escalation);
+        return Finalize(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
+    }
+
+    /// <summary>Returns true when the executor must return immediately (terminal failure / review).</summary>
+    private async Task<bool> ExecuteSkillPlanStepAsync(
+        AgentRun run,
+        AgentPlan plan,
+        AgentPlanStep ps,
+        AgentStep runStep,
+        IReadOnlyDictionary<string, string> input,
+        List<PlanStepResult> stepResults,
+        PlanExecutionContext ctx,
+        PlanExecutorLoopState state,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(ps.InvokedSkillKey) || ps.InvokedSkillVersion is null)
+        {
+            var fr = new FailureReason("SKILL_METADATA", "Skill plan step is missing invoked skill metadata.", FailureCategory.Policy);
+            state.PrimaryFailure ??= fr;
+            ps.Status = AgentPlanStepStatus.Failed;
+            runStep.Fail(_clock.UtcNow);
+            run.Fail(fr.Message, _clock.UtcNow);
+            run.RecordTrace(
+                TraceEventKind.PlanExecutionFailed,
+                "Plan execution failed (invalid skill metadata).",
+                _clock.UtcNow,
+                TraceData(run, plan, ps));
+            stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, PolicyDecisionOutcome.Deny, 0, new StepFailureSummary(fr, RetryDisposition.None), EscalationDisposition.None));
+            return true;
+        }
+
+        if (!_skills.TryGet(ps.InvokedSkillKey, ps.InvokedSkillVersion, out var skill) || skill is null)
+        {
+            var fr = new FailureReason(
+                "UNKNOWN_SKILL",
+                $"Skill '{ps.InvokedSkillKey}' version '{ps.InvokedSkillVersion.Value}' is not registered.",
+                FailureCategory.Policy);
+            state.PrimaryFailure ??= fr;
+            ps.Status = AgentPlanStepStatus.Failed;
+            runStep.Fail(_clock.UtcNow);
+            run.Fail(fr.Message, _clock.UtcNow);
+            run.RecordTrace(
+                TraceEventKind.PlanExecutionFailed,
+                "Plan execution failed (unknown skill).",
+                _clock.UtcNow,
+                TraceData(run, plan, ps, "skillKey", ps.InvokedSkillKey, "skillVersion", ps.InvokedSkillVersion.Value));
+            stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, PolicyDecisionOutcome.Deny, 0, new StepFailureSummary(fr, RetryDisposition.None), EscalationDisposition.None));
+            return true;
+        }
+
+        run.RecordTrace(
+            TraceEventKind.SkillInvocationStarted,
+            $"Skill invocation started: {skill.SkillKey}@{skill.Version.Value}.",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "skillKey", skill.SkillKey, "skillVersion", skill.Version.Value));
+
+        IReadOnlyDictionary<string, string>? lastToolOutput = null;
+        var totalAttempts = 0;
+        PolicyDecisionOutcome? lastPolicy = null;
+
+        foreach (var proc in skill.ProcedureSteps.OrderBy(s => s.OrderIndex))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (proc.Kind == SkillProcedureStepKind.Segment)
+            {
+                run.RecordTrace(
+                    TraceEventKind.SkillProcedureSegmentRecorded,
+                    $"Skill segment: {proc.Name}.",
+                    _clock.UtcNow,
+                    TraceData(run, plan, ps, "procedureStepId", proc.StepId, "segmentName", proc.Name));
+                continue;
+            }
+
+            if (proc.Kind != SkillProcedureStepKind.ToolRef || string.IsNullOrWhiteSpace(proc.ToolKey))
+            {
+                continue;
+            }
+
+            var inner = await ExecuteSkillInnerToolAsync(
+                run,
+                plan,
+                ps,
+                runStep,
+                proc.ToolKey.Trim(),
+                input,
+                state,
+                cancellationToken).ConfigureAwait(false);
+
+            totalAttempts += inner.PipelineAttempts;
+            lastPolicy = inner.PolicyOutcome;
+
+            if (inner.ReturnFromExecutor)
+            {
+                run.RecordTrace(
+                    TraceEventKind.SkillInvocationCompleted,
+                    "Skill invocation ended (terminal state).",
+                    _clock.UtcNow,
+                    TraceData(run, plan, ps, "skillKey", skill.SkillKey));
+                stepResults.Add(
+                    new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, lastPolicy, totalAttempts, inner.Failure, state.Escalation));
+                return true;
+            }
+
+            if (inner.AbortProcedure)
+            {
+                run.RecordTrace(
+                    TraceEventKind.SkillInvocationCompleted,
+                    "Skill invocation ended (procedure aborted).",
+                    _clock.UtcNow,
+                    TraceData(run, plan, ps, "skillKey", skill.SkillKey, "planStepStatus", ps.Status.ToString()));
+                ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
+                stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, lastPolicy, totalAttempts, inner.Failure, state.Escalation));
+                return false;
+            }
+
+            if (inner.Output is not null)
+            {
+                lastToolOutput = inner.Output;
+            }
+        }
+
+        runStep.Complete(_clock.UtcNow);
+        ps.Status = AgentPlanStepStatus.Completed;
+        var snapshotOutput = SnapshotOutput(ps, lastToolOutput ?? StepInputBinding.Empty.Parameters);
+        ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, true, snapshotOutput));
+        run.RecordTrace(
+            TraceEventKind.SkillInvocationCompleted,
+            $"Skill invocation completed: {skill.SkillKey}@{skill.Version.Value}.",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "skillKey", skill.SkillKey));
+        run.RecordTrace(
+            TraceEventKind.PlanExecutionStepCompleted,
+            $"Plan step completed: {ps.SourceStepId}.",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "attemptsUsed", totalAttempts.ToString()));
+        stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, lastPolicy, totalAttempts, null, EscalationDisposition.None));
+
+        return false;
+    }
+
+    private sealed record InnerToolResult(
+        bool ReturnFromExecutor,
+        bool AbortProcedure,
+        int PipelineAttempts,
+        PolicyDecisionOutcome? PolicyOutcome,
+        StepFailureSummary? Failure,
+        IReadOnlyDictionary<string, string>? Output);
+
+    private async Task<InnerToolResult> ExecuteSkillInnerToolAsync(
+        AgentRun run,
+        AgentPlan plan,
+        AgentPlanStep ps,
+        AgentStep runStep,
+        string toolKey,
+        IReadOnlyDictionary<string, string> input,
+        PlanExecutorLoopState state,
+        CancellationToken cancellationToken)
+    {
+        if (!_registry.TryGetRegistration(toolKey, out var registration) || registration is null)
+        {
+            var fr = new FailureReason("UNKNOWN_TOOL", $"Tool '{toolKey}' is not registered.", FailureCategory.Policy);
+            state.PrimaryFailure ??= fr;
+            ps.Status = AgentPlanStepStatus.Failed;
+            runStep.Fail(_clock.UtcNow);
+            run.Fail(fr.Message, _clock.UtcNow);
+            run.RecordTrace(
+                TraceEventKind.PlanExecutionFailed,
+                "Plan execution failed (unknown tool during skill).",
+                _clock.UtcNow,
+                TraceData(run, plan, ps, "toolKey", toolKey));
+            return new InnerToolResult(true, false, 0, PolicyDecisionOutcome.Deny, new StepFailureSummary(fr, RetryDisposition.None), null);
+        }
+
+        var policyDecision = await _policy.EvaluateToolCallAsync(
+            new PolicyEvaluationRequest(run.Id, runStep.Id, toolKey, input),
+            cancellationToken);
+
+        runStep.AddPolicyDecision(policyDecision);
+        run.RecordTrace(
+            TraceEventKind.PolicyEvaluated,
+            "Tool policy evaluated (skill inner).",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "outcome", policyDecision.Outcome.ToString(), "reasonCode", policyDecision.ReasonCode, "toolKey", toolKey));
+
+        var toolCall = ToolCall.Start(run.Id, runStep.Id, toolKey, input, _clock.UtcNow);
+
+        if (policyDecision.Outcome == PolicyDecisionOutcome.Deny)
+        {
+            toolCall.Deny(policyDecision.Reason, _clock.UtcNow);
+            runStep.AddToolCall(toolCall);
+            ps.Status = AgentPlanStepStatus.Failed;
+            var fr = new FailureReason(policyDecision.ReasonCode, policyDecision.Reason, FailureCategory.Policy);
+            state.PrimaryFailure ??= fr;
+            var skip = state.SkipRemaining;
+            var esc = state.Escalation;
+            var handled = ApplyFailurePolicyCore(run, plan, ps, runStep, new StepFailureSummary(fr, RetryDisposition.None), ref skip, ref esc);
+            state.SkipRemaining = skip;
+            state.Escalation = esc;
+
+            if (!handled)
+            {
+                return new InnerToolResult(true, false, 0, policyDecision.Outcome, new StepFailureSummary(fr, RetryDisposition.None), null);
+            }
+
+            return new InnerToolResult(false, true, 0, policyDecision.Outcome, new StepFailureSummary(fr, RetryDisposition.None), null);
+        }
+
+        if (policyDecision.Outcome == PolicyDecisionOutcome.RequiresReview)
+        {
+            toolCall.MarkRequiresReview(policyDecision.Reason, _clock.UtcNow);
+            runStep.AddToolCall(toolCall);
+            runStep.MarkRequiresReview(_clock.UtcNow);
+            ps.Status = AgentPlanStepStatus.RequiresReview;
+            run.EnterRequiresReview(policyDecision.Reason, _clock.UtcNow);
+            state.Escalation = EscalationDisposition.EscalatedToReview;
+            run.RecordTrace(
+                TraceEventKind.PlanExecutionRequiresReview,
+                "Plan execution requires review (policy during skill).",
+                _clock.UtcNow,
+                TraceData(run, plan, ps));
+            return new InnerToolResult(true, false, 0, policyDecision.Outcome, null, null);
+        }
+
+        run.RecordTrace(
+            TraceEventKind.ToolCallStarted,
+            "Tool call started (skill inner).",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "toolCallId", toolCall.Id.ToString(), "toolKey", toolKey));
+
+        var pipelineResult = await _pipeline.ExecuteAsync(
+            run,
+            runStep.Id,
+            toolCall.Id,
+            registration.Executor,
+            new ToolExecutionRequest(run.Id, runStep.Id, toolKey, input),
+            cancellationToken).ConfigureAwait(false);
+
+        if (pipelineResult.Success)
+        {
+            toolCall.Succeed(pipelineResult.Output!, _clock.UtcNow);
+            runStep.AddToolCall(toolCall);
+            return new InnerToolResult(false, false, pipelineResult.AttemptsUsed, policyDecision.Outcome, null, pipelineResult.Output);
+        }
+
+        toolCall.Fail(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
+        runStep.AddToolCall(toolCall);
+
+        var failure = new StepFailureSummary(
+            new FailureReason("TOOL_PIPELINE", pipelineResult.ErrorMessage ?? "Tool execution failed.", FailureCategory.ToolExecution),
+            ps.OnFailure == FailureHandlingPolicy.RetryViaToolPipelineOnly
+                ? RetryDisposition.DelegatedToToolPipeline
+                : RetryDisposition.None);
+
+        state.PrimaryFailure ??= failure.Reason;
+
+        run.RecordTrace(
+            TraceEventKind.PlanFailureDecisionRecorded,
+            "Skill inner tool failure recorded.",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "onFailure", ps.OnFailure.ToString(), "retryDisposition", failure.RetryDisposition.ToString()));
+
+        var skip2 = state.SkipRemaining;
+        var esc2 = state.Escalation;
+        var handledFailure = ApplyToolFailureOutcomeCore(run, plan, ps, runStep, failure, ref skip2, ref esc2);
+        state.SkipRemaining = skip2;
+        state.Escalation = esc2;
+
+        if (!handledFailure)
+        {
+            return new InnerToolResult(true, false, pipelineResult.AttemptsUsed, policyDecision.Outcome, failure, null);
+        }
+
+        return new InnerToolResult(false, true, pipelineResult.AttemptsUsed, policyDecision.Outcome, failure, null);
+    }
+
+    /// <summary>Returns true when the executor must return immediately (terminal failure / review).</summary>
+    private async Task<bool> ExecuteTopLevelToolPlanStepAsync(
+        AgentRun run,
+        AgentPlan plan,
+        AgentPlanStep ps,
+        AgentStep runStep,
+        string toolKey,
+        IReadOnlyDictionary<string, string> input,
+        List<PlanStepResult> stepResults,
+        PlanExecutionContext ctx,
+        PlanExecutorLoopState state,
+        CancellationToken cancellationToken)
+    {
+        if (!_registry.TryGetRegistration(toolKey, out var registration) || registration is null)
+        {
+            var fr = new FailureReason("UNKNOWN_TOOL", $"Tool '{toolKey}' is not registered.", FailureCategory.Policy);
+            state.PrimaryFailure ??= fr;
+            ps.Status = AgentPlanStepStatus.Failed;
+            runStep.Fail(_clock.UtcNow);
+            run.Fail(fr.Message, _clock.UtcNow);
+            run.RecordTrace(
+                TraceEventKind.PlanExecutionFailed,
+                "Plan execution failed (unknown tool).",
+                _clock.UtcNow,
+                TraceData(run, plan, ps));
+            stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, PolicyDecisionOutcome.Deny, 0, new StepFailureSummary(fr, RetryDisposition.None), EscalationDisposition.None));
+            return true;
+        }
+
+        var policyDecision = await _policy.EvaluateToolCallAsync(
+            new PolicyEvaluationRequest(run.Id, runStep.Id, toolKey, input),
+            cancellationToken);
+
+        runStep.AddPolicyDecision(policyDecision);
+        run.RecordTrace(
+            TraceEventKind.PolicyEvaluated,
+            "Tool policy evaluated (plan step).",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "outcome", policyDecision.Outcome.ToString(), "reasonCode", policyDecision.ReasonCode));
+
+        var toolCall = ToolCall.Start(run.Id, runStep.Id, toolKey, input, _clock.UtcNow);
+
+        if (policyDecision.Outcome == PolicyDecisionOutcome.Deny)
+        {
+            toolCall.Deny(policyDecision.Reason, _clock.UtcNow);
+            runStep.AddToolCall(toolCall);
+            ps.Status = AgentPlanStepStatus.Failed;
+            var fr = new FailureReason(policyDecision.ReasonCode, policyDecision.Reason, FailureCategory.Policy);
+            state.PrimaryFailure ??= fr;
+            var handled = await ApplyFailurePolicyAsync(
+                run,
+                plan,
+                ps,
+                runStep,
+                toolCall,
+                new StepFailureSummary(fr, RetryDisposition.None),
+                state,
+                cancellationToken).ConfigureAwait(false);
+
+            stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, 0, new StepFailureSummary(fr, RetryDisposition.None), state.Escalation));
+            ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
+
+            if (!handled)
+            {
+                return true;
+            }
+
+            run.RecordTrace(
+                TraceEventKind.PlanExecutionStepCompleted,
+                $"Plan step coordination completed: {ps.SourceStepId}.",
+                _clock.UtcNow,
+                TraceData(run, plan, ps, "finalStatus", ps.Status.ToString()));
+            return false;
+        }
+
+        if (policyDecision.Outcome == PolicyDecisionOutcome.RequiresReview)
+        {
+            toolCall.MarkRequiresReview(policyDecision.Reason, _clock.UtcNow);
+            runStep.AddToolCall(toolCall);
+            runStep.MarkRequiresReview(_clock.UtcNow);
+            ps.Status = AgentPlanStepStatus.RequiresReview;
+            run.EnterRequiresReview(policyDecision.Reason, _clock.UtcNow);
+            state.Escalation = EscalationDisposition.EscalatedToReview;
+            run.RecordTrace(
+                TraceEventKind.PlanExecutionRequiresReview,
+                "Plan execution requires review (policy).",
+                _clock.UtcNow,
+                TraceData(run, plan, ps));
+            stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, 0, null, state.Escalation));
+            ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
+            return true;
+        }
+
+        run.RecordTrace(
+            TraceEventKind.ToolCallStarted,
+            "Tool call started (plan step).",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "toolCallId", toolCall.Id.ToString()));
+
+        var pipelineResult = await _pipeline.ExecuteAsync(
+            run,
+            runStep.Id,
+            toolCall.Id,
+            registration.Executor,
+            new ToolExecutionRequest(run.Id, runStep.Id, toolKey, input),
+            cancellationToken).ConfigureAwait(false);
+
+        if (pipelineResult.Success)
+        {
+            toolCall.Succeed(pipelineResult.Output!, _clock.UtcNow);
+            runStep.AddToolCall(toolCall);
+            runStep.Complete(_clock.UtcNow);
+            ps.Status = AgentPlanStepStatus.Completed;
+            var snapshotOutput = SnapshotOutput(ps, pipelineResult.Output!);
+            ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, true, snapshotOutput));
+            run.RecordTrace(
+                TraceEventKind.PlanExecutionStepCompleted,
+                $"Plan step completed: {ps.SourceStepId}.",
+                _clock.UtcNow,
+                TraceData(run, plan, ps, "attemptsUsed", pipelineResult.AttemptsUsed.ToString()));
+            stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, pipelineResult.AttemptsUsed, null, EscalationDisposition.None));
+            return false;
+        }
+
+        toolCall.Fail(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
+        runStep.AddToolCall(toolCall);
+
+        var failure = new StepFailureSummary(
+            new FailureReason("TOOL_PIPELINE", pipelineResult.ErrorMessage ?? "Tool execution failed.", FailureCategory.ToolExecution),
+            ps.OnFailure == FailureHandlingPolicy.RetryViaToolPipelineOnly
+                ? RetryDisposition.DelegatedToToolPipeline
+                : RetryDisposition.None);
+
+        state.PrimaryFailure ??= failure.Reason;
+
+        run.RecordTrace(
+            TraceEventKind.PlanFailureDecisionRecorded,
+            "Plan step failure recorded.",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "onFailure", ps.OnFailure.ToString(), "retryDisposition", failure.RetryDisposition.ToString()));
+
+        var handledFailure = await ApplyToolFailureOutcomeAsync(
+            run,
+            plan,
+            ps,
+            runStep,
+            failure,
+            state,
+            cancellationToken).ConfigureAwait(false);
+
+        ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
+        stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, pipelineResult.AttemptsUsed, failure, state.Escalation));
+
+        if (!handledFailure)
+        {
+            return true;
+        }
+
+        run.RecordTrace(
+            TraceEventKind.PlanExecutionStepCompleted,
+            $"Plan step coordination completed after failure policy: {ps.SourceStepId}.",
+            _clock.UtcNow,
+            TraceData(run, plan, ps, "finalStatus", ps.Status.ToString()));
+        return false;
     }
 
     private Task<bool> ApplyFailurePolicyAsync(
@@ -300,12 +608,17 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         AgentStep runStep,
         ToolCall toolCall,
         StepFailureSummary failure,
-        ref bool skipRemaining,
-        ref EscalationDisposition escalation,
+        PlanExecutorLoopState state,
         CancellationToken cancellationToken)
     {
+        _ = toolCall;
         _ = cancellationToken;
-        return Task.FromResult(ApplyFailurePolicyCore(run, plan, ps, runStep, failure, ref skipRemaining, ref escalation));
+        var skip = state.SkipRemaining;
+        var esc = state.Escalation;
+        var r = ApplyFailurePolicyCore(run, plan, ps, runStep, failure, ref skip, ref esc);
+        state.SkipRemaining = skip;
+        state.Escalation = esc;
+        return Task.FromResult(r);
     }
 
     private bool ApplyFailurePolicyCore(
@@ -361,12 +674,16 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         AgentPlanStep ps,
         AgentStep runStep,
         StepFailureSummary failure,
-        ref bool skipRemaining,
-        ref EscalationDisposition escalation,
+        PlanExecutorLoopState state,
         CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        return Task.FromResult(ApplyToolFailureOutcomeCore(run, plan, ps, runStep, failure, ref skipRemaining, ref escalation));
+        var skip = state.SkipRemaining;
+        var esc = state.Escalation;
+        var r = ApplyToolFailureOutcomeCore(run, plan, ps, runStep, failure, ref skip, ref esc);
+        state.SkipRemaining = skip;
+        state.Escalation = esc;
+        return Task.FromResult(r);
     }
 
     private bool ApplyToolFailureOutcomeCore(
@@ -467,6 +784,11 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             {
                 d[kv.Key] = kv.Value;
             }
+        }
+
+        foreach (var kv in run.SessionMemory)
+        {
+            d["session:" + kv.Key] = kv.Value;
         }
 
         return d;

@@ -153,4 +153,59 @@ public sealed class AgentRecipePlanDomainTests
         Assert.Equal("first", plan.Steps[0].SourceStepId);
         Assert.Equal("second", plan.Steps[1].SourceStepId);
     }
+
+    [Fact]
+    public void TryCreate_SkillStep_RequiresSkillKeyAndVersion()
+    {
+        var steps = new[] { new RecipeStepDefinition("a", 1, RecipeStepKind.Skill, string.Empty) };
+
+        var ok = AgentRecipe.TryCreate(Guid.NewGuid(), "sk", V1, CoordinationTopology.SequentialPipeline, steps, null, out _, out var validation);
+
+        Assert.False(ok);
+        Assert.Contains(validation.Issues, i => i.Code == "SKILL_KEY_INVALID");
+        Assert.Contains(validation.Issues, i => i.Code == "SKILL_VERSION_INVALID");
+    }
+
+    [Fact]
+    public void TryCreate_SkillStep_RejectsToolKey()
+    {
+        var steps = new[]
+        {
+            new RecipeStepDefinition(
+                "a",
+                1,
+                RecipeStepKind.Skill,
+                FakeToolKey,
+                InvokedSkillKey: "my.skill",
+                InvokedSkillVersion: V1)
+        };
+
+        var ok = AgentRecipe.TryCreate(Guid.NewGuid(), "sk", V1, CoordinationTopology.SequentialPipeline, steps, null, out _, out var validation);
+
+        Assert.False(ok);
+        Assert.Contains(validation.Issues, i => i.Code == "SKILL_STEP_TOOLKEY");
+    }
+
+    [Fact]
+    public void Instantiate_SkillStep_CopiesInvokedMetadata()
+    {
+        var steps = new[]
+        {
+            new RecipeStepDefinition(
+                "skill1",
+                1,
+                RecipeStepKind.Skill,
+                string.Empty,
+                InvokedSkillKey: "demo.skill",
+                InvokedSkillVersion: V1)
+        };
+
+        var ok = AgentRecipe.TryCreate(Guid.NewGuid(), "r", V1, CoordinationTopology.SequentialPipeline, steps, null, out var recipe, out _);
+        Assert.True(ok);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), DateTimeOffset.UtcNow);
+        var step = plan.Steps[0];
+        Assert.Equal(RecipeStepKind.Skill, step.Kind);
+        Assert.Equal("demo.skill", step.InvokedSkillKey);
+        Assert.Equal(V1.Value, step.InvokedSkillVersion!.Value);
+    }
 }

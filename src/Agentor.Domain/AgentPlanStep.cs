@@ -14,7 +14,9 @@ public sealed class AgentPlanStep
         StepInputBinding? inputBinding,
         StepOutputBinding? outputBinding,
         FailureHandlingPolicy onFailure,
-        CompensationHookDefinition? compensationHook)
+        CompensationHookDefinition? compensationHook,
+        string? invokedSkillKey = null,
+        AgentRecipeVersion? invokedSkillVersion = null)
     {
         Id = id;
         SourceStepId = sourceStepId;
@@ -26,6 +28,8 @@ public sealed class AgentPlanStep
         OutputBinding = outputBinding;
         OnFailure = onFailure;
         CompensationHook = compensationHook;
+        InvokedSkillKey = invokedSkillKey;
+        InvokedSkillVersion = invokedSkillVersion;
         Status = AgentPlanStepStatus.Pending;
         CompensationStatus = CompensationStatus.None;
     }
@@ -39,6 +43,12 @@ public sealed class AgentPlanStep
     public RecipeStepKind Kind { get; }
 
     public string ToolKey { get; }
+
+    /// <summary>When <see cref="Kind"/> is <see cref="RecipeStepKind.Skill"/>, the logical skill key to resolve.</summary>
+    public string? InvokedSkillKey { get; }
+
+    /// <summary>When <see cref="Kind"/> is <see cref="RecipeStepKind.Skill"/>, the skill package version to resolve.</summary>
+    public AgentRecipeVersion? InvokedSkillVersion { get; }
 
     public StepGuardDefinition? Guard { get; }
 

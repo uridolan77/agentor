@@ -25,7 +25,8 @@ internal static class AgentorTestComposition
         IPolicyEvaluator policyEvaluator,
         IClock clock,
         ToolExecutionOptions? toolExecutionOptions = null,
-        IStepGuardEvaluator? guardEvaluator = null)
+        IStepGuardEvaluator? guardEvaluator = null,
+        ISkillPackageCatalog? skillCatalog = null)
     {
         var opts = Microsoft.Extensions.Options.Options.Create(toolExecutionOptions ?? new ToolExecutionOptions());
         var pipeline = new ToolExecutionPipeline(clock, opts);
@@ -34,7 +35,8 @@ internal static class AgentorTestComposition
             policyEvaluator,
             pipeline,
             clock,
-            guardEvaluator ?? new StepGuardEvaluator());
+            guardEvaluator ?? new StepGuardEvaluator(),
+            skillCatalog ?? new EmptySkillPackageCatalog());
     }
 
     public static ExecuteAgentPlanHandler CreateExecuteAgentPlanHandler(
@@ -43,9 +45,10 @@ internal static class AgentorTestComposition
         IPolicyEvaluator policyEvaluator,
         IClock clock,
         ToolExecutionOptions? toolExecutionOptions = null,
-        IStepGuardEvaluator? guardEvaluator = null)
+        IStepGuardEvaluator? guardEvaluator = null,
+        ISkillPackageCatalog? skillCatalog = null)
     {
-        var executor = CreateSequentialPlanExecutor(toolRegistry, policyEvaluator, clock, toolExecutionOptions, guardEvaluator);
+        var executor = CreateSequentialPlanExecutor(toolRegistry, policyEvaluator, clock, toolExecutionOptions, guardEvaluator, skillCatalog);
         return new ExecuteAgentPlanHandler(executor, repository);
     }
 }

@@ -27,6 +27,7 @@ internal static class RecordMapper
             StartedAt = run.StartedAt,
             CompletedAt = run.CompletedAt,
             ErrorMessage = run.ErrorMessage,
+            SessionMemoryJson = JsonSerializer.Serialize(run.SessionMemory, JsonOpts),
             Steps = run.Steps.Select(ToRecord).ToList(),
             TraceEvents = run.Trace.Select(ToRecord).ToList()
         };
@@ -118,6 +119,9 @@ internal static class RecordMapper
             .Select(ToDomain)
             .ToList();
 
+        var sessionMemory = JsonSerializer.Deserialize<Dictionary<string, string>>(record.SessionMemoryJson, JsonOpts)
+                           ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         return AgentRun.Reconstitute(
             record.Id,
             record.ProfileId,
@@ -129,7 +133,8 @@ internal static class RecordMapper
             record.CompletedAt,
             record.ErrorMessage,
             steps,
-            trace);
+            trace,
+            sessionMemory);
     }
 
     private static AgentStep ToDomain(AgentStepRecord record)

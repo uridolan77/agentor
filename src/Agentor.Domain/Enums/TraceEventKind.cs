@@ -14,6 +14,9 @@ public enum TraceEventKind
     /// <summary>Run stopped pending human or workflow review (distinct from failure).</summary>
     RunRequiresReview,
 
+    SessionMemoryWriteAccepted,
+    SessionMemoryWriteRejected,
+
     /// <summary>A single tool execution attempt began (timeout/retry pipeline).</summary>
     ToolExecutionAttemptStarted,
 
@@ -39,6 +42,10 @@ public enum TraceEventKind
     StepGuardEvaluated,
     PlanFailureDecisionRecorded,
     CompensationHookRecorded,
+
+    SkillInvocationStarted,
+    SkillInvocationCompleted,
+    SkillProcedureSegmentRecorded,
 
     /// <summary>Run recorded Athanor evidence search identifiers as provenance input (not canon).</summary>
     AthanorEvidenceSearchProvenanceAttached,

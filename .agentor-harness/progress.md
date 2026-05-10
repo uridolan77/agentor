@@ -29,3 +29,15 @@ PR26–PR30: Conexus port (`IModelGatewayClient`), `FakeModelGatewayClient`, `co
 | PR30.5 | Conexus/manifest boundary + declared budget docs/tests | Done |
 
 Next: PR31 Skills / Phase 7 (not started; PR30.5 completed first).
+
+## Phase 7 - Skills, memory, evaluation (2026-05-10)
+
+PR31-PR35 completed in one harness session: skill package domain, skill plan execution + catalog, session scratch memory with EF column, deterministic evaluation harness helper, run quality gate summary.
+
+| PR | Scope | Status |
+|----|--------|--------|
+| PR31 | SkillPackage model | Done |
+| PR32 | Skill invocation pipeline + traces | Done |
+| PR33 | Session memory boundary + persistence | Done |
+| PR34 | Evaluation harness | Done |
+| PR35 | Run quality gates | Done |

@@ -84,7 +84,9 @@ public sealed class AgentPlan
                     def.InputBinding,
                     def.OutputBinding,
                     def.OnFailure,
-                    def.Compensation));
+                    def.Compensation,
+                    def.InvokedSkillKey?.Trim(),
+                    def.InvokedSkillVersion));
         }
 
         return plan;

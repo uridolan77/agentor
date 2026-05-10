@@ -6,6 +6,7 @@ public sealed class AgentRun
 {
     private readonly List<AgentStep> _steps = new();
     private readonly List<ExecutionTraceEvent> _trace = new();
+    private readonly Dictionary<string, string> _sessionMemory = new(StringComparer.OrdinalIgnoreCase);
 
     private AgentRun(Guid id, Guid profileId, string agentName, string objective, string traceId, DateTimeOffset startedAt)
     {
@@ -40,6 +41,11 @@ public sealed class AgentRun
 
     public IReadOnlyList<ExecutionTraceEvent> Trace => _trace;
 
+    /// <summary>
+    /// Bounded run-scoped scratch memory. Not Athanor canon; not durable knowledge.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> SessionMemory => _sessionMemory;
+
     public static AgentRun Start(Guid profileId, string agentName, string objective, string traceId, DateTimeOffset now)
     {
         if (profileId == Guid.Empty)
@@ -70,6 +76,81 @@ public sealed class AgentRun
         });
 
         return run;
+    }
+
+    public SessionMemoryWriteResult TryWriteSessionMemory(string key, string value, SessionMemoryBudget budget, DateTimeOffset now)
+    {
+        AgentStateMachine.EnsureRunCanMutate(this);
+        if (Status != AgentRunStatus.Running)
+        {
+            return new SessionMemoryWriteResult(SessionMemoryWriteStatus.RejectedNotRunning, "SESSION_MEMORY_NOT_RUNNING");
+        }
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return new SessionMemoryWriteResult(SessionMemoryWriteStatus.RejectedKeyInvalid, "SESSION_MEMORY_KEY_REQUIRED");
+        }
+
+        var k = key.Trim();
+        if (k.Length > budget.MaxKeyLength)
+        {
+            return new SessionMemoryWriteResult(SessionMemoryWriteStatus.RejectedKeyTooLarge, "SESSION_MEMORY_KEY_TOO_LARGE");
+        }
+
+        if (value.Length > budget.MaxValueLength)
+        {
+            return new SessionMemoryWriteResult(SessionMemoryWriteStatus.RejectedValueTooLarge, "SESSION_MEMORY_VALUE_TOO_LARGE");
+        }
+
+        var isReplace = _sessionMemory.ContainsKey(k);
+        if (!isReplace && _sessionMemory.Count >= budget.MaxKeys)
+        {
+            return new SessionMemoryWriteResult(SessionMemoryWriteStatus.RejectedKeyCount, "SESSION_MEMORY_KEY_LIMIT");
+        }
+
+        var projectedTotal = TotalStoredCharactersExcludingKey(k) + value.Length;
+        if (projectedTotal > budget.MaxTotalStoredCharacters)
+        {
+            RecordTrace(
+                TraceEventKind.SessionMemoryWriteRejected,
+                "Session memory write rejected (total budget).",
+                now,
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["key"] = k,
+                    ["reasonCode"] = "SESSION_MEMORY_TOTAL_BUDGET"
+                });
+            return new SessionMemoryWriteResult(SessionMemoryWriteStatus.RejectedTotalBudget, "SESSION_MEMORY_TOTAL_BUDGET");
+        }
+
+        _sessionMemory[k] = value;
+        RecordTrace(
+            TraceEventKind.SessionMemoryWriteAccepted,
+            "Session memory write accepted (non-canon scratch).",
+            now,
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["key"] = k,
+                ["valueLength"] = value.Length.ToString()
+            });
+
+        return new SessionMemoryWriteResult(SessionMemoryWriteStatus.Accepted, null);
+    }
+
+    private int TotalStoredCharactersExcludingKey(string keyToReplace)
+    {
+        var total = 0;
+        foreach (var kv in _sessionMemory)
+        {
+            if (string.Equals(kv.Key, keyToReplace, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            total += kv.Value.Length;
+        }
+
+        return total;
     }
 
     public AgentStep StartStep(string name, DateTimeOffset now)
@@ -212,7 +293,8 @@ public sealed class AgentRun
         DateTimeOffset? completedAt,
         string? errorMessage,
         IEnumerable<AgentStep> steps,
-        IEnumerable<ExecutionTraceEvent> trace)
+        IEnumerable<ExecutionTraceEvent> trace,
+        IReadOnlyDictionary<string, string>? sessionMemory = null)
     {
         var run = new AgentRun(id, profileId, agentName, objective, traceId, startedAt);
         run.Status = status;
@@ -220,6 +302,14 @@ public sealed class AgentRun
         run.ErrorMessage = errorMessage;
         run._steps.AddRange(steps);
         run._trace.AddRange(trace);
+        if (sessionMemory is not null)
+        {
+            foreach (var kv in sessionMemory)
+            {
+                run._sessionMemory[kv.Key] = kv.Value;
+            }
+        }
+
         return run;
     }
 }

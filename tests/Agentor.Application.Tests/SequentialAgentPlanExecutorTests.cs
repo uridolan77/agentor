@@ -407,6 +407,70 @@ public sealed class SequentialAgentPlanExecutorTests
         Assert.Equal(expectedSecondStatus, plan.Steps[1].Status);
     }
 
+    [Fact]
+    public async Task SkillPlan_WithSegmentAndTool_RecordsSkillTraces_AndInvokesInnerTool()
+    {
+        const string skillKey = "harness.echo-skill";
+        var skillVersion = AgentRecipeVersion.Parse("1.0.0");
+        var okSkill = SkillPackage.TryCreate(
+            Guid.NewGuid(),
+            skillKey,
+            skillVersion,
+            "Echo skill",
+            "Segment then echo tool.",
+            [
+                new SkillProcedureStepDefinition("p1", 1, "Intro", SkillProcedureStepKind.Segment),
+                new SkillProcedureStepDefinition("p2", 2, "Echo", SkillProcedureStepKind.ToolRef, FakeTool)
+            ],
+            out var skillPkg,
+            out var skillVal);
+        Assert.True(okSkill);
+        Assert.NotNull(skillPkg);
+        Assert.True(skillVal.IsValid);
+
+        var catalog = new InMemorySkillPackageCatalog();
+        catalog.Register(skillPkg!);
+
+        var clock = new SystemClock();
+        var run = AgentRun.Start(Guid.NewGuid(), "SkillPlan", "obj", "trace-skill", clock.UtcNow);
+        var okRecipe = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "one-skill",
+            AgentRecipeVersion.Parse("1"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition(
+                    "s1",
+                    1,
+                    RecipeStepKind.Skill,
+                    string.Empty,
+                    InvokedSkillKey: skillKey,
+                    InvokedSkillVersion: skillVersion)
+            ],
+            null,
+            out var recipe,
+            out var recipeVal);
+        Assert.True(okRecipe);
+        Assert.True(recipeVal.IsValid);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+
+        var counting = new CountingExecutor();
+        var registry = new ToolRegistry();
+        registry.Register(new ToolDefinition(FakeTool, "t", "d", ToolRiskLevel.Low), counting);
+        var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock, skillCatalog: catalog);
+
+        var result = await executor.ExecuteAsync(run, plan, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(AgentRunStatus.Completed, run.Status);
+        Assert.Equal(1, counting.Invocations);
+        Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.SkillInvocationStarted);
+        Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.SkillProcedureSegmentRecorded);
+        Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.SkillInvocationCompleted);
+        Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.PolicyEvaluated && e.Message.Contains("skill inner", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static readonly HashSet<TraceEventKind> PlanCoordinationKinds =
     [
         TraceEventKind.PlanExecutionStarted,

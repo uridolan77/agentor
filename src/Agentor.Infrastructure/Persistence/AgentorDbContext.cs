@@ -31,6 +31,7 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(r => r.StartedAt).HasColumnName("started_at");
             entity.Property(r => r.CompletedAt).HasColumnName("completed_at");
             entity.Property(r => r.ErrorMessage).HasColumnName("error_message").HasMaxLength(2000);
+            entity.Property(r => r.SessionMemoryJson).HasColumnName("session_memory_json").IsRequired();
 
             entity.HasMany(r => r.Steps)
                 .WithOne(s => s.Run)

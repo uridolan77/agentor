@@ -70,3 +70,20 @@ Scope: `RunManifestModelTelemetry` + `ModelCallTelemetryAggregator` (Application
 - **Boundary**: Domain manifest hashes generic telemetry inputs; gateway-shaped JSON parsing stays in Application.
 - **Budget**: Caps apply only when corresponding declared fields are present on the tool input.
 
+
+
+## Phase 7 verification (2026-05-10)
+
+Commands (repo root):
+
+`
+dotnet restore Agentor.sln
+dotnet build Agentor.sln
+dotnet test Agentor.sln
+`
+
+Results: restore OK; build OK; test OK (all projects).
+
+Scope: PR31 SkillPackage + procedure steps; PR32 RecipeStepKind.Skill, ISkillPackageCatalog, InMemorySkillPackageCatalog, SequentialAgentPlanExecutor skill path + TraceEventKind skill kinds; PR33 SessionMemoryBudget/TryWriteSessionMemory, trace kinds, plan BuildInput session: keys, EF agent_runs.session_memory_json migration + snapshot; PR34 RunEvaluationHarness; PR35 RunQualityGateEvaluator.
+
+PR completion notes: PR31-PR35 landed as one integrated pass with per-PR acceptance items in feature-list.json.

@@ -140,6 +140,34 @@ internal static class RecipePlanValidation
                 {
                     issues.Add(new PlanValidationIssue("TOOL_KEY_INVALID", "Tool steps require a non-empty tool key.", step.StepId));
                 }
+
+                if (!string.IsNullOrWhiteSpace(step.InvokedSkillKey) || step.InvokedSkillVersion is not null)
+                {
+                    issues.Add(new PlanValidationIssue(
+                        "TOOL_STEP_SKILL_METADATA",
+                        "Tool steps must not declare invoked skill metadata.",
+                        step.StepId));
+                }
+            }
+            else if (step.Kind == RecipeStepKind.Skill)
+            {
+                if (string.IsNullOrWhiteSpace(step.InvokedSkillKey))
+                {
+                    issues.Add(new PlanValidationIssue("SKILL_KEY_INVALID", "Skill steps require a non-empty invoked skill key.", step.StepId));
+                }
+
+                if (step.InvokedSkillVersion is null)
+                {
+                    issues.Add(new PlanValidationIssue("SKILL_VERSION_INVALID", "Skill steps require an invoked skill version.", step.StepId));
+                }
+
+                if (!string.IsNullOrWhiteSpace(step.ToolKey))
+                {
+                    issues.Add(new PlanValidationIssue(
+                        "SKILL_STEP_TOOLKEY",
+                        "Skill steps must not declare a tool key (use InvokedSkillKey / InvokedSkillVersion).",
+                        step.StepId));
+                }
             }
         }
 

@@ -12,6 +12,8 @@ public sealed class AgentRunRecord
     public DateTimeOffset? CompletedAt { get; set; }
     public string? ErrorMessage { get; set; }
 
+    public string SessionMemoryJson { get; set; } = "{}";
+
     public List<AgentStepRecord> Steps { get; set; } = [];
     public List<TraceEventRecord> TraceEvents { get; set; } = [];
 }

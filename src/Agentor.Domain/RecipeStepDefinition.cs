@@ -11,4 +11,6 @@ public sealed record RecipeStepDefinition(
     StepInputBinding? InputBinding = null,
     StepOutputBinding? OutputBinding = null,
     FailureHandlingPolicy OnFailure = FailureHandlingPolicy.FailFast,
-    CompensationHookDefinition? Compensation = null);
+    CompensationHookDefinition? Compensation = null,
+    string? InvokedSkillKey = null,
+    AgentRecipeVersion? InvokedSkillVersion = null);
