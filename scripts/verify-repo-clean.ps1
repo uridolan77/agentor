@@ -1,7 +1,7 @@
-# Repository cleanliness checks (PR75.6). Conservative: prints every offending path.
+# Repository cleanliness checks (PR75.7). Prints every offending path; exits non-zero on failure.
 # Run from repository root. Does not modify files.
-# UTF-8/BOM/null-byte checks are intentionally limited to `.agentor-harness/`, `scripts/`, and
-# `.github/workflows/` so the script does not fail on legacy encoding elsewhere in `src/` or `docs/`.
+# UTF-8/BOM/null-byte checks cover harness, automation, docs, source, tests, benchmarks, optional fixtures,
+# root policy files, and explicit root globs (UTF-8 no BOM).
 
 $ErrorActionPreference = "Stop"
 
@@ -10,6 +10,38 @@ $failures = New-Object System.Collections.Generic.List[string]
 
 function Add-Failure([string]$Message) {
     [void]$failures.Add($Message)
+}
+
+function Test-TextFileEncoding([string]$fullPath) {
+    $bytes = [System.IO.File]::ReadAllBytes($fullPath)
+    if ($bytes.Length -eq 0) { return }
+
+    # UTF-16 BOM
+    if (($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) -or
+        ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFE -and $bytes[1] -eq 0xFF)) {
+        Add-Failure "UTF-16 BOM detected (rewrite as UTF-8): $fullPath"
+        return
+    }
+
+    # UTF-8 BOM (repo standard: no BOM)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        Add-Failure "UTF-8 BOM detected (use UTF-8 without BOM): $fullPath"
+        return
+    }
+
+    for ($i = 0; $i -lt $bytes.Length; $i++) {
+        if ($bytes[$i] -eq 0) {
+            Add-Failure "Null byte detected in text file: $fullPath"
+            return
+        }
+    }
+
+    $utf8Strict = [System.Text.UTF8Encoding]::new($false, $true)
+    try {
+        [void]$utf8Strict.GetString($bytes)
+    } catch {
+        Add-Failure "File is not valid strict UTF-8: $fullPath ($($_.Exception.Message))"
+    }
 }
 
 # --- 1) Root-level Python (no allowlist today) ---
@@ -39,7 +71,7 @@ foreach ($rel in $rootDirs) {
     }
 }
 
-# --- Harness / policy checks (overlap with verify-harness.ps1 is intentional) ---
+# --- Harness / policy checks ---
 $featurePath = Join-Path $repoRoot ".agentor-harness/feature-list.json"
 if (-not (Test-Path -LiteralPath $featurePath)) {
     Add-Failure "Missing $featurePath"
@@ -95,53 +127,51 @@ if (-not (Test-Path -LiteralPath $handoffPath)) {
     }
 }
 
-# --- 2–3) UTF-8 / BOM / UTF-16 / null bytes (PR75.6 scope: harness + automation only) ---
-# Broader repo files may contain legacy BOM/null issues; do not fail this script on unrelated paths.
-$textExtensions = @(".cs", ".md", ".json", ".yml", ".yaml", ".ps1", ".sln", ".csproj")
+# --- Broad UTF-8 / BOM / encoding scan (PR75.7) ---
+$textExtensions = @(
+    ".cs", ".md", ".json", ".yml", ".yaml", ".ps1", ".sln", ".csproj",
+    ".props", ".targets", ".editorconfig", ".gitignore"
+)
+
 $scanRoots = @(
     (Join-Path $repoRoot ".agentor-harness"),
+    (Join-Path $repoRoot ".cursor"),
     (Join-Path $repoRoot "scripts"),
-    (Join-Path (Join-Path $repoRoot ".github") "workflows")
+    (Join-Path (Join-Path $repoRoot ".github") "workflows"),
+    (Join-Path $repoRoot "docs"),
+    (Join-Path $repoRoot "src"),
+    (Join-Path $repoRoot "tests"),
+    (Join-Path $repoRoot "benchmarks")
 )
+
+$fixturesRoot = Join-Path $repoRoot "fixtures"
+if (Test-Path -LiteralPath $fixturesRoot) {
+    $scanRoots += $fixturesRoot
+}
 
 foreach ($root in $scanRoots) {
     if (-not (Test-Path -LiteralPath $root)) { continue }
     Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
         $full = $_.FullName
-        if ($full -match "\\(bin|obj|\.git)\\") { return }
-        if ($textExtensions -notcontains $_.Extension.ToLowerInvariant()) { return }
+        if ($full -match "\\(bin|obj|\.git|node_modules)\\") { return }
+        $ext = $_.Extension.ToLowerInvariant()
+        $allowed = ($textExtensions -contains $ext) -or ($_.Name -eq ".gitignore")
+        if (-not $allowed) { return }
+        Test-TextFileEncoding $full
+    }
+}
 
-        $bytes = [System.IO.File]::ReadAllBytes($full)
-        if ($bytes.Length -eq 0) { return }
+# Root-level globs and named files (repo policy / solution entrypoints)
+foreach ($pat in @("*.sln", "*.md", "*.json", "*.yml", "*.yaml", "*.props", "*.targets", "*.csproj")) {
+    Get-ChildItem -LiteralPath $repoRoot -File -Filter $pat -ErrorAction SilentlyContinue | ForEach-Object {
+        Test-TextFileEncoding $_.FullName
+    }
+}
 
-        # UTF-16 BOM
-        if (($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) -or
-            ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFE -and $bytes[1] -eq 0xFF)) {
-            Add-Failure "UTF-16 BOM detected (rewrite as UTF-8): $full"
-            return
-        }
-
-        # UTF-8 BOM (repo standard: no BOM for these paths)
-        if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
-            Add-Failure "UTF-8 BOM detected (use UTF-8 without BOM): $full"
-            return
-        }
-
-        # Null byte in text file
-        for ($i = 0; $i -lt $bytes.Length; $i++) {
-            if ($bytes[$i] -eq 0) {
-                Add-Failure "Null byte detected in text file: $full"
-                return
-            }
-        }
-
-        # Strict UTF-8 decode
-        $utf8Strict = [System.Text.UTF8Encoding]::new($false, $true)
-        try {
-            [void]$utf8Strict.GetString($bytes)
-        } catch {
-            Add-Failure "File is not valid strict UTF-8: $full ($($_.Exception.Message))"
-        }
+foreach ($name in @("Dockerfile", "docker-compose.yml", ".editorconfig", ".gitignore")) {
+    $rp = Join-Path $repoRoot $name
+    if (Test-Path -LiteralPath $rp) {
+        Test-TextFileEncoding $rp
     }
 }
 

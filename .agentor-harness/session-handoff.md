@@ -1,28 +1,22 @@
 # Session handoff
 
-## Completed (PR75.6)
+## Completed (PR75.7)
 
-- Removed tracked root scratch Python patch scripts (`git rm` of `_*.py`, `write_phase9_payload.py`, and related files).
-- Added `.gitignore` root-only hygiene patterns; `scripts/verify-repo-clean.ps1`; `scripts/run-benchmarks.ps1`.
-- Compacted `.agentor-harness/current-pr.md`; updated harness to **PR75.6**; appended `progress.md` and `verification-log.md`.
-- `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` lists all `passes: false` acceptance rows with disposition notes.
-- Strengthened redaction tests (`JsonRedactionTests`, `RedactionPolicyTests`) and expanded `ContractDtoCompatibilityTests` for representative public DTOs.
-- Documentation: `phase15-performance-baselines.md`, `phase15-redaction.md`, `v1.0-RC.md`, `benchmarks/Agentor.Benchmarks/README.md`; closeout docs now require both harness and repo-clean scripts.
-
-## Deliberately not changed
-
-- **Program.cs** was not split into `Endpoints/*.cs` (deferred; see `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`).
-- No CI change to execute full BenchmarkDotNet runs (still compile-only benchmark build).
-- `Phase13ProductEndpoints.cs` was not modified in this hygiene pass.
+- `verify-repo-clean.ps1`: full-repo text encoding and harness policy checks.
+- `ci.yml`: `verify-harness` (ExpectedPhase 15, PR75.7) + `verify-repo-clean` after tests, before Docker.
+- `AGENTS.md`: current boundaries; PR1 historical; closeout protocol.
+- `src/Agentor.Api/Program.cs` + `Endpoints/*.cs`: endpoint wiring extracted; routes/tags unchanged.
+- `.agentor-harness/*`: `current-pr`, `feature-list` (PR75.7 rows + ProfileId note fix), `progress`, `verification-log` (after verify), `session-handoff` (this file).
+- `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` and new `v1.0-RC-REPO-STATUS.md`.
+- UTF-8 no BOM on touched files; `verify-repo-clean` and `verify-harness` used as gate.
 
 ## Not started
 
-- **Phase 16+** roadmap or any post-Phase-15 product/runtime features were **not** started.
+- **Phase 16+** product roadmap features.
+- **PR23-API-003 / PR24-API-003** still false: need running-run `WebApplicationFactory` fixture; not added in this cleanup pass.
+- **PR52-004 / PR53-005** remain false: deferred to v1.1 per harness and deferred-items doc.
 
-## Remaining risks / false acceptance items
+## Remaining risks / false acceptance
 
-- All historical `passes: false` rows remain in `feature-list.json`; see `v1.0-RC-DEFERRED-ITEMS.md` for triage. PR75.6 acceptance rows are marked true only with named evidence.
-
-## Next recommended step
-
-- When ready for API ergonomics only: small PR to extract `Program.cs` endpoint groups behind stable extension methods (no route changes), or continue deferred items with explicit evidence updates.
+- See `feature-list.json` for all `passes: false` rows; four deferred items documented in `v1.0-RC-DEFERRED-ITEMS.md`.
+- Broad encoding scan may surface legacy files in future edits; keep new text as UTF-8 no BOM.

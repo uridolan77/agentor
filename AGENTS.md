@@ -5,6 +5,7 @@
 Agentor is a deterministic, observable, policy-governed agent execution runtime.
 
 Agentor is not:
+
 - a chatbot product
 - a generic RAG system
 - a canonical knowledge engine
@@ -13,13 +14,28 @@ Agentor is not:
 - an MCP marketplace
 - a wrapper around Microsoft Agent Framework, Semantic Kernel, LangGraph, AutoGen, CrewAI, or A2A
 
-## External service boundaries
+## Current architecture boundaries
 
-- Athanor remains the canonical knowledge-state and provenance service.
-- Conexus remains the LLM/model gateway.
-- MCP integration is a future transport/tooling layer.
-- A2A / external-agent protocols are post-v0.1 adapter concerns.
-- Microsoft Agent Framework and Semantic Kernel may be adapter integrations later, not Agentor core.
+These boundaries describe the **implemented** runtime shape (core plus adapters), not a future-only roadmap sketch.
+
+- **Agentor coordinates**: runs, steps, tools, skills (declared packages), policy decisions, traces, manifests, eval hooks, and integration ports.
+- **Athanor canonizes**: knowledge state and provenance live in Athanor when integrated; Agentor treats Athanor ports as **non-canon by default** unless explicitly configured as authoritative for a deployment.
+- **Conexus routes models**: LLM traffic stays behind Conexus-shaped adapters when present.
+- **MCP is an adapter surface**: MCP appears as registry/client/tool-binding ports (including fake/in-memory and HTTP-oriented adapters), not as core domain logic.
+- **External-agent / A2A-style protocols** may surface via generic or protocol-shaped adapters; core stays protocol-agnostic.
+- **Frameworks stay outside Domain**: Semantic Kernel, Microsoft Agent Framework, and similar stacks belong in Infrastructure/Application adapters, not in `Agentor.Domain`.
+- **Tool execution remains policy-gated**: every tool invocation flows through policy evaluation and trace emission.
+- **RequiresReview is distinct from Deny**: review queues and human decisions are modeled separately from hard denials.
+
+## Historical PR1 constraints (frozen reference)
+
+PR1 was an early harness milestone with deliberate omissions so tests could run without external services. It is **historical**, not a blanket rule for all future work.
+
+**Historical PR1 scope allowed**: minimal contracts, fake executor, allow-all policy, in-memory repository, minimal API.
+
+**Historical PR1 forbade** (for that milestone): real Athanor/Conexus/MCP, LLM calls, vector stores, background orchestration products, dashboards, etc.
+
+New phases may introduce integrations **when explicitly scheduled**, subject to architecture boundaries above—not PR1-era prohibition lists.
 
 ## Anthropic CWC-derived development doctrine
 
@@ -60,37 +76,6 @@ Do not implement multiple future phases in one PR.
 8. Do not introduce infrastructure before the domain needs it.
 9. Do not add agent taxonomies before the run kernel is stable.
 10. Keep frameworks behind adapters.
-
-## PR1 limitations
-
-Allowed:
-- AgentProfile
-- AgentRun
-- AgentStep
-- ToolCall
-- PolicyDecision
-- ExecutionTrace
-- RunManifest
-- FakeToolExecutor
-- AllowAllPolicyEvaluator
-- InMemoryAgentRunRepository
-- Minimal API endpoints
-
-Forbidden in PR1:
-- real Athanor client
-- real Conexus client
-- real MCP
-- Microsoft Agent Framework
-- Semantic Kernel
-- A2A
-- LangGraph / AutoGen / CrewAI
-- LLM calls
-- memory subsystem
-- vector database
-- background jobs
-- distributed orchestration
-- dashboard
-- authentication beyond simple future docs
 
 ## Agentor Session Closeout Protocol — mandatory
 
@@ -174,7 +159,7 @@ pwsh ./scripts/verify-repo-clean.ps1
 For phase-specific closeout, pass expected values:
 
 ```powershell
-pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 15 -ExpectedHarnessPass PR75.6
+pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 15 -ExpectedHarnessPass PR75.7
 ```
 
 See `.agentor-harness/SESSION_CLOSEOUT_PROTOCOL.md` for the canonical closeout procedure.

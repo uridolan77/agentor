@@ -1,16 +1,17 @@
 {
     "phase":  15,
-    "title":  "Phase 15 v1.0 platform hardening (PR71-PR75) + PR75.6 repository hygiene",
-    "harnessPass":  "PR75.6",
+    "title":  "Phase 15 v1.0 platform hardening (PR71-PR75) + PR75.7 repository tightening",
+    "harnessPass":  "PR75.7",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
+                  "PR75.7: repository tightening — broadened verify-repo-clean.ps1 (harness, .cursor, scripts, workflows, docs, src, tests, benchmarks, optional fixtures, root policy files); CI runs verify-harness (ExpectedPhase 15, PR75.7) + verify-repo-clean; AGENTS.md current boundaries; Program.cs endpoint extension methods; feature-list note fix (ProfileId vs Phase 11 identity); v1.0-RC-DEFERRED-ITEMS + v1.0-RC-REPO-STATUS; UTF-8 no BOM on touched files; no Phase 16 product work.",
                   "PR75.6: repository hygiene - removed root scratch Python; verify-repo-clean.ps1 + run-benchmarks.ps1; compact current-pr; v1.0-RC-DEFERRED-ITEMS.md; contract/redaction tests; no Phase 16 work.",
                   "Phase 15 PR71-PR75: v1.0 platform hardening — SensitiveFieldCatalog/RedactionPolicy/JsonRedaction for audit export + evaluation JSON; BenchmarkDotNet project benchmarks/Agentor.Benchmarks; CI (.github/workflows/ci.yml: dotnet ef migrations list, evaluation test slice, Docker image build, TRX artifacts); Agentor.Contracts.Tests DTO round-trips; docs phase15-redaction.md, phase15-performance-baselines.md, CONTRACT_VERSIONING.md, MIGRATION_AND_UPGRADE.md, docs/RELEASE/v1.0-RC.md, ARCHITECTURE_BOUNDARY_REVIEW.md.",
                   "Phase 14 PR66-PR70: versioned evaluation fixture registry (schema 4, kind EvaluationFixtureRegistry), harness fixture parse (schema \u003e=2), coordination profiles (SequentialPipeline, SkillWrappedSequential, McpToolBoundPlan, ExternalAgentTool, ReviewGatedPlan) via HarnessProfileMaterializer, quality rule sets (QualityRuleSetEvaluator, JSON predicates only), CoordinationEvaluationMetrics from run/manifest artifacts, deterministic EvaluationReportGenerator (Markdown/JSON/CSV + CI folder). Tests: tests/Agentor.Application.Tests/Evaluation/*.cs; fixtures: tests/Agentor.Application.Tests/fixtures/eval/registry.json, quality-rules-*.json.",
                   "Phase 12 PR56-PR60: run queue (inline + in-memory background), durable outbox + dispatcher, execution leases + distributed op ledger, HTTP transport resilience registry, EF persistence + migration 20260512080000_Phase12Reliability.",
                   "PR60.5: harness reconciliation; OutboxDispatcherTests; Phase12EfRoundTripTests (Sqlite); TransportResilienceRegistryTests.",
-                  "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
+                  "ProfileId fallback is legacy compatibility only; explicit ProjectId/KnowledgeScopeId exists after Phase 11 (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
                   "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
                   "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
                   "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests).",
@@ -1121,6 +1122,69 @@
                                 "description":  "No post-Phase-15 roadmap or product feature implementation in this pass.",
                                 "passes":  true,
                                 "evidence":  "session-handoff.md Not started (Phase 16+); progress.md PR75.6 section"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Broadened verify-repo-clean across repo text files",
+                                "pr":  75.7,
+                                "id":  "PR75.7-001",
+                                "evidence":  "scripts/verify-repo-clean.ps1 exit 0"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "CI runs verify-harness and verify-repo-clean",
+                                "pr":  75.7,
+                                "id":  "PR75.7-002",
+                                "evidence":  ".github/workflows/ci.yml"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "AGENTS.md updated to current architecture state",
+                                "pr":  75.7,
+                                "id":  "PR75.7-003",
+                                "evidence":  "AGENTS.md"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Program.cs endpoint mappings modularized without route changes",
+                                "pr":  75.7,
+                                "id":  "PR75.7-004",
+                                "evidence":  "src/Agentor.Api/Program.cs; src/Agentor.Api/Endpoints/*.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "feature-list notes corrected/slimmed",
+                                "pr":  75.7,
+                                "id":  "PR75.7-005",
+                                "evidence":  ".agentor-harness/feature-list.json"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "deferred item report tightened",
+                                "pr":  75.7,
+                                "id":  "PR75.7-006",
+                                "evidence":  "docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "repo status document added",
+                                "pr":  75.7,
+                                "id":  "PR75.7-007",
+                                "evidence":  "docs/RELEASE/v1.0-RC-REPO-STATUS.md"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "touched files UTF-8 no BOM",
+                                "pr":  75.7,
+                                "id":  "PR75.7-008",
+                                "evidence":  "scripts/verify-repo-clean.ps1 + this closeout"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "no post-Phase-15 feature work started",
+                                "pr":  75.7,
+                                "id":  "PR75.7-009",
+                                "evidence":  ".agentor-harness/session-handoff.md"
                             }
                         ]
 }
