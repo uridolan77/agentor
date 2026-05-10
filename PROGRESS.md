@@ -9,6 +9,7 @@ This file is the agent-maintained handoff. Claude Code should read it before doi
 - PR07 persistence work appears implemented.
 - CWC-inspired long-running coding harness installed (overlay, hooks, docs, verification scripts).
 - PR08 run read model and query endpoints: list runs, trace/steps/tool-calls sub-resources, repository list paging, API tests, evidence captured.
+- PR08 fresh-context evaluator: PASS on `a2c83d6` (read-model scope, boundaries, build/test + api-smoke evidence).
 
 ## In progress
 
@@ -16,7 +17,6 @@ This file is the agent-maintained handoff. Claude Code should read it before doi
 
 ## Next
 
-- Fresh-context evaluator pass on PR08 diff + verification artifacts.
 - PR09 — idempotency / command deduplication (per roadmap), or PR10 integration tests when scheduled.
 
 ## Notes
