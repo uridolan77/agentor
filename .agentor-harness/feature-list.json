@@ -1,13 +1,174 @@
 {
   "phase": 5,
   "title": "Athanor integration",
+  "harnessPass": "PR25.5",
   "encoding": "utf-8",
   "lastVerified": "2026-05-10",
-  "items": [
-    { "id": "PR21", "description": "Athanor client port and fake implementation", "passes": true, "evidence": "IKnowledgeStateClient; FakeKnowledgeStateClient; FakeKnowledgeStateClientTests" },
-    { "id": "PR22", "description": "Athanor read-only canonical state integration", "passes": true, "evidence": "LookupCanonicalEntryAsync; snapshot/canonical GET handlers; AthanorCommandHandlersTests snapshot case" },
-    { "id": "PR23", "description": "Evidence search and provenance attachment", "passes": true, "evidence": "AttachAthanorEvidenceProvenanceHandler; AthanorEvidenceSearchProvenanceAttached; AthanorCommandHandlersTests" },
-    { "id": "PR24", "description": "Candidate submission to Athanor", "passes": true, "evidence": "SubmitAthanorCandidateHandler; AthanorCandidateSubmitted; POST /athanor/candidates" },
-    { "id": "PR25", "description": "Review queue integration and non-canonization guard", "passes": true, "evidence": "QueueAthanorReviewHandler; AthanorReviewQueued; NonCanonizationBoundaryTests" }
+  "notes": [
+    "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
+    "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false)."
+  ],
+  "acceptanceItems": [
+    {
+      "id": "PR21-001",
+      "pr": 21,
+      "description": "IKnowledgeStateClient port defines read + candidate + review operations without Canonize",
+      "passes": true,
+      "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations; src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs"
+    },
+    {
+      "id": "PR21-002",
+      "pr": 21,
+      "description": "FakeKnowledgeStateClient implements port with in-memory behavior",
+      "passes": true,
+      "evidence": "FakeKnowledgeStateClientTests (all methods)"
+    },
+    {
+      "id": "PR21-003",
+      "pr": 21,
+      "description": "DI registers IKnowledgeStateClient to FakeKnowledgeStateClient",
+      "passes": true,
+      "evidence": "src/Agentor.Infrastructure/DependencyInjection.cs (AddSingleton<IKnowledgeStateClient, FakeKnowledgeStateClient>)"
+    },
+    {
+      "id": "PR22-001",
+      "pr": 22,
+      "description": "LookupCanonicalEntryAsync resolves from seeded snapshot",
+      "passes": true,
+      "evidence": "FakeKnowledgeStateClientTests.LookupCanonicalEntryAsync_UsesSeededSnapshot"
+    },
+    {
+      "id": "PR22-002",
+      "pr": 22,
+      "description": "Latest snapshot query returns seeded data when run exists",
+      "passes": true,
+      "evidence": "AthanorCommandHandlersTests.GetLatestSnapshot_ReturnsSeededSnapshot_WhenRunExists"
+    },
+    {
+      "id": "PR22-003",
+      "pr": 22,
+      "description": "Canonical lookup returns RunExists=false for unknown run",
+      "passes": true,
+      "evidence": "AthanorCommandHandlersTests.LookupCanonical_UnknownRun_ReturnsRunNotExists"
+    },
+    {
+      "id": "PR22-004",
+      "pr": 22,
+      "description": "Canonical lookup rejects empty canonical key",
+      "passes": true,
+      "evidence": "AthanorCommandHandlersTests.LookupCanonical_EmptyKey_ThrowsArgumentException"
+    },
+    {
+      "id": "PR22-API-001",
+      "pr": 22,
+      "description": "GET latest snapshot returns 404 for unknown run",
+      "passes": true,
+      "evidence": "AthanorApiTests.GetLatestSnapshot_UnknownRun_Returns404"
+    },
+    {
+      "id": "PR22-API-002",
+      "pr": 22,
+      "description": "GET canonical returns 404 for unknown run",
+      "passes": true,
+      "evidence": "AthanorApiTests.GetCanonical_UnknownRun_Returns404"
+    },
+    {
+      "id": "PR22-API-003",
+      "pr": 22,
+      "description": "GET canonical returns 400 when key is empty",
+      "passes": true,
+      "evidence": "AthanorApiTests.GetCanonical_EmptyKey_ReturnsBadRequest"
+    },
+    {
+      "id": "PR23-001",
+      "pr": 23,
+      "description": "Evidence search provenance attaches trace when run is Running",
+      "passes": true,
+      "evidence": "AthanorCommandHandlersTests.AttachEvidenceProvenance_WritesTrace_WhenRunRunning"
+    },
+    {
+      "id": "PR23-API-001",
+      "pr": 23,
+      "description": "POST evidence-provenance returns 409 when run is not Running",
+      "passes": true,
+      "evidence": "AthanorApiTests.PostEvidenceProvenance_AfterCompletedStartRun_Returns409"
+    },
+    {
+      "id": "PR23-API-003",
+      "pr": 23,
+      "description": "Public API returns 2xx for evidence-provenance while run is Running",
+      "passes": false,
+      "evidence": "TODO: running-run fixture or plan-integrated call"
+    },
+    {
+      "id": "PR24-001",
+      "pr": 24,
+      "description": "Candidate submission records trace when run is Running",
+      "passes": true,
+      "evidence": "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
+    },
+    {
+      "id": "PR24-002",
+      "pr": 24,
+      "description": "Submit candidate returns false without trace when run is not Running",
+      "passes": true,
+      "evidence": "AthanorCommandHandlersTests.SubmitCandidate_WhenRunNotRunning_ReturnsFalseWithoutTrace"
+    },
+    {
+      "id": "PR24-API-001",
+      "pr": 24,
+      "description": "POST candidates returns 409 when run is not Running",
+      "passes": true,
+      "evidence": "AthanorApiTests.PostCandidate_AfterCompletedStartRun_Returns409"
+    },
+    {
+      "id": "PR24-API-003",
+      "pr": 24,
+      "description": "Public API returns 2xx for candidate submit while run is Running",
+      "passes": false,
+      "evidence": "TODO: same as PR23-API-003"
+    },
+    {
+      "id": "PR25-001",
+      "pr": 25,
+      "description": "IKnowledgeStateClient has no Canonize-named operations",
+      "passes": true,
+      "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
+    },
+    {
+      "id": "PR25-002",
+      "pr": 25,
+      "description": "AgentRun declared public surface has no Canonize-named methods",
+      "passes": true,
+      "evidence": "NonCanonizationBoundaryTests.AgentRun_public_declared_surface_has_no_Canonize_methods"
+    },
+    {
+      "id": "PR25-003",
+      "pr": 25,
+      "description": "Fake submit status documents non-canon outcome",
+      "passes": true,
+      "evidence": "NonCanonizationBoundaryTests.FakeKnowledgeStateClient_submit_status_is_explicitly_non_canon"
+    },
+    {
+      "id": "PR25-004",
+      "pr": 25,
+      "description": "Review queue records AthanorReviewQueued when run is Running",
+      "passes": true,
+      "evidence": "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
+    },
+    {
+      "id": "PR25-005",
+      "pr": 25,
+      "description": "Queue review returns false without trace when run is not Running",
+      "passes": true,
+      "evidence": "AthanorCommandHandlersTests.QueueReview_WhenRunNotRunning_ReturnsFalseWithoutTrace"
+    },
+    {
+      "id": "PR25-API-001",
+      "pr": 25,
+      "description": "POST review-queue returns 409 when run is not Running",
+      "passes": true,
+      "evidence": "AthanorApiTests.PostReviewQueue_AfterCompletedStartRun_Returns409"
+    }
   ]
 }

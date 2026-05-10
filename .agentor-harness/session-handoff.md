@@ -1,22 +1,16 @@
-# Session handoff — Agentor harness
+# Session handoff - Agentor harness
 
-## Completed this session
+## Done (PR25.5)
 
-- **Phase 5 (PR21–PR25):** Athanor client port (`IKnowledgeStateClient`), fake implementation, read-only snapshot/canonical integration, evidence provenance attachment, candidate submission, review queue recording, and non-canonization guard tests.
-- Harness markdown/JSON was reset to UTF-8 after prior encoding corruption.
+- feature-list.json: audit-style acceptance items with passes + evidence; PR23-API-003 and PR24-API-003 explicitly false with TODO.
+- Tests: API 409 for candidates and review-queue on completed runs; canonical 404/400; application tests for lookup and not-running submit/queue.
+- docs/ATHANOR_INTEGRATION_BOUNDARY.md: port is implemented (fake); ProfileId as projectId is a temporary harness convention.
 
-## Conventions used
+## Next
 
-- `ProfileId` on `AgentRun` is used as Athanor **projectId** for harness alignment.
-- Mutating Athanor endpoints require `AgentRunStatus.Running` (completed PR1 runs return 409 Conflict).
+- PR26 Conexus per PR_INDEX.md (not started in this repo).
 
-## Follow-up for next agent
+## Read first
 
-- Begin **Phase 6 — Conexus** per `docs/planning/pr1-pr40/PR_INDEX.md` when ready.
-- Optional hardening: real HTTP Athanor adapter behind the same port (out of scope for this harness pass).
-
-## Files to read first
-
-- `docs/ATHANOR_INTEGRATION_BOUNDARY.md`
-- `src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs`
-- `src/Agentor.Api/Program.cs` (Athanor route group)
+- .agentor-harness/feature-list.json
+- docs/ATHANOR_INTEGRATION_BOUNDARY.md

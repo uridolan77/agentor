@@ -1,33 +1,23 @@
-# Agentor harness — verification log
+# Agentor harness - verification log
 
-## Final verification (Phase 5 complete — 2026-05-10)
+## PR25.5 verification (2026-05-10)
 
-Commands (repository root):
+Commands (repository root, Agentor.sln):
 
 ```
-dotnet restore
-dotnet build
-dotnet test
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
 ```
 
-Results: restore OK; build OK; test OK (Domain 23, Application 48, Infrastructure 17, Api 30 — total 118).
+Results: restore OK; build OK; test OK.
 
----
+Counts: Domain 23, Application 52, Infrastructure 17, Api 34 (total 126).
 
-## PR gate notes (same commit; logical ordering)
+Scope: itemized feature-list.json; Athanor API/application tests for 409/404/400 paths; ATHANOR_INTEGRATION_BOUNDARY.md (implemented fake port; ProfileId-as-projectId harness note). No Conexus, no real Athanor HTTP, no canonization APIs.
 
-**PR21 completion:** Port + fake + DI + `FakeKnowledgeStateClientTests`. No HTTP client; no Athanor canon paths.
+## PR completion note - PR25.5
 
-**PR22 completion:** Added `LookupCanonicalEntryAsync`, `GetLatestAthanorSnapshotForRunQueryHandler`, `LookupAthanorCanonicalForRunQueryHandler`, GET `/agent-runs/{id}/athanor/latest-snapshot` and GET `/agent-runs/{id}/athanor/canonical?key=`.
+feature-list.json: two items remain passes=false (PR23-API-003, PR24-API-003) for deferred public-API 2xx success paths until a running-run fixture or plan integration.
 
-**PR23 completion:** `AttachAthanorEvidenceProvenanceHandler`, POST `/agent-runs/{id}/athanor/evidence-provenance`, trace kind `AthanorEvidenceSearchProvenanceAttached`.
-
-**PR24 completion:** `SubmitAthanorCandidateHandler`, POST `/agent-runs/{id}/athanor/candidates`, trace kind `AthanorCandidateSubmitted`.
-
-**PR25 completion:** `QueueAthanorReviewHandler`, POST `/agent-runs/{id}/athanor/review-queue`, trace kind `AthanorReviewQueued`, `NonCanonizationBoundaryTests`.
-
----
-
-## Policy check (PR16 prerequisite)
-
-`PolicyDecisionOutcome.RequiresReview` remains distinct from `Deny` in runtime policy and plan executor tests (unchanged this phase).
+Policy: PolicyDecisionOutcome.RequiresReview remains distinct from Deny (unchanged).
