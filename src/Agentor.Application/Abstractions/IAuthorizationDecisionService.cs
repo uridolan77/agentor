@@ -6,7 +6,8 @@ public enum AgentorPermission
     GovernanceReviewRead,
     PolicyBundleWrite,
     PolicyBundleRead,
-    AuditRead
+    AuditRead,
+    OpsRead,
 }
 
 public sealed record AuthorizationDecision(bool Allowed, string? Reason = null)

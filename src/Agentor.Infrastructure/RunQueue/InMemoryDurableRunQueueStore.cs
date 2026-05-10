@@ -125,11 +125,22 @@ public sealed class InMemoryDurableRunQueueStore : IDurableRunQueue
         return Task.CompletedTask;
     }
 
-    public Task MarkCompletedAsync(Guid workItemId, Guid agentRunId, DateTimeOffset now, CancellationToken cancellationToken)
+    public Task MarkCompletedAsync(
+        Guid workItemId,
+        Guid agentRunId,
+        string workerId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
         lock (_gate)
         {
             if (!_items.TryGetValue(workItemId, out var item))
+            {
+                return Task.CompletedTask;
+            }
+
+            if (item.Value.Status != DurableRunQueueStatus.Claimed
+                || !string.Equals(item.Value.ClaimedBy, workerId, StringComparison.Ordinal))
             {
                 return Task.CompletedTask;
             }
@@ -147,11 +158,22 @@ public sealed class InMemoryDurableRunQueueStore : IDurableRunQueue
         return Task.CompletedTask;
     }
 
-    public Task MarkFailedAsync(Guid workItemId, string error, DateTimeOffset now, CancellationToken cancellationToken)
+    public Task MarkFailedAsync(
+        Guid workItemId,
+        string error,
+        string workerId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
         lock (_gate)
         {
             if (!_items.TryGetValue(workItemId, out var item))
+            {
+                return Task.CompletedTask;
+            }
+
+            if (item.Value.Status != DurableRunQueueStatus.Claimed
+                || !string.Equals(item.Value.ClaimedBy, workerId, StringComparison.Ordinal))
             {
                 return Task.CompletedTask;
             }

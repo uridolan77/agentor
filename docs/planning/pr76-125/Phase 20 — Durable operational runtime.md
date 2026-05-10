@@ -88,3 +88,16 @@ Acceptance:
 - No secrets.
 - Useful for operator dashboard.
 ```
+
+## PR100.5 — Phase 20 reconciliation, ops security, and durability hardening
+
+Acceptance:
+
+```text
+- Harness reconciled to Phase 20 / PR100.5.
+- Ops endpoints require OpsRead; Service is explicitly denied OpsRead.
+- Ops error fields are sanitized for secret-bearing content and truncated for safety.
+- EF durable queue can reclaim expired claimed rows and does not steal non-expired claims.
+- Durable queue completion/failure transitions are ownership-checked by worker id.
+- Outbox hosted dispatch is guarded against no-op sink usage outside Development/Test unless explicitly overridden.
+```

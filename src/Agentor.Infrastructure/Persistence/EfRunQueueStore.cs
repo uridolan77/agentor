@@ -66,13 +66,16 @@ public sealed class EfRunQueueStore : IDurableRunQueue
         CancellationToken cancellationToken)
     {
         var pending = DurableRunQueueStatus.Pending.ToString();
+        var claimedStatus = DurableRunQueueStatus.Claimed.ToString();
+
         // Pull candidate ids first, then atomically transition one row to Claimed.
         var candidateRows = await _db.RunQueueItems.AsNoTracking()
-            .Where(r => r.Status == pending)
+            .Where(r => r.Status == pending || r.Status == claimedStatus)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         var candidateIds = candidateRows
+            .Where(r => r.Status == pending || (r.LeaseExpiresAtUtc.HasValue && r.LeaseExpiresAtUtc <= now))
             .OrderBy(r => r.EnqueuedAtUtc)
             .Select(r => r.WorkItemId)
             .ToList();
@@ -87,28 +90,38 @@ public sealed class EfRunQueueStore : IDurableRunQueue
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var pending = DurableRunQueueStatus.Pending.ToString();
+        var pendingStatus = DurableRunQueueStatus.Pending.ToString();
+        var claimedStatus = DurableRunQueueStatus.Claimed.ToString();
+        var leaseExpiresAtUtc = now.Add(leaseTtl);
+
         foreach (var candidateId in candidateIds)
         {
-            var affected = await _db.RunQueueItems
-                .Where(r => r.WorkItemId == candidateId
-                    && r.Status == pending)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(r => r.Status, DurableRunQueueStatus.Claimed.ToString())
-                    .SetProperty(r => r.ClaimedBy, workerId)
-                    .SetProperty(r => r.LeaseExpiresAtUtc, now.Add(leaseTtl))
-                    .SetProperty(r => r.UpdatedAtUtc, now), cancellationToken)
+            var row = await _db.RunQueueItems
+                .FirstOrDefaultAsync(r => r.WorkItemId == candidateId, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (affected == 0)
+            if (row is null)
             {
                 continue;
             }
 
-            var claimed = await _db.RunQueueItems.AsNoTracking()
-                .SingleAsync(r => r.WorkItemId == candidateId, cancellationToken)
-                .ConfigureAwait(false);
-            return ToRecord(claimed);
+            var canClaim = row.Status == pendingStatus
+                || (row.Status == claimedStatus
+                    && row.LeaseExpiresAtUtc is not null
+                    && row.LeaseExpiresAtUtc <= now);
+
+            if (!canClaim)
+            {
+                continue;
+            }
+
+            row.Status = claimedStatus;
+            row.ClaimedBy = workerId;
+            row.LeaseExpiresAtUtc = leaseExpiresAtUtc;
+            row.UpdatedAtUtc = now;
+
+            _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return ToRecord(row);
         }
 
         return null;
@@ -116,24 +129,35 @@ public sealed class EfRunQueueStore : IDurableRunQueue
 
     public async Task ReleaseClaimAsync(Guid workItemId, string workerId, DateTimeOffset now, CancellationToken cancellationToken)
     {
+        var claimedStatus = DurableRunQueueStatus.Claimed.ToString();
+        var pendingStatus = DurableRunQueueStatus.Pending.ToString();
         _ = await _db.RunQueueItems
             .Where(r => r.WorkItemId == workItemId
-                && r.Status == DurableRunQueueStatus.Claimed.ToString()
+                && r.Status == claimedStatus
                 && r.ClaimedBy == workerId)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(r => r.Status, DurableRunQueueStatus.Pending.ToString())
+                .SetProperty(r => r.Status, pendingStatus)
                 .SetProperty(r => r.ClaimedBy, (string?)null)
                 .SetProperty(r => r.LeaseExpiresAtUtc, (DateTimeOffset?)null)
                 .SetProperty(r => r.UpdatedAtUtc, now), cancellationToken)
             .ConfigureAwait(false);
     }
 
-    public async Task MarkCompletedAsync(Guid workItemId, Guid agentRunId, DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task MarkCompletedAsync(
+        Guid workItemId,
+        Guid agentRunId,
+        string workerId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
+        var claimedStatus = DurableRunQueueStatus.Claimed.ToString();
+        var completedStatus = DurableRunQueueStatus.Completed.ToString();
         _ = await _db.RunQueueItems
-            .Where(r => r.WorkItemId == workItemId)
+            .Where(r => r.WorkItemId == workItemId
+                && r.Status == claimedStatus
+                && r.ClaimedBy == workerId)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(r => r.Status, DurableRunQueueStatus.Completed.ToString())
+                .SetProperty(r => r.Status, completedStatus)
                 .SetProperty(r => r.AgentRunId, agentRunId)
                 .SetProperty(r => r.Error, (string?)null)
                 .SetProperty(r => r.ClaimedBy, (string?)null)
@@ -142,12 +166,21 @@ public sealed class EfRunQueueStore : IDurableRunQueue
             .ConfigureAwait(false);
     }
 
-    public async Task MarkFailedAsync(Guid workItemId, string error, DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task MarkFailedAsync(
+        Guid workItemId,
+        string error,
+        string workerId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
     {
+        var claimedStatus = DurableRunQueueStatus.Claimed.ToString();
+        var failedStatus = DurableRunQueueStatus.Failed.ToString();
         _ = await _db.RunQueueItems
-            .Where(r => r.WorkItemId == workItemId)
+            .Where(r => r.WorkItemId == workItemId
+                && r.Status == claimedStatus
+                && r.ClaimedBy == workerId)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(r => r.Status, DurableRunQueueStatus.Failed.ToString())
+                .SetProperty(r => r.Status, failedStatus)
                 .SetProperty(r => r.Error, error)
                 .SetProperty(r => r.ClaimedBy, (string?)null)
                 .SetProperty(r => r.LeaseExpiresAtUtc, (DateTimeOffset?)null)

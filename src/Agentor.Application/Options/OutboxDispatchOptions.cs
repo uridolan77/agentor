@@ -10,6 +10,8 @@ public sealed class OutboxDispatchOptions
 
     public int PollIntervalMilliseconds { get; set; } = 1000;
 
+    public bool AllowNoOpSinkOutsideDevelopment { get; set; }
+
     public int SafeBatchSize => Math.Clamp(BatchSize, 1, 500);
 
     public TimeSpan PollInterval => TimeSpan.FromMilliseconds(Math.Clamp(PollIntervalMilliseconds, 25, 30000));

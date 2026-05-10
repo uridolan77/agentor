@@ -1,5 +1,52 @@
 # Agentor harness progress
 
+## Phase 20 PR100.5 (2026-05-10)
+
+Completed **Phase 20 reconciliation, ops security, and durability hardening**:
+
+- Added `OpsRead` authorization permission and enforced it on all ops endpoints:
+	- `GET /api/v1/ops/queue`
+	- `GET /api/v1/ops/outbox`
+	- `GET /api/v1/ops/leases`
+- Hardened default role mapping in `RoleBasedAuthorizationDecisionService`:
+	- `Service` remains read-only but is explicitly denied `OpsRead`.
+- Added ops output sanitization in `OpsEndpoints`:
+	- queue/outbox error text is redacted for common secret-bearing tokens and truncated for safe operator display.
+- Strengthened durable queue claim behavior in `EfRunQueueStore`:
+	- claim loop now reclaims `Claimed` rows only when lease is expired.
+	- non-expired claimed rows are not stealable.
+- Strengthened durable completion ownership semantics:
+	- `IDurableRunQueue.MarkCompletedAsync` and `MarkFailedAsync` now require `workerId`.
+	- EF and in-memory durable queue stores now enforce worker ownership checks.
+	- run queue worker wiring updated to pass worker identity for completion/failure transitions.
+- Hardened outbox sink safety:
+	- added `OutboxDispatchOptions.AllowNoOpSinkOutsideDevelopment` (default false).
+	- `OutboxHostedService` now throws when dispatch is enabled with `NoOpOutboxSink` outside Development/Test unless explicit override is set.
+- Updated docs:
+	- `docs/security/auth-boundary.md` (OpsRead permission + ops endpoint authorization)
+	- `docs/security/deployment-threat-notes.md` (ops/read exposure + no-op outbox sink guard)
+	- `docs/planning/pr76-125/Phase 20 — Durable operational runtime.md` (PR100.5 reconciliation acceptance)
+
+Added/updated tests:
+
+- `RoleBasedAuthorizationDecisionServiceTests` (OpsRead allowed/denied by role)
+- `EndpointAuthorizationApiTests` (ops endpoints allow/forbid/unauthorized)
+- `IntegrationEndpointsTests` (ops response secret redaction/truncation regression)
+- `EfRunQueueStoreTests` (expired claim reclaim, active claim protection, ownership transitions)
+- `OutboxHostedServiceTests` (prod guard for no-op sink + explicit override)
+
+Verification:
+
+- `dotnet restore Agentor.sln` succeeded
+- `dotnet build Agentor.sln --no-restore` succeeded
+- `dotnet test Agentor.sln --no-build` succeeded
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 20 -ExpectedHarnessPass PR100.5` succeeded
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
+
+Active deferred items (`passes: false`): `SCOPE-001` only.
+
+Scope guard: Phase 21 was not started in this pass.
+
 ## Phase 19 PR95.5 (2026-05-10)
 
 Completed **Phase 19 authorization hardening**:

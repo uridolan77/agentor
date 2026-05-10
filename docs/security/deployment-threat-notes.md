@@ -26,13 +26,18 @@ This note captures operational risks and deployment controls for Agentor auth mo
 
 5. Over-privileged service actors
 
-- Risk: machine identities may perform governance mutations.
-- Control: default role mapping keeps `Service` as read-only in `RoleBasedAuthorizationDecisionService`.
+- Risk: machine identities may perform governance mutations or read operator runtime surfaces.
+- Control: default role mapping keeps `Service` as read-only in `RoleBasedAuthorizationDecisionService` and excludes `OpsRead`.
 
-6. Audit data exposure
+6. Audit and operations data exposure
 
-- Risk: unauthorized actors retrieving audit exports.
-- Control: `GET /audit-export` now requires `AuditRead` permission.
+- Risk: unauthorized actors retrieving audit exports or operational queue/outbox/lease state.
+- Control: `GET /audit-export` requires `AuditRead`; `/api/v1/ops/*` requires `OpsRead`.
+
+7. No-op outbox dispatch in production
+
+- Risk: enabled dispatch with `NoOpOutboxSink` marks outbox messages succeeded without delivery.
+- Control: `OutboxHostedService` throws outside Development/Test when `OutboxDispatch:Enabled=true` and sink is no-op unless `OutboxDispatch:AllowNoOpSinkOutsideDevelopment=true` is explicitly set.
 
 ## Deployment recommendations
 

@@ -23,9 +23,19 @@ public interface IDurableRunQueue
 
     Task ReleaseClaimAsync(Guid workItemId, string workerId, DateTimeOffset now, CancellationToken cancellationToken);
 
-    Task MarkCompletedAsync(Guid workItemId, Guid agentRunId, DateTimeOffset now, CancellationToken cancellationToken);
+    Task MarkCompletedAsync(
+        Guid workItemId,
+        Guid agentRunId,
+        string workerId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
 
-    Task MarkFailedAsync(Guid workItemId, string error, DateTimeOffset now, CancellationToken cancellationToken);
+    Task MarkFailedAsync(
+        Guid workItemId,
+        string error,
+        string workerId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken);
 
     Task<IReadOnlyList<RunQueueRecord>> ListLatestAsync(int take, CancellationToken cancellationToken);
 }

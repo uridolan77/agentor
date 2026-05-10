@@ -99,11 +99,15 @@ public sealed class RunQueueHostedService : BackgroundService
             await using var scope = _scopeFactory.CreateAsyncScope();
             var handler = scope.ServiceProvider.GetRequiredService<StartAgentRunHandler>();
             var run = await handler.HandleAsync(item.Command, cancellationToken).ConfigureAwait(false);
-            await _queueStore.MarkCompletedAsync(item.WorkItemId, run.Id, _clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            await _queueStore
+                .MarkCompletedAsync(item.WorkItemId, run.Id, _workerId, _clock.UtcNow, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await _queueStore.MarkFailedAsync(item.WorkItemId, ex.Message, _clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            await _queueStore
+                .MarkFailedAsync(item.WorkItemId, ex.Message, _workerId, _clock.UtcNow, cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 }

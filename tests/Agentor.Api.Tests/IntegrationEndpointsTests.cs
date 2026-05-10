@@ -164,20 +164,34 @@ public sealed class IntegrationEndpointsTests
         var leases = scope.ServiceProvider.GetRequiredService<IRunExecutionLeaseStore>();
 
         var workItemId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
         await queue.EnqueueAsync(
             new RunWorkItem(workItemId, new StartAgentRunCommand("Ops Agent", "Queue visibility test.")),
+            now,
+            CancellationToken.None);
+        _ = await queue.TryClaimAsync(workItemId, "ops-tester", TimeSpan.FromMinutes(1), now, CancellationToken.None);
+        await queue.MarkFailedAsync(
+            workItemId,
+            "password=super-secret-value; token=abc123",
+            "ops-tester",
             DateTimeOffset.UtcNow,
             CancellationToken.None);
 
+        var outboxId = Guid.NewGuid();
         await outbox.AppendAsync(
             new Agentor.Application.Reliability.OutboxMessage(
-                Guid.NewGuid(),
+                outboxId,
                 Agentor.Application.Reliability.OutboxMessageKind.Mcp,
                 "{}",
                 Agentor.Application.Reliability.OutboxStatus.Pending,
                 0,
                 DateTimeOffset.UtcNow,
                 null),
+            CancellationToken.None);
+        await outbox.IncrementAttemptAndRequeueOrPoisonAsync(
+            outboxId,
+            "authorization: bearer very-secret-token",
+            5,
             CancellationToken.None);
 
         await leases.TryAcquireAsync(
@@ -208,8 +222,12 @@ public sealed class IntegrationEndpointsTests
 
         Assert.NotNull(queueItems);
         Assert.Contains(queueItems!, x => x.WorkItemId == workItemId);
+        var queueItem = queueItems!.Single(x => x.WorkItemId == workItemId);
+        Assert.Equal("[redacted]", queueItem.Error);
         Assert.NotNull(outboxItems);
         Assert.NotEmpty(outboxItems!);
+        var outboxItem = outboxItems!.Single(x => x.Id == outboxId);
+        Assert.Equal("[redacted]", outboxItem.LastError);
         Assert.NotNull(leaseItems);
         Assert.NotEmpty(leaseItems!);
 
@@ -218,6 +236,7 @@ public sealed class IntegrationEndpointsTests
         Assert.DoesNotContain("secret", raw);
         Assert.DoesNotContain("authorization", raw);
         Assert.DoesNotContain("apikey", raw);
+        Assert.DoesNotContain("token", raw);
     }
 
     private sealed class FixedStatusHttpClientFactory(HttpStatusCode statusCode) : IHttpClientFactory

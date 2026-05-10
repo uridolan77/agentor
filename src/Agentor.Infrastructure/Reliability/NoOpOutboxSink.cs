@@ -4,7 +4,7 @@ using Agentor.Application.Reliability;
 namespace Agentor.Infrastructure.Reliability;
 
 /// <summary>
-/// Default sink used when no transport-backed dispatcher is configured.
+/// Default sink used for disabled/local/test no-op dispatch scenarios only.
 /// </summary>
 public sealed class NoOpOutboxSink : IOutboxSink
 {

@@ -82,11 +82,17 @@ public sealed class InMemoryRunQueue : IRunQueue
             await using var scope = _scopeFactory.CreateAsyncScope();
             var handler = scope.ServiceProvider.GetRequiredService<StartAgentRunHandler>();
             var run = await handler.HandleAsync(item.Command, cancellationToken).ConfigureAwait(false);
-            await _store.MarkCompletedAsync(item.WorkItemId, run.Id, _clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            var workerId = string.IsNullOrWhiteSpace(item.ClaimedBy) ? InlineWorkerId : item.ClaimedBy;
+            await _store
+                .MarkCompletedAsync(item.WorkItemId, run.Id, workerId!, _clock.UtcNow, cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await _store.MarkFailedAsync(item.WorkItemId, ex.Message, _clock.UtcNow, cancellationToken).ConfigureAwait(false);
+            var workerId = string.IsNullOrWhiteSpace(item.ClaimedBy) ? InlineWorkerId : item.ClaimedBy;
+            await _store
+                .MarkFailedAsync(item.WorkItemId, ex.Message, workerId!, _clock.UtcNow, cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 }

@@ -4,6 +4,8 @@ using Agentor.Api.Security;
 using Agentor.Api.Tests.Support;
 using Agentor.Application;
 using Agentor.Application.Abstractions;
+using Agentor.Application.Reliability;
+using Agentor.Application.RunQueue;
 using Agentor.Contracts;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
@@ -159,6 +161,74 @@ public sealed class EndpointAuthorizationApiTests : IClassFixture<EndpointAuthor
             new ApplyHumanReviewRequestDto(ReviewDecisionKind.Approve));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpsQueue_WithHumanOperator_ReturnsOk()
+    {
+        ResetActor();
+
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/ops/queue");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpsQueue_WithServiceActor_ReturnsForbidden()
+    {
+        ResetActor();
+        _factory.ActorAccessor.CurrentActor = new ActorContext(
+            Guid.Parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
+            "service",
+            ActorRole.Service);
+
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/ops/queue");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpsQueue_WhenActorAccessorThrows_ReturnsUnauthorized()
+    {
+        ResetActor();
+        _factory.ActorAccessor.ThrowOnAccess = true;
+
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/ops/queue");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpsOutbox_WithSystemActor_ReturnsOk()
+    {
+        ResetActor();
+        _factory.ActorAccessor.CurrentActor = new ActorContext(
+            Guid.Parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+            "system",
+            ActorRole.System);
+
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/ops/outbox");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpsLeases_WithServiceActor_ReturnsForbidden()
+    {
+        ResetActor();
+        _factory.ActorAccessor.CurrentActor = new ActorContext(
+            Guid.Parse("cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd"),
+            "service",
+            ActorRole.Service);
+
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/ops/leases");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     private static AgentRun BuildRunInRequiresReview(DateTimeOffset now)

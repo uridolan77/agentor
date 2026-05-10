@@ -1,5 +1,40 @@
 # Verification log
 
+## Phase 20 PR100.5 (2026-05-10)
+
+```powershell
+dotnet --info
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+dotnet test tests/Agentor.Api.Tests/Agentor.Api.Tests.csproj --no-build
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 20 -ExpectedHarnessPass PR100.5
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- dotnet info: succeeded
+- Restore: succeeded
+- Build: succeeded
+- Tests: **377 passed, 0 failed**
+- API smoke evidence: **89 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=20`, `ExpectedHarnessPass=PR100.5`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 72 / Total 72
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 128 / Total 128
+- Agentor.Infrastructure.Tests: Passed 75 / Total 75
+- Agentor.Api.Tests: Passed 89 / Total 89
+
+Scope:
+
+- completed: PR100.5 Phase 20 reconciliation hardening (ops auth + sanitization, durable queue expired-claim reclaim and ownership checks, no-op outbox sink production guard)
+- not started: Phase 21+
+
 ## Phase 19 PR95.5 (2026-05-10)
 
 ```powershell

@@ -51,12 +51,13 @@ Permissions are modeled as `AgentorPermission`:
 - `PolicyBundleWrite`
 - `PolicyBundleRead`
 - `AuditRead`
+- `OpsRead`
 
 Default role mapping (`RoleBasedAuthorizationDecisionService`):
 
 - `System`: all permissions
 - `HumanOperator`: all permissions
-- `Service`: read-only permissions (`PolicyBundleRead`, `AuditRead`)
+- `Service`: read-only permissions (`PolicyBundleRead`, `AuditRead`, `GovernanceReviewRead`) and explicitly not `OpsRead`
 
 ## Endpoint enforcement
 
@@ -76,6 +77,9 @@ Current enforced endpoints include:
 - `GET /api/v1/runs/{runId}/audit-packet` -> `AuditRead`
 - `POST /api/v1/reviews/{runId}/decisions` -> `GovernanceReviewWrite`
 - `GET /api/v1/reviews/pending` -> `GovernanceReviewRead`
+- `GET /api/v1/ops/queue` -> `OpsRead`
+- `GET /api/v1/ops/outbox` -> `OpsRead`
+- `GET /api/v1/ops/leases` -> `OpsRead`
 
 ## Scope note (SCOPE-001)
 
