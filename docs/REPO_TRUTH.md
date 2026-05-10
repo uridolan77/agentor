@@ -19,7 +19,8 @@ This document states **what the code and HTTP surface actually do today**, so op
 
 ## Persistence
 
-- **PostgreSQL / EF** persistence exists, but aggregate persistence for runs still uses a **delete-then-reinsert style save** for the aggregate in places — not yet append-only / optimistic-concurrency hardened for audit-grade immutability expectations.
+- **`EfCoreAgentRunRepository.SaveAsync`** merges into the existing **`agent_runs`** row: upserts root scalars (including **`session_memory_json`**, **`human_review_decisions_json`**, and **`resume_cursor_json`** for **`PlanResumeCursor`**), upserts **`agent_steps`** and nested **`tool_calls`** / **`policy_decisions`** by id, and **appends** new **`trace_events`** by id. Existing trace rows are **immutable**; a save that would rewrite payload raises **`AgentRunTraceImmutabilityException`**.
+- **`agent_runs.aggregate_version`** is an optimistic-concurrency token (incremented on each successful save). **`AgentRun.PersistenceConcurrencyVersion`** is populated on **`GetAsync`** and refreshed after **`SaveAsync`**; a stale version yields **`AgentRunPersistenceConcurrencyException`** (mapped to **409 Conflict** on the HTTP surface). **`POST /agent-runs`** and other handlers that only create runs do not require a prior load.
 
 ## Authentication (Jwt mode)
 

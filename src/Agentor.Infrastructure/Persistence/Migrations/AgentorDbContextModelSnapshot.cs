@@ -72,6 +72,15 @@ namespace Agentor.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("project_id");
 
+                    b.Property<string>("ResumeCursorJson")
+                        .HasColumnType("text")
+                        .HasColumnName("resume_cursor_json");
+
+                    b.Property<long>("AggregateVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("aggregate_version");
+
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");

@@ -45,6 +45,10 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(r => r.ErrorMessage).HasColumnName("error_message").HasMaxLength(2000);
             entity.Property(r => r.SessionMemoryJson).HasColumnName("session_memory_json").IsRequired();
             entity.Property(r => r.HumanReviewDecisionsJson).HasColumnName("human_review_decisions_json").IsRequired();
+            entity.Property(r => r.ResumeCursorJson).HasColumnName("resume_cursor_json").HasColumnType("text");
+            entity.Property(r => r.AggregateVersion)
+                .HasColumnName("aggregate_version")
+                .IsConcurrencyToken();
 
             entity.HasMany(r => r.Steps)
                 .WithOne(s => s.Run)

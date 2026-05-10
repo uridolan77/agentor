@@ -1,10 +1,11 @@
 {
-    "phase":  26,
-    "title":  "Phase 26 — PR117 scoped policy + PR117.5 orchestration/queue hardening",
-    "harnessPass":  "PR117.5",
+    "phase":  27,
+    "title":  "Phase 27 — PR118 EF aggregate merge save + concurrency + trace immutability",
+    "harnessPass":  "PR118",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
+                  "PR118 (2026-05-11): Phase 27 — EfCoreAgentRunRepository.SaveAsync merges tracked aggregate (no delete/reinsert): upsert root + steps + tool_calls + policy_decisions; append-only trace_events by id with AgentRunTraceImmutabilityException on rewrite; agent_runs.resume_cursor_json + PlanResumeCursor JSON round-trip; aggregate_version optimistic concurrency + AgentRun.PersistenceConcurrencyVersion; AgentRunPersistenceConcurrencyException + ExceptionHandlingMiddleware 409/400; migration 20260511200000_Phase27AgentRunPersistence + snapshot; EfCoreAgentRunRepositoryTests (re-save dedup trace, tampered trace, resume cursor, HR order, stale concurrency SQLite). Verification: dotnet test Agentor.sln — 443 passed; verify-harness ExpectedPhase 27 PR118; verify-repo-clean.",
                   "PR117.5 (2026-05-11): Phase 26 second pass — EF run_queue_items persists execution_mode/recipe_id/plan_id/tool_key/skill_key/tool_input_json; EfRunQueueStore enqueue/ToRecord; PostgreSQL migration 20260511183000_RunQueueOrchestrationPayload + snapshot RunQueueItemRecord; RunQueueHostedServiceEfSqliteScopeTests (Conexus model, MCP echo, explicit LegacyFakeTool, recipe); EfRunQueueStoreTests orchestration round-trip; StartAgentRunFingerprint includes Tenant/Workspace/Project/KnowledgeScope; ApiContractTests idempotency conflicts on differing ProjectId/KnowledgeScopeId; RunOrchestrationNotFoundException + ExceptionHandlingMiddleware (404 + sanitized 500); AgentRunOrchestrator maps missing plan/recipe/skill to typed errors; AgentRunOrchestrationApiTests unknown plan/recipe/skill; docs REPO_TRUTH queue payload + policy-bundles scoped merge security note. Verification: dotnet test Agentor.sln — 438 passed; verify-harness ExpectedPhase 26 PR117.5; verify-repo-clean.",
                   "PR117 (2026-05-11): Phase 26 — PolicyRule scope identifiers + PolicyRuleScope.KnowledgeScope; PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope) filters + merges (specificity + Deny>RequiresReview>Allow); PolicyEvaluationRequest.Scope; RuntimePolicyEvaluator resolves bundle per run scope; SequentialAgentPlanExecutor/GovernedSingleToolRunDriver/ApplyHumanReviewDecisionHandler propagate AgentRun.ToPolicyScope(); audit export root effectivePolicyScope; CreatePolicyRuleDto/PolicyRuleDto scope id fields; PolicyScopeEvaluationTests + domain validation tests; docs REPO_TRUTH + policy-bundles.md; v1.0-RC-DEFERRED-ITEMS SCOPE-001 closed. Verification: dotnet test Agentor.sln — 428 passed; verify-harness ExpectedPhase 26 PR117; verify-repo-clean.",
                   "PR116 (2026-05-11): Phase 25 — RunQueueHostedService resolves IDurableRunQueue/IRunExecutionLeaseStore per TryProcessSingleAsync iteration via IServiceScopeFactory (EF scoped DbContext alignment); drain uses StartAgentRunRouting + IAgentRunOrchestrator + AgentorPublicRunOptions; AddAgentorInfrastructure binds Agentor:PublicRuns; RunQueueHostedServiceEfSqliteScopeTests (ValidateScopes=true); docs REPO_TRUTH durable queue worker; CI verify-harness ExpectedPhase 25 PR116. Verification: dotnet test Agentor.sln — 420 passed; verify-harness ExpectedPhase 25 PR116; verify-repo-clean.",
@@ -47,6 +48,62 @@
                   "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model — PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle→PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
               ],
     "acceptanceItems":  [
+                            {
+                                "id":  "PR118-001",
+                                "pr":  118,
+                                "description":  "EfCoreAgentRunRepository.SaveAsync merges into existing agent_runs row (no Remove+re-Add aggregate)",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/Persistence/EfCoreAgentRunRepository.cs SaveAsync"
+                            },
+                            {
+                                "id":  "PR118-002",
+                                "pr":  118,
+                                "description":  "Trace events append by id; rewriting same id payload fails with AgentRunTraceImmutabilityException",
+                                "passes":  true,
+                                "evidence":  "EfCoreAgentRunRepositoryTests.SaveAsync_RewritingExistingTrace_ThrowsTraceImmutability"
+                            },
+                            {
+                                "id":  "PR118-003",
+                                "pr":  118,
+                                "description":  "Re-saving same run does not duplicate trace_events rows",
+                                "passes":  true,
+                                "evidence":  "EfCoreAgentRunRepositoryTests.SaveAsync_ReSave_DoesNotDuplicateTraceEvents"
+                            },
+                            {
+                                "id":  "PR118-004",
+                                "pr":  118,
+                                "description":  "aggregate_version + PersistenceConcurrencyVersion detect stale writers",
+                                "passes":  true,
+                                "evidence":  "EfCoreAgentRunRepositoryTests.SaveAsync_SecondWriterWithStaleConcurrencyToken_Throws; AgentRunRecord.AggregateVersion"
+                            },
+                            {
+                                "id":  "PR118-005",
+                                "pr":  118,
+                                "description":  "resume_cursor_json persists PlanResumeCursor through GetAsync",
+                                "passes":  true,
+                                "evidence":  "EfCoreAgentRunRepositoryTests.SaveAsync_RoundTripsResumeCursorJson; RecordMapper.TryDeserializeResumeCursor"
+                            },
+                            {
+                                "id":  "PR118-006",
+                                "pr":  118,
+                                "description":  "Human review decisions JSON array order stable across re-save",
+                                "passes":  true,
+                                "evidence":  "EfCoreAgentRunRepositoryTests.SaveAsync_HumanReviewDecisionOrder_IsStableAcrossRoundTrip"
+                            },
+                            {
+                                "id":  "PR118-007",
+                                "pr":  118,
+                                "description":  "PostgreSQL migration adds aggregate_version + resume_cursor_json",
+                                "passes":  true,
+                                "evidence":  "Migrations/20260511200000_Phase27AgentRunPersistence.cs; AgentorDbContextModelSnapshot.cs"
+                            },
+                            {
+                                "id":  "PR118-008",
+                                "pr":  118,
+                                "description":  "API maps persistence concurrency to 409 and trace immutability to 400",
+                                "passes":  true,
+                                "evidence":  "ExceptionHandlingMiddleware.cs (AgentRunPersistenceConcurrencyException; AgentRunTraceImmutabilityException)"
+                            },
                             {
                                 "id":  "PR111-001",
                                 "pr":  111,

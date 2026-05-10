@@ -72,6 +72,12 @@ public sealed class AgentRun
 
     public string? ErrorMessage { get; private set; }
 
+    /// <summary>
+    /// When set, row-backed persistence (for example EF Core) may use this as the expected optimistic-concurrency
+    /// aggregate version for the last materialized database row. Populated by repositories on load; refreshed after successful save.
+    /// </summary>
+    public long? PersistenceConcurrencyVersion { get; set; }
+
     public IReadOnlyList<AgentStep> Steps => _steps;
 
     public IReadOnlyList<ExecutionTraceEvent> Trace => _trace;

@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 27 PR118 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 27 -ExpectedHarnessPass PR118
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **443 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=27`, `ExpectedHarnessPass=PR118`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 74 / Total 74
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 141 / Total 141
+- Agentor.Infrastructure.Tests: Passed 106 / Total 106
+- Agentor.Api.Tests: Passed 109 / Total 109
+
+Scope:
+
+- completed: Phase 27 PR118 EF merge save, aggregate_version concurrency, trace immutability, resume_cursor_json, middleware 409/400, migration + tests + REPO_TRUTH
+- not started: Phase 28+
+
 ## Phase 26 PR117 + PR117.5 (2026-05-11)
 
 ```powershell

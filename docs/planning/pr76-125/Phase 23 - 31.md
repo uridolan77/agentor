@@ -10,9 +10,9 @@ That makes the repo look more advanced internally than it behaves externally.
 
 ## 2. Persistence is unsafe for audit-grade runtime
 
-`EfCoreAgentRunRepository.SaveAsync` still removes the existing run, saves, then re-adds the whole aggregate. 
+**Update (Phase 27):** `EfCoreAgentRunRepository.SaveAsync` now **merges** into the existing row (append-aware traces, upserted steps/tool calls/policy decisions, `resume_cursor_json`, numeric **`aggregate_version`** optimistic concurrency). The historical delete/reinsert window is removed.
 
-For a trace/audit/governance runtime, that is not acceptable long term. You need append-aware persistence, optimistic concurrency, and no delete/reinsert window.
+Remaining gaps (if any) should be tracked explicitly in deferred-items / harness rather than this intro list.
 
 ## 3. Queue worker still has a scoped-lifetime risk in Postgres mode
 

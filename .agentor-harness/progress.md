@@ -1,5 +1,25 @@
 # Agentor harness progress
 
+## Phase 27 PR118 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **`EfCoreAgentRunRepository.SaveAsync`**: merge into existing **`agent_runs`** (no **`Remove`**); upsert steps and nested tool calls / policy decisions; append **`trace_events`** by id with immutability guard (**`AgentRunTraceImmutabilityException`**).
+- **Columns / model**: **`aggregate_version`** (optimistic concurrency), **`resume_cursor_json`**; **`AgentRun.PersistenceConcurrencyVersion`**; migration **`20260511200000_Phase27AgentRunPersistence`** + **`AgentorDbContextModelSnapshot`**.
+- **Exceptions / HTTP**: **`AgentRunPersistenceConcurrencyException`**, **`AgentRunTraceImmutabilityException`**; **`ExceptionHandlingMiddleware`** maps to **409** / **400**.
+- **Tests**: **`EfCoreAgentRunRepositoryTests`** — trace re-save dedup, tampered trace, resume cursor JSON, human-review JSON order, SQLite two-writer stale version.
+- **Docs**: **`docs/REPO_TRUTH.md`** persistence section; **`docs/planning/pr76-125/Phase 23 - 31.md`** intro blocker #2 updated.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **443 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 27 -ExpectedHarnessPass PR118`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 28 not started.
+
 ## Phase 26 PR117 + PR117.5 (2026-05-11)
 
 **Status**: Complete.
@@ -15,7 +35,7 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117.5`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 27 not started.
+**Scope guard**: Phase 27 completed later (see Phase 27 PR118).
 
 ## Phase 25 PR116 (2026-05-11)
 

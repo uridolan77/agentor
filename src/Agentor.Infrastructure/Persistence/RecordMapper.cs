@@ -9,7 +9,7 @@ namespace Agentor.Infrastructure.Persistence;
 
 internal static class RecordMapper
 {
-    private static readonly JsonSerializerOptions JsonOpts = new()
+    internal static readonly JsonSerializerOptions RecordJsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter() }
@@ -34,8 +34,11 @@ internal static class RecordMapper
             StartedAt = run.StartedAt,
             CompletedAt = run.CompletedAt,
             ErrorMessage = run.ErrorMessage,
-            SessionMemoryJson = JsonSerializer.Serialize(run.SessionMemory, JsonOpts),
-            HumanReviewDecisionsJson = JsonSerializer.Serialize(run.HumanReviewDecisions.ToList(), JsonOpts),
+            SessionMemoryJson = JsonSerializer.Serialize(run.SessionMemory, RecordJsonOptions),
+            HumanReviewDecisionsJson = JsonSerializer.Serialize(run.HumanReviewDecisions.ToList(), RecordJsonOptions),
+            ResumeCursorJson = run.ResumeCursor is null
+                ? null
+                : JsonSerializer.Serialize(run.ResumeCursor, RecordJsonOptions),
             Steps = run.Steps.Select(ToRecord).ToList(),
             TraceEvents = run.Trace.Select(ToRecord).ToList()
         };
@@ -66,8 +69,8 @@ internal static class RecordMapper
             StepId = toolCall.StepId,
             ToolKey = toolCall.ToolKey,
             Status = toolCall.Status.ToString(),
-            InputJson = JsonSerializer.Serialize(toolCall.Input, JsonOpts),
-            OutputJson = JsonSerializer.Serialize(toolCall.Output, JsonOpts),
+            InputJson = JsonSerializer.Serialize(toolCall.Input, RecordJsonOptions),
+            OutputJson = JsonSerializer.Serialize(toolCall.Output, RecordJsonOptions),
             StartedAt = toolCall.StartedAt,
             CompletedAt = toolCall.CompletedAt,
             ErrorMessage = toolCall.ErrorMessage
@@ -88,6 +91,8 @@ internal static class RecordMapper
         };
     }
 
+    internal static TraceEventRecord ToTraceRecord(ExecutionTraceEvent evt) => ToRecord(evt);
+
     private static TraceEventRecord ToRecord(ExecutionTraceEvent evt)
     {
         return new TraceEventRecord
@@ -97,7 +102,7 @@ internal static class RecordMapper
             Kind = evt.Kind.ToString(),
             Message = evt.Message,
             OccurredAt = evt.OccurredAt,
-            DataJson = JsonSerializer.Serialize(evt.Data, JsonOpts)
+            DataJson = JsonSerializer.Serialize(evt.Data, RecordJsonOptions)
         };
     }
 
@@ -132,11 +137,13 @@ internal static class RecordMapper
             .Select(ToDomain)
             .ToList();
 
-        var sessionMemory = JsonSerializer.Deserialize<Dictionary<string, string>>(record.SessionMemoryJson, JsonOpts)
+        var sessionMemory = JsonSerializer.Deserialize<Dictionary<string, string>>(record.SessionMemoryJson, RecordJsonOptions)
                            ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        var humanReviews = JsonSerializer.Deserialize<List<HumanReviewDecisionJsonDto>>(record.HumanReviewDecisionsJson, JsonOpts)
+        var humanReviews = JsonSerializer.Deserialize<List<HumanReviewDecisionJsonDto>>(record.HumanReviewDecisionsJson, RecordJsonOptions)
                            ?? [];
+
+        var resumeCursor = TryDeserializeResumeCursor(record.ResumeCursorJson);
 
         return AgentRun.Reconstitute(
             record.Id,
@@ -155,7 +162,25 @@ internal static class RecordMapper
             record.WorkspaceId,
             record.ProjectId,
             record.KnowledgeScopeId,
-            humanReviews.Select(r => r.ToDomain()));
+            humanReviews.Select(r => r.ToDomain()),
+            resumeCursor);
+    }
+
+    private static PlanResumeCursor? TryDeserializeResumeCursor(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<PlanResumeCursor>(json, RecordJsonOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private static AgentStep ToDomain(AgentStepRecord record)
@@ -177,9 +202,9 @@ internal static class RecordMapper
 
     private static ToolCall ToDomain(ToolCallRecord record)
     {
-        var input = JsonSerializer.Deserialize<Dictionary<string, string>>(record.InputJson, JsonOpts)
+        var input = JsonSerializer.Deserialize<Dictionary<string, string>>(record.InputJson, RecordJsonOptions)
                     ?? new Dictionary<string, string>();
-        var output = JsonSerializer.Deserialize<Dictionary<string, string>>(record.OutputJson, JsonOpts)
+        var output = JsonSerializer.Deserialize<Dictionary<string, string>>(record.OutputJson, RecordJsonOptions)
                      ?? new Dictionary<string, string>();
 
         return ToolCall.Reconstitute(
@@ -209,7 +234,7 @@ internal static class RecordMapper
 
     private static ExecutionTraceEvent ToDomain(TraceEventRecord record)
     {
-        var data = JsonSerializer.Deserialize<Dictionary<string, string>>(record.DataJson, JsonOpts);
+        var data = JsonSerializer.Deserialize<Dictionary<string, string>>(record.DataJson, RecordJsonOptions);
 
         return new ExecutionTraceEvent(
             record.Id,

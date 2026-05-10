@@ -20,6 +20,12 @@ public sealed class AgentRunRecord
 
     public string HumanReviewDecisionsJson { get; set; } = "[]";
 
+    /// <summary>Serialized <see cref="Agentor.Domain.Governance.PlanResumeCursor"/> when a plan is suspended for review.</summary>
+    public string? ResumeCursorJson { get; set; }
+
+    /// <summary>Monotonic optimistic-concurrency version for the aggregate root row.</summary>
+    public long AggregateVersion { get; set; }
+
     public List<AgentStepRecord> Steps { get; set; } = [];
     public List<TraceEventRecord> TraceEvents { get; set; } = [];
 }

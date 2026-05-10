@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Agentor.Application.Abstractions;
 using Agentor.Application.Orchestration;
 using Agentor.Contracts;
 using Microsoft.AspNetCore.Http.Json;
@@ -30,6 +31,38 @@ public sealed class ExceptionHandlingMiddleware
         try
         {
             await _next(context);
+        }
+        catch (AgentRunPersistenceConcurrencyException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+            context.Response.ContentType = "application/json";
+
+            var traceId = context.Response.Headers.TryGetValue(TraceIdHeaderName, out var tv)
+                ? tv.ToString()
+                : null;
+
+            var errorDto = new ApiErrorDto(
+                "AgentRunPersistenceConcurrency",
+                ex.Message,
+                traceId);
+            var payload = JsonSerializer.Serialize(errorDto, _jsonOptions);
+            await context.Response.WriteAsync(payload);
+        }
+        catch (AgentRunTraceImmutabilityException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            context.Response.ContentType = "application/json";
+
+            var traceId = context.Response.Headers.TryGetValue(TraceIdHeaderName, out var tv)
+                ? tv.ToString()
+                : null;
+
+            var errorDto = new ApiErrorDto(
+                "AgentRunTraceImmutability",
+                ex.Message,
+                traceId);
+            var payload = JsonSerializer.Serialize(errorDto, _jsonOptions);
+            await context.Response.WriteAsync(payload);
         }
         catch (RunOrchestrationValidationException ex)
         {

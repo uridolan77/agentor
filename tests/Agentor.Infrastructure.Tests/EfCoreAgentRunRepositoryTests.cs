@@ -1,3 +1,4 @@
+using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
@@ -247,5 +248,250 @@ public sealed class EfCoreAgentRunRepositoryTests
         Assert.Equal(2, page.TotalCount);
         Assert.Equal(2, page.Items.Count);
         Assert.True(page.Items[0].StartedAt >= page.Items[1].StartedAt);
+    }
+
+    [Fact]
+    public async Task SaveAsync_ReSave_DoesNotDuplicateTraceEvents()
+    {
+        await using var ctx = CreateContext("trace-dedup-test");
+        await ctx.Database.EnsureCreatedAsync();
+        var repo = new EfCoreAgentRunRepository(ctx);
+
+        var run = BuildCompletedRun("dedup-trace");
+        await repo.SaveAsync(run, CancellationToken.None);
+        var traceCount = run.Trace.Count;
+
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        await using var verify = CreateContext("trace-dedup-test");
+        var n = await verify.TraceEvents.CountAsync(e => e.RunId == run.Id);
+        Assert.Equal(traceCount, n);
+    }
+
+    [Fact]
+    public async Task SaveAsync_RewritingExistingTrace_ThrowsTraceImmutability()
+    {
+        await using var ctx = CreateContext("trace-immut-test");
+        await ctx.Database.EnsureCreatedAsync();
+        var repo = new EfCoreAgentRunRepository(ctx);
+
+        var run = BuildCompletedRun("immut-trace");
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var loaded = await repo.GetAsync(run.Id, CancellationToken.None);
+        Assert.NotNull(loaded);
+
+        var first = loaded!.Trace[0];
+        var tamperedTrace = loaded.Trace
+            .Select(e => e.Id == first.Id
+                ? new ExecutionTraceEvent(e.Id, e.RunId, e.Kind, "Tampered message.", e.OccurredAt, e.Data)
+                : e)
+            .ToList();
+
+        var tampered = AgentRun.Reconstitute(
+            loaded.Id,
+            loaded.ProfileId,
+            loaded.AgentName,
+            loaded.Objective,
+            loaded.TraceId,
+            loaded.Status,
+            loaded.StartedAt,
+            loaded.CompletedAt,
+            loaded.ErrorMessage,
+            loaded.Steps.ToList(),
+            tamperedTrace,
+            loaded.SessionMemory,
+            loaded.TenantId,
+            loaded.WorkspaceId,
+            loaded.ProjectId,
+            loaded.KnowledgeScopeId,
+            loaded.HumanReviewDecisions,
+            loaded.ResumeCursor);
+        tampered.PersistenceConcurrencyVersion = loaded.PersistenceConcurrencyVersion;
+
+        await Assert.ThrowsAsync<AgentRunTraceImmutabilityException>(() =>
+            repo.SaveAsync(tampered, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SaveAsync_RoundTripsResumeCursorJson()
+    {
+        await using var ctx = CreateContext("resume-cursor-test");
+        await ctx.Database.EnsureCreatedAsync();
+        var repo = new EfCoreAgentRunRepository(ctx);
+
+        var now = DateTimeOffset.UtcNow;
+        var planId = Guid.NewGuid();
+        var blockedPlanStepId = Guid.NewGuid();
+        var remaining = new List<PendingPlanStep>
+        {
+            new(
+                Guid.NewGuid(),
+                "s-next",
+                2,
+                "tool.next",
+                RecipeStepKind.Tool,
+                FailureHandlingPolicy.FailFast,
+                null,
+                null),
+        };
+        var cursor = new PlanResumeCursor(
+            planId,
+            blockedPlanStepId,
+            "s-blocked",
+            "tool.blocked",
+            remaining,
+            new List<PlanStepResumeSnapshot>(),
+            now);
+
+        var run = AgentRun.Reconstitute(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Agent",
+            "Objective",
+            "resume-trace",
+            AgentRunStatus.RequiresReview,
+            now.AddMinutes(-1),
+            null,
+            "pending",
+            [],
+            [],
+            null,
+            null,
+            null,
+            null,
+            null,
+            [],
+            cursor);
+
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var loaded = await repo.GetAsync(run.Id, CancellationToken.None);
+        Assert.NotNull(loaded);
+        Assert.NotNull(loaded!.ResumeCursor);
+        Assert.Equal(planId, loaded.ResumeCursor!.PlanId);
+        Assert.Equal("s-blocked", loaded.ResumeCursor.BlockedAtSourceStepId);
+    }
+
+    [Fact]
+    public async Task SaveAsync_HumanReviewDecisionOrder_IsStableAcrossRoundTrip()
+    {
+        await using var ctx = CreateContext("hr-order-test");
+        await ctx.Database.EnsureCreatedAsync();
+        var repo = new EfCoreAgentRunRepository(ctx);
+
+        var now = DateTimeOffset.UtcNow;
+        var d1 = new HumanReviewDecision(Guid.NewGuid(), ReviewDecisionKind.RequestChanges, Guid.NewGuid(), now, "a", ReviewResolutionStatus.ChangesRequested);
+        var d2 = new HumanReviewDecision(Guid.NewGuid(), ReviewDecisionKind.Approve, Guid.NewGuid(), now.AddSeconds(1), "b", ReviewResolutionStatus.ResolvedApproved);
+
+        var run = AgentRun.Reconstitute(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Agent",
+            "Objective",
+            "hr-order-trace",
+            AgentRunStatus.RequiresReview,
+            now.AddMinutes(-1),
+            null,
+            "pending",
+            [],
+            [],
+            null,
+            null,
+            null,
+            null,
+            null,
+            [d1, d2]);
+
+        await repo.SaveAsync(run, CancellationToken.None);
+        var loaded = await repo.GetAsync(run.Id, CancellationToken.None);
+        Assert.NotNull(loaded);
+        Assert.Equal(d1.Id, loaded!.HumanReviewDecisions[0].Id);
+        Assert.Equal(d2.Id, loaded.HumanReviewDecisions[1].Id);
+
+        await repo.SaveAsync(loaded, CancellationToken.None);
+
+        var loaded2 = await repo.GetAsync(run.Id, CancellationToken.None);
+        Assert.NotNull(loaded2);
+        Assert.Equal(d1.Id, loaded2!.HumanReviewDecisions[0].Id);
+        Assert.Equal(d2.Id, loaded2.HumanReviewDecisions[1].Id);
+    }
+
+    [Fact]
+    public async Task SaveAsync_SecondWriterWithStaleConcurrencyToken_Throws()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "agentor-ef-conc-" + Guid.NewGuid().ToString("N") + ".db");
+        var connectionString = "Data Source=" + path;
+
+        try
+        {
+            var options = new DbContextOptionsBuilder<AgentorDbContext>()
+                .UseSqlite(connectionString)
+                .Options;
+
+            await using (var init = new AgentorDbContext(options))
+            {
+                await init.Database.EnsureDeletedAsync();
+                await init.Database.EnsureCreatedAsync();
+            }
+
+            var seed = BuildCompletedRun("conc-seed");
+            await using (var w = new AgentorDbContext(options))
+            {
+                await new EfCoreAgentRunRepository(w).SaveAsync(seed, CancellationToken.None);
+            }
+
+            await using var ctxA = new AgentorDbContext(options);
+            await using var ctxB = new AgentorDbContext(options);
+            var repoA = new EfCoreAgentRunRepository(ctxA);
+            var repoB = new EfCoreAgentRunRepository(ctxB);
+
+            var loadedA = await repoA.GetAsync(seed.Id, CancellationToken.None);
+            var loadedB = await repoB.GetAsync(seed.Id, CancellationToken.None);
+            Assert.NotNull(loadedA);
+            Assert.NotNull(loadedB);
+
+            static AgentRun CloneWithObjective(AgentRun x, string objective) =>
+                AgentRun.Reconstitute(
+                    x.Id,
+                    x.ProfileId,
+                    x.AgentName,
+                    objective,
+                    x.TraceId,
+                    x.Status,
+                    x.StartedAt,
+                    x.CompletedAt,
+                    x.ErrorMessage,
+                    x.Steps.ToList(),
+                    x.Trace.ToList(),
+                    x.SessionMemory,
+                    x.TenantId,
+                    x.WorkspaceId,
+                    x.ProjectId,
+                    x.KnowledgeScopeId,
+                    x.HumanReviewDecisions,
+                    x.ResumeCursor);
+
+            var a2 = CloneWithObjective(loadedA!, "writer-a");
+            a2.PersistenceConcurrencyVersion = loadedA!.PersistenceConcurrencyVersion;
+            var b2 = CloneWithObjective(loadedB!, "writer-b");
+            b2.PersistenceConcurrencyVersion = loadedB!.PersistenceConcurrencyVersion;
+
+            await repoA.SaveAsync(a2, CancellationToken.None);
+
+            await Assert.ThrowsAsync<AgentRunPersistenceConcurrencyException>(() =>
+                repoB.SaveAsync(b2, CancellationToken.None));
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+                // best-effort cleanup of temp sqlite file
+            }
+        }
     }
 }
