@@ -17,6 +17,7 @@
 ## Phase 3 — Tools and runtime policy
 - PR11 — Tool registry and tool definitions
 - PR12 — Runtime policy engine v1
+- PR12.5 — Coordination layer and evaluation signature doctrine (docs/ADR only; arXiv:2605.03310)
 - PR13 — Tool execution pipeline with timeout/retry/cancellation
 - PR14 — Tool result envelopes and artifact references
 - PR15 — Tool-call audit and policy denial surfaces

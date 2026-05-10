@@ -4,6 +4,10 @@
 
 Wrap tool execution with timeout, retry, cancellation, and structured failure.
 
+## Related architecture (PR12.5)
+
+PR12.5 defines **coordination** as an Agentor-owned runtime layer separate from information access and model execution; **runtime policy** is only one slice of coordination. This PR implements **tool execution mechanics** (timeouts, retries, cancellation), not multi-agent topologies or orchestration graphs. Preserve trace fields (attempt counts, durations, failure and cancellation reasons) so later coordination evaluation can attribute cost, latency, and failure signatures without confounding. See `docs/COORDINATION_LAYER.md` and ADR-008.
+
 ## Medium-long pass scope
 
 This PR should implement one coherent runtime layer with code, tests, and documentation updates. It should not be split into tiny cosmetic PRs, but it must not implement the next phase early.
@@ -37,6 +41,7 @@ External services must remain absent unless this PR explicitly introduces their 
 - Do not allow Agentor to canonize knowledge.
 - Do not call model providers directly.
 - Do not bypass ToolRegistry or PolicyEvaluator for executable actions.
+- Do not implement multi-agent coordination patterns from PR12.5 (those remain design/evaluation doctrine until later PRs).
 
 ## Claude Code prompt
 

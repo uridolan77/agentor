@@ -33,6 +33,14 @@ Domain must not reference:
 - Semantic Kernel
 - A2A libraries
 
+## Coordination layer
+
+Agentor treats **coordination** as an explicit governed runtime layer: how runs, plans, steps, tools, policy, traces, manifests, and evaluations combine to complete work under declared authority and termination semantics. Coordination is **not** the same as information access (Athanor, tools, bounded memory) or model execution (Conexus). MCP, A2A, Semantic Kernel, Microsoft Agent Framework, LangGraph, AutoGen, and CrewAI remain **adapters**; they must not define Agentor's coordination ontology (ADR-006, ADR-008).
+
+After **PR12**, **runtime policy** (allow / deny / requires review for registered tools) is part of coordination but does **not** exhaust it. Broader coordination concerns include topology, aggregation, synchronization, failure isolation, compute budgets, and **coordination evaluation signatures** (see `docs/COORDINATION_LAYER.md` and `docs/papers/ARXIV_2605_03310_COORDINATION_LAYER.md`).
+
+**PR12.5** records this doctrine in documentation and ADRs only; it does not add coordination runtime code.
+
 ## Runtime loop
 
 ```text

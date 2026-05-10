@@ -4,6 +4,10 @@
 
 Introduce plan/recipe concepts based on conexus.adaptation discipline but translated to Agentor execution.
 
+## Related architecture (PR12.5)
+
+`AgentPlan` / `AgentRecipe` are the first **domain-level** carriers of coordination structure (for example sequential pipeline topology). Import **Agentor** coordination concepts and traces, not LangGraph/Semantic Kernel/Microsoft Agent Framework orchestration ontologies (ADR-006, ADR-008).
+
 ## Medium-long pass scope
 
 This PR should implement one coherent runtime layer with code, tests, and documentation updates. It should not be split into tiny cosmetic PRs, but it must not implement the next phase early.

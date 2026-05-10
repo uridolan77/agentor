@@ -4,6 +4,10 @@
 
 Add quality gates that pass/fail runs based on evaluation and policy/manifest properties.
 
+## Related architecture (PR12.5)
+
+Quality gates should eventually reflect **coordination evaluation signatures** (reliability/calibration, resolution, cost/latency, token/compute, diversity collapse, escalation, failure isolation, termination quality) in addition to single-score success. Keep gates explainable from manifest and trace evidence; do not conflate Athanor authority or Conexus routing with coordination outcomes.
+
 ## Medium-long pass scope
 
 This PR should implement one coherent runtime layer with code, tests, and documentation updates. It should not be split into tiny cosmetic PRs, but it must not implement the next phase early.

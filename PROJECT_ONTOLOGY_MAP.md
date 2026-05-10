@@ -43,6 +43,25 @@ SessionMemory
   bounded run/session context, not canonical knowledge
 ```
 
+## Coordination layer (doctrine and future concepts)
+
+Coordination is how governed work is organized to completion. Agentor owns coordination as part of its runtime, separate from canonical knowledge (Athanor) and model execution (Conexus). External frameworks provide adapters, not Agentor's coordination ontology (ADR-006, ADR-008).
+
+Future coordination concepts (names indicative; not all exist in code yet):
+
+```text
+CoordinationProfile
+  declarative configuration of topology, authority, aggregation, sync, termination, failure handling, budget, and evaluation signature expectations for a run or plan
+
+CoordinationEvaluationSignature
+  expected and observed behavioral signatures for a coordination pattern (reliability/calibration, resolution, cost/latency, token/compute, diversity collapse, escalation, failure isolation, termination quality)
+
+ComputeBudgetProfile
+  limits and accounting for steps, tool calls, model calls, tokens, cost, latency, review escalations
+```
+
+Reference coordination patterns for design and evaluation (not normative defaults): Single Agent, Sequential Pipeline, Independent Ensemble, Peer-Critique Debate, Orchestrator-Specialist, Consensus Alignment. See `docs/COORDINATION_LAYER.md` and `docs/papers/ARXIV_2605_03310_COORDINATION_LAYER.md`.
+
 ## Integration entities
 
 ```text

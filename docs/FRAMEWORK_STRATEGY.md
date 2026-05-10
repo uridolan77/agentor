@@ -22,6 +22,10 @@ SkillInvocation
 EvaluationResult
 ```
 
+## Coordination versus adapters
+
+**Coordination** (owned by Agentor as runtime doctrine; see ADR-008 and `docs/COORDINATION_LAYER.md`) describes how governed execution is structured and evaluated. **Adapters** translate external stacks into those primitives. LangGraph graphs, AutoGen conversations, CrewAI crews, Semantic Kernel planners, Microsoft Agent Framework orchestration, MCP transports, and A2A envelopes may implement coordination *mechanisms elsewhere*; they must not become Agentor's coordination **ontology**. PR12 runtime policy participates in coordination but is not the entire coordination layer.
+
 ## Adapter candidates
 
 Possible adapters:

@@ -23,6 +23,7 @@ Agentor owns:
 - run-level evaluation
 - skills as procedural runtime packages
 - runtime memory boundaries
+- coordination as an explicit governed runtime layer (topology, authority, aggregation, synchronization, termination, failure handling, budgets, and evaluation signatures over time; see `docs/COORDINATION_LAYER.md` and ADR-008)
 
 Agentor does not own:
 - canonical knowledge

@@ -4,6 +4,10 @@
 
 Add full run evaluation harness using deterministic fixtures.
 
+## Related architecture (PR12.5)
+
+Future coordination evaluation must avoid **confounding** model, tool, prompt, and information-access changes with coordination changes. Design harness and fixtures so coordination dimensions (topology, authority, aggregation, sync, termination, failure policy) can be varied under **controlled** conditions where practical. Track cost, latency, token/compute, and coordination overhead as **architectural outputs**, not only task labels (see `docs/COORDINATION_LAYER.md`).
+
 ## Medium-long pass scope
 
 This PR should implement one coherent runtime layer with code, tests, and documentation updates. It should not be split into tiny cosmetic PRs, but it must not implement the next phase early.

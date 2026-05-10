@@ -40,3 +40,4 @@ EvaluationResult
 - Canonical knowledge still goes through Athanor.
 - MCP tools still go through Agentor ToolRegistry and PolicyEvaluator.
 - A2A remains post-v0.1 unless a concrete product requirement appears.
+- Coordination semantics remain Agentor-owned; see ADR-008 and `docs/COORDINATION_LAYER.md` (vendor orchestration graphs are not the coordination ontology).

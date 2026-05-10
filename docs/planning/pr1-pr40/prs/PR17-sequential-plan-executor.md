@@ -4,6 +4,10 @@
 
 Execute multi-step AgentPlans sequentially using registered tools and policy.
 
+## Related architecture (PR12.5)
+
+Treat the sequential executor as the first **runtime** expression of **Sequential Pipeline** coordination: ordered steps, clear termination at plan end, traceable policy gates per step. Do not import external framework coordination graphs as the source of truth (ADR-008).
+
 ## Medium-long pass scope
 
 This PR should implement one coherent runtime layer with code, tests, and documentation updates. It should not be split into tiny cosmetic PRs, but it must not implement the next phase early.

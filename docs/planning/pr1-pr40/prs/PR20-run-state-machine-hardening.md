@@ -4,6 +4,10 @@
 
 Formalize run/step/tool state transitions and reject invalid mutations.
 
+## Related architecture (PR12.5)
+
+State-machine hardening makes **coordination states** explicit and invalid transitions observable—supporting termination quality, failure isolation, and later coordination evaluation signatures. This PR does not add new coordination topologies beyond enforcing valid transitions for existing primitives.
+
 ## Medium-long pass scope
 
 This PR should implement one coherent runtime layer with code, tests, and documentation updates. It should not be split into tiny cosmetic PRs, but it must not implement the next phase early.

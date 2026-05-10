@@ -61,3 +61,9 @@ external call reference
 MCP, Microsoft Agent Framework, Semantic Kernel, A2A, LangGraph, AutoGen, and CrewAI are adapter candidates.
 
 They do not define the core Agentor ontology.
+
+## Lesson 7 — Coordination is a runtime layer, not a prompt trick
+
+Agentor owns **coordination** as an explicit governed layer: topology, authority, how outputs aggregate, synchronization, termination, failure handling, budgets, and how coordination is **traced** and **evaluated**. Runtime policy after PR12 is necessary but only one slice of coordination. Canonical knowledge stays with Athanor; model execution stays with Conexus; frameworks stay behind adapters (see `docs/COORDINATION_LAYER.md`, ADR-008, and arXiv:2605.03310 note under `docs/papers/`).
+
+Do not assume debate, consensus, or more agents are automatically better—compare coordination patterns using controlled evaluation and explicit signatures (cost, latency, tokens, diversity collapse, escalation, failure isolation, termination quality), not slogans.
