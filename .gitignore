@@ -13,3 +13,8 @@ coverage/
 .env.local
 appsettings.Development.json
 artifacts/
+
+# CWC/Agentor verification artifacts
+artifacts/verification/
+.claude/.evidence-reads
+AGENT_STOP
