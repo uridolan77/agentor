@@ -1,10 +1,11 @@
 {
     "phase":  15,
-    "title":  "Phase 15 v1.0 platform hardening (PR71-PR75) + PR75.7 repository tightening",
-    "harnessPass":  "PR75.7",
+    "title":  "Phase 15 v1.0 platform hardening (PR71-PR75) + PR75.7 repository tightening + PR75.8 Athanor running-run API tests",
+    "harnessPass":  "PR75.8",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
+                  "PR75.8: Athanor POST evidence-provenance (204) and candidates (202) covered with WebApplicationFactory + TestAgentRunRepository seeding AgentRun.Start (Running); PR23-API-003 / PR24-API-003 flipped true.",
                   "PR75.7: repository tightening — broadened verify-repo-clean.ps1 (harness, .cursor, scripts, workflows, docs, src, tests, benchmarks, optional fixtures, root policy files); CI runs verify-harness (ExpectedPhase 15, PR75.7) + verify-repo-clean; AGENTS.md current boundaries; Program.cs endpoint extension methods; feature-list note fix (ProfileId vs Phase 11 identity); v1.0-RC-DEFERRED-ITEMS + v1.0-RC-REPO-STATUS; UTF-8 no BOM on touched files; no Phase 16 product work.",
                   "PR75.6: repository hygiene - removed root scratch Python; verify-repo-clean.ps1 + run-benchmarks.ps1; compact current-pr; v1.0-RC-DEFERRED-ITEMS.md; contract/redaction tests; no Phase 16 work.",
                   "Phase 15 PR71-PR75: v1.0 platform hardening — SensitiveFieldCatalog/RedactionPolicy/JsonRedaction for audit export + evaluation JSON; BenchmarkDotNet project benchmarks/Agentor.Benchmarks; CI (.github/workflows/ci.yml: dotnet ef migrations list, evaluation test slice, Docker image build, TRX artifacts); Agentor.Contracts.Tests DTO round-trips; docs phase15-redaction.md, phase15-performance-baselines.md, CONTRACT_VERSIONING.md, MIGRATION_AND_UPGRADE.md, docs/RELEASE/v1.0-RC.md, ARCHITECTURE_BOUNDARY_REVIEW.md.",
@@ -12,7 +13,6 @@
                   "Phase 12 PR56-PR60: run queue (inline + in-memory background), durable outbox + dispatcher, execution leases + distributed op ledger, HTTP transport resilience registry, EF persistence + migration 20260512080000_Phase12Reliability.",
                   "PR60.5: harness reconciliation; OutboxDispatcherTests; Phase12EfRoundTripTests (Sqlite); TransportResilienceRegistryTests.",
                   "ProfileId fallback is legacy compatibility only; explicit ProjectId/KnowledgeScopeId exists after Phase 11 (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
-                  "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
                   "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
                   "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests).",
                   "Phase 7 PR31-PR35: SkillPackage model; RecipeStepKind.Skill + ISkillPackageCatalog + plan executor skill traces; bounded session memory on AgentRun + EF session_memory_json; RunEvaluationHarness; RunQualityGateEvaluator.",
@@ -119,8 +119,8 @@
                                 "id":  "PR23-API-003",
                                 "pr":  23,
                                 "description":  "Public API returns 2xx for evidence-provenance while run is Running",
-                                "passes":  false,
-                                "evidence":  "TODO: running-run fixture or plan-integrated call"
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Api.Tests/AthanorRunningRunApiTests.cs :: PostEvidenceProvenance_WhileRunRunning_Returns204NoContent"
                             },
                             {
                                 "id":  "PR24-001",
@@ -147,8 +147,8 @@
                                 "id":  "PR24-API-003",
                                 "pr":  24,
                                 "description":  "Public API returns 2xx for candidate submit while run is Running",
-                                "passes":  false,
-                                "evidence":  "TODO: same as PR23-API-003"
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Api.Tests/AthanorRunningRunApiTests.cs :: PostCandidate_WhileRunRunning_Returns202Accepted"
                             },
                             {
                                 "id":  "PR25-001",
@@ -1184,6 +1184,41 @@
                                 "description":  "no post-Phase-15 feature work started",
                                 "pr":  75.7,
                                 "id":  "PR75.7-009",
+                                "evidence":  ".agentor-harness/session-handoff.md"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "API test: POST evidence-provenance returns 204 while run is Running",
+                                "pr":  75.8,
+                                "id":  "PR75.8-001",
+                                "evidence":  "tests/Agentor.Api.Tests/AthanorRunningRunApiTests.cs :: PostEvidenceProvenance_WhileRunRunning_Returns204NoContent"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "API test: POST candidates returns 202 while run is Running",
+                                "pr":  75.8,
+                                "id":  "PR75.8-002",
+                                "evidence":  "tests/Agentor.Api.Tests/AthanorRunningRunApiTests.cs :: PostCandidate_WhileRunRunning_Returns202Accepted"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "TestAgentRunRepository + AthanorRunningRunApiFixture replace IAgentRunRepository for seeding Running runs",
+                                "pr":  75.8,
+                                "id":  "PR75.8-003",
+                                "evidence":  "tests/Agentor.Api.Tests/Support/TestAgentRunRepository.cs; AthanorRunningRunApiFixture.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Harness harnessPass PR75.8; deferred-items lists only PR52-004 and PR53-005 false",
+                                "pr":  75.8,
+                                "id":  "PR75.8-004",
+                                "evidence":  ".agentor-harness/feature-list.json; docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "No v1.1 PolicyBundle / multi-step resume work started",
+                                "pr":  75.8,
+                                "id":  "PR75.8-005",
                                 "evidence":  ".agentor-harness/session-handoff.md"
                             }
                         ]

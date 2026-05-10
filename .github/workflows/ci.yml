@@ -38,7 +38,7 @@ jobs:
         run: dotnet build benchmarks/Agentor.Benchmarks/Agentor.Benchmarks.csproj --configuration Release --no-restore
 
       - name: Verify harness (phase 15 PR75.7)
-        run: pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 15 -ExpectedHarnessPass PR75.7
+        run: pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 15 -ExpectedHarnessPass PR75.8
 
       - name: Verify repository cleanliness
         run: pwsh ./scripts/verify-repo-clean.ps1

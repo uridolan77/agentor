@@ -1,22 +1,18 @@
 # Session handoff
 
-## Completed (PR75.7)
+## Completed (PR75.8)
 
-- `verify-repo-clean.ps1`: full-repo text encoding and harness policy checks.
-- `ci.yml`: `verify-harness` (ExpectedPhase 15, PR75.7) + `verify-repo-clean` after tests, before Docker.
-- `AGENTS.md`: current boundaries; PR1 historical; closeout protocol.
-- `src/Agentor.Api/Program.cs` + `Endpoints/*.cs`: endpoint wiring extracted; routes/tags unchanged.
-- `.agentor-harness/*`: `current-pr`, `feature-list` (PR75.7 rows + ProfileId note fix), `progress`, `verification-log` (after verify), `session-handoff` (this file).
-- `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` and new `v1.0-RC-REPO-STATUS.md`.
-- UTF-8 no BOM on touched files; `verify-repo-clean` and `verify-harness` used as gate.
+- `tests/Agentor.Api.Tests/AthanorRunningRunApiTests.cs`: POST evidence-provenance **204** and POST candidates **202** with run in **Running** state.
+- `tests/Agentor.Api.Tests/Support/TestAgentRunRepository.cs` + `AthanorRunningRunApiFixture.cs`: replace `IAgentRunRepository` and seed `AgentRun.Start(...)` (POST `/api/v1/agent-runs` completes immediately so it cannot leave a running run).
+- `.agentor-harness/feature-list.json`: **PR23-API-003** / **PR24-API-003** `passes: true`; **harnessPass PR75.8**; PR75.8 acceptance rows.
+- `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`: only **PR52-004** and **PR53-005** remain documented as false.
 
 ## Not started
 
-- **Phase 16+** product roadmap features.
-- **PR23-API-003 / PR24-API-003** still false: need running-run `WebApplicationFactory` fixture; not added in this cleanup pass.
-- **PR52-004 / PR53-005** remain false: deferred to v1.1 per harness and deferred-items doc.
+- **Phase 16+** product roadmap (unless explicitly scheduled).
+- **v1.1** full PolicyBundle / enterprise policy engine (**PR52-004** still false).
+- **v1.1** multi-step review resume semantics (**PR53-005** still false).
 
 ## Remaining risks / false acceptance
 
-- See `feature-list.json` for all `passes: false` rows; four deferred items documented in `v1.0-RC-DEFERRED-ITEMS.md`.
-- Broad encoding scan may surface legacy files in future edits; keep new text as UTF-8 no BOM.
+- See `feature-list.json` for **PR52-004** and **PR53-005** (`passes: false`); both deferred by design, not bugs introduced in PR75.8.
