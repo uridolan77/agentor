@@ -1,5 +1,18 @@
 # Agentor harness progress
 
+## Phase 15 + PR75.5 (2026-05-10)
+
+Completed **PR75.5** harness reconciliation after **Phase 15 PR71-PR75** v1.0 platform hardening.
+
+- Redaction: `SensitiveFieldCatalog`, `RedactionPolicy`, `RedactionResult`, `JsonRedaction`; audit export and evaluation report JSON use structured key-name redaction; tests under `tests/Agentor.Application.Tests/Redaction/`; `docs/developer/phase15-redaction.md`.
+- Performance: BenchmarkDotNet project `benchmarks/Agentor.Benchmarks`; `docs/developer/phase15-performance-baselines.md`.
+- CI: `.github/workflows/ci.yml` — EF migrations list, evaluation test slice, Docker image build, TRX artifacts, benchmark Release compile.
+- Upgrade readiness: `tests/Agentor.Contracts.Tests/ContractDtoCompatibilityTests.cs`; `docs/developer/CONTRACT_VERSIONING.md`; `docs/developer/MIGRATION_AND_UPGRADE.md`.
+- RC artifacts: `docs/RELEASE/v1.0-RC.md`; `docs/ARCHITECTURE_BOUNDARY_REVIEW.md`; `docs/ROADMAP.md` Phase 15 note.
+- Harness: `feature-list.json` phase **15**, harnessPass **PR75.5**, new acceptance rows with named evidence.
+
+Next harness marker: **post Phase 15** roadmap items only when explicitly scheduled.
+
 ## Phase 14 + PR70.5 (2026-05-10)
 
 Completed **PR70.5** harness reconciliation after **Phase 14 PR66-PR70** advanced evaluation work.
@@ -9,7 +22,7 @@ Completed **PR70.5** harness reconciliation after **Phase 14 PR66-PR70** advance
 - Documentation: `docs/developer/phase14-evaluation.md`.
 - Harness: `feature-list.json` phase **14**, harnessPass **PR70.5**, new acceptance rows with named test/source evidence.
 
-Next harness marker: **Phase 15** when that phase is opened in planning docs.
+Next harness marker at the time: **Phase 15** when that phase is opened in planning docs.
 
 ## Phase 13 + PR65.5 (2026-05-10)
 

@@ -7,6 +7,7 @@ using Agentor.Application.Abstractions;
 using Agentor.Application.Manifest;
 using Agentor.Application.Options;
 using Agentor.Application.Quality;
+using Agentor.Application.Redaction;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Microsoft.Extensions.Options;
@@ -51,7 +52,7 @@ public sealed class GetRunAuditExportQueryHandler
         var quality = RunQualityGateEvaluator.Evaluate(run, requireCompleted: false);
 
         var root = BuildAuditRoot(run, manifest, quality);
-        RunAuditRedactor.Apply(root, _options.SensitiveKeySubstrings);
+        JsonRedaction.Apply(root, RedactionPolicy.FromAuditExportOptions(_options));
         var canonical = root.ToJsonString(SerializerOptions);
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
         return new RunAuditExportResult(canonical, hash);
@@ -166,56 +167,5 @@ public sealed class GetRunAuditExportQueryHandler
         };
 
         return root;
-    }
-}
-
-internal static class RunAuditRedactor
-{
-    public static void Apply(JsonNode? node, IReadOnlyList<string> sensitiveSubstrings)
-    {
-        if (node is null || sensitiveSubstrings.Count == 0)
-        {
-            return;
-        }
-
-        if (node is JsonObject obj)
-        {
-            foreach (var property in obj.ToList())
-            {
-                if (ShouldRedactKey(property.Key, sensitiveSubstrings))
-                {
-                    obj[property.Key] = "[REDACTED]";
-                }
-                else
-                {
-                    Apply(property.Value, sensitiveSubstrings);
-                }
-            }
-        }
-        else if (node is JsonArray arr)
-        {
-            foreach (var item in arr)
-            {
-                Apply(item, sensitiveSubstrings);
-            }
-        }
-    }
-
-    private static bool ShouldRedactKey(string key, IReadOnlyList<string> sensitiveSubstrings)
-    {
-        foreach (var s in sensitiveSubstrings)
-        {
-            if (string.IsNullOrWhiteSpace(s))
-            {
-                continue;
-            }
-
-            if (key.Contains(s, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

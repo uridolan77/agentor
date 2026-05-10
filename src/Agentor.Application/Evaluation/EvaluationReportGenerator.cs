@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Agentor.Application.Redaction;
 
 namespace Agentor.Application.Evaluation;
 
@@ -128,7 +130,9 @@ public static class EvaluationReportGenerator
             })
             .ToList();
 
-        return JsonSerializer.Serialize(new { generatedAtUtc = "1970-01-01T00:00:00Z", rows = ordered }, JsonOptions);
+        var root = JsonSerializer.SerializeToNode(new { generatedAtUtc = "1970-01-01T00:00:00Z", rows = ordered }, JsonOptions);
+        JsonRedaction.Apply(root, RedactionPolicy.CatalogDefault);
+        return root!.ToJsonString(JsonOptions);
     }
 
     public static string BuildCsv(IReadOnlyList<CoordinationProfileRunRecord> rows)

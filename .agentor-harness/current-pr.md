@@ -22,4 +22,8 @@ Completed: **Phase 14 PR66-PR70** - Advanced evaluation: `EvaluationFixtureRegis
 
 Completed: **PR70.5** - Phase 14 harness reconciliation: `feature-list.json` phase **14** / harnessPass **PR70.5**; Phase 14 acceptance rows; `docs/developer/phase14-evaluation.md`; verification log refresh.
 
-Next: **Phase 15** when opened per `docs/planning/pr41-pr75/` (do not implement until that scope is explicitly requested).
+Completed: **Phase 15 PR71-PR75** — v1.0 platform hardening: `SensitiveFieldCatalog`, `RedactionPolicy`, `RedactionResult`, `JsonRedaction` (audit export + evaluation CI JSON), BenchmarkDotNet project `benchmarks/Agentor.Benchmarks`, CI pipeline (`dotnet ef` migrations list, evaluation test slice, Docker image build, TRX artifacts), `ContractDtoCompatibilityTests`, docs (`phase15-redaction.md`, `phase15-performance-baselines.md`, `CONTRACT_VERSIONING.md`, `MIGRATION_AND_UPGRADE.md`, `docs/RELEASE/v1.0-RC.md`, `ARCHITECTURE_BOUNDARY_REVIEW.md`).
+
+Completed: **PR75.5** — Phase 15 harness reconciliation: `feature-list.json` phase **15** / harnessPass **PR75.5**; verification log refresh; session handoff.
+
+Next: **Post Phase 15** roadmap items only when explicitly scheduled (do not start next phase during closeout).

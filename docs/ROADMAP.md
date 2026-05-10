@@ -30,3 +30,7 @@ PR41+       A2A / external-agent protocols and optional framework adapters
 ## v0.1 release candidate (Phase 8)
 
 Phase 8 (PR36–PR40) lands the MCP adapter boundary (fake registry + tool binding), API observability hooks, container/CI packaging, and RC versioning. Acceptance is tracked in `.agentor-harness/feature-list.json` with verification in `.agentor-harness/verification-log.md`.
+
+## v1.0 release candidate (Phase 15)
+
+Phase 15 (PR71–PR75) delivers platform hardening: structured JSON redaction, performance baseline harness, CI release checks, migration/versioning docs, and RC notes. Closeout state: `.agentor-harness/feature-list.json` phase **15** / harnessPass **PR75.5**.

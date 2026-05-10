@@ -1,16 +1,23 @@
 # Session handoff
 
-## Completed (this pass)
+## Completed (Phase 15 / PR75.5)
 
-- **Phase 14 PR66-PR70** advanced evaluation implementation is present in the tree: `src/Agentor.Application/Evaluation/` (registry, harness parse, profiles/materializer, quality rules, metrics, report generator) with **Application.Tests** coverage under `tests/Agentor.Application.Tests/Evaluation/` and JSON fixtures under `tests/Agentor.Application.Tests/fixtures/eval/`.
-- **PR70.5 harness closeout**: `feature-list.json` set to phase **14** / harnessPass **PR70.5**; `current-pr.md`, `progress.md`, this file, `verification-log.md`, and `docs/developer/phase14-evaluation.md` updated; `scripts/verify-harness.ps1` passed for expected phase/pass.
-- Full solution verification: `dotnet restore` / `dotnet build` / `dotnet test` on **Agentor.sln** (counts recorded in `verification-log.md`).
+- **PR71-style redaction**: `SensitiveFieldCatalog`, `RedactionPolicy`, `RedactionResult`, `JsonRedaction`; audit export uses `RedactionPolicy.FromAuditExportOptions`; `EvaluationReportGenerator.BuildJson` applies catalog-default redaction before string output.
+- **PR72**: BenchmarkDotNet `benchmarks/Agentor.Benchmarks` (audit export + manifest paths); `docs/developer/phase15-performance-baselines.md`.
+- **PR73**: `.github/workflows/ci.yml` hardened (dotnet-ef migrations list, evaluation `FullyQualifiedName~Agentor.Application.Tests.Evaluation`, Docker build, TRX upload, benchmark Release build).
+- **PR74**: `Agentor.Contracts.Tests` JSON round-trips; `CONTRACT_VERSIONING.md`; `MIGRATION_AND_UPGRADE.md`.
+- **PR75**: `docs/RELEASE/v1.0-RC.md`, `docs/ARCHITECTURE_BOUNDARY_REVIEW.md`, harness reconciliation (phase 15 / PR75.5).
+- Full solution verification recorded in `.agentor-harness/verification-log.md`.
 
 ## Next (not started here)
 
-- **Phase 15** and later PRs from `docs/planning/pr41-pr75/` only when explicitly scoped.
+- **Post Phase 15** roadmap or a new phase from `docs/planning/` only when explicitly scoped and requested.
 
-## Risks / false acceptance
+## Not started
 
-- Prior-phase `acceptanceItems` with `passes: false` remain unchanged in `feature-list.json` (for example legacy API / integration rows). Only the **new Phase 14 rows** are marked passing with evidence tied to the new evaluation tests and sources.
-- `RunEvaluationHarness` behavior was not expanded in this closeout beyond existing harness tests; registry format complements rather than replacing every legacy fixture path until a later migration pass if desired.
+- No runtime feature work beyond Phase 15 scope was started in this pass (no new phase PRs).
+
+## Risks / remaining `passes: false`
+
+- Earlier-phase `acceptanceItems` that were already `passes: false` in git HEAD (for example legacy API contract rows) remain **unchanged** and still false unless separately verified; Phase 15 rows are marked passing with named file/test evidence in `feature-list.json`.
+- Redaction is **key-name substring** based; values in non-JSON surfaces or unusual key names may still leak secrets until extended.

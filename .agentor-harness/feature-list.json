@@ -1,10 +1,11 @@
 {
-    "phase":  14,
-    "title":  "Advanced evaluation \u0026 coordination science (Phase 14 PR66-PR70) + PR70.5 harness reconciliation",
-    "harnessPass":  "PR70.5",
+    "phase":  15,
+    "title":  "Phase 15 v1.0 platform hardening (PR71-PR75) + PR75.5 harness reconciliation",
+    "harnessPass":  "PR75.5",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
+                  "Phase 15 PR71-PR75: v1.0 platform hardening — SensitiveFieldCatalog/RedactionPolicy/JsonRedaction for audit export + evaluation JSON; BenchmarkDotNet project benchmarks/Agentor.Benchmarks; CI (.github/workflows/ci.yml: dotnet ef migrations list, evaluation test slice, Docker image build, TRX artifacts); Agentor.Contracts.Tests DTO round-trips; docs phase15-redaction.md, phase15-performance-baselines.md, CONTRACT_VERSIONING.md, MIGRATION_AND_UPGRADE.md, docs/RELEASE/v1.0-RC.md, ARCHITECTURE_BOUNDARY_REVIEW.md.",
                   "Phase 14 PR66-PR70: versioned evaluation fixture registry (schema 4, kind EvaluationFixtureRegistry), harness fixture parse (schema \u003e=2), coordination profiles (SequentialPipeline, SkillWrappedSequential, McpToolBoundPlan, ExternalAgentTool, ReviewGatedPlan) via HarnessProfileMaterializer, quality rule sets (QualityRuleSetEvaluator, JSON predicates only), CoordinationEvaluationMetrics from run/manifest artifacts, deterministic EvaluationReportGenerator (Markdown/JSON/CSV + CI folder). Tests: tests/Agentor.Application.Tests/Evaluation/*.cs; fixtures: tests/Agentor.Application.Tests/fixtures/eval/registry.json, quality-rules-*.json.",
                   "Phase 12 PR56-PR60: run queue (inline + in-memory background), durable outbox + dispatcher, execution leases + distributed op ledger, HTTP transport resilience registry, EF persistence + migration 20260512080000_Phase12Reliability.",
                   "PR60.5: harness reconciliation; OutboxDispatcherTests; Phase12EfRoundTripTests (Sqlite); TransportResilienceRegistryTests.",
@@ -1028,6 +1029,48 @@
                                 "pr":  70.5,
                                 "id":  "PR70.5-HARNESS-PHASE14",
                                 "evidence":  "scripts/verify-harness.ps1 -ExpectedPhase 14 -ExpectedHarnessPass PR70.5; .agentor-harness/verification-log.md"
+                            },
+                            {
+                                "id":  "PR71-REDACTION-HYGIENE",
+                                "pr":  71,
+                                "description":  "Redaction surface: SensitiveFieldCatalog, RedactionPolicy, RedactionResult, JsonRedaction; audit export + evaluation report JSON redacted; unit tests; developer doc.",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Redaction/; GetRunAuditExportQueryHandler.cs; EvaluationReportGenerator.cs; tests/Agentor.Application.Tests/Redaction/JsonRedactionTests.cs; docs/developer/phase15-redaction.md"
+                            },
+                            {
+                                "id":  "PR72-PERF-BASELINES",
+                                "pr":  72,
+                                "description":  "BenchmarkDotNet project compiles in solution; performance baseline doc with targets and regression policy.",
+                                "passes":  true,
+                                "evidence":  "benchmarks/Agentor.Benchmarks/Phase15RuntimeBenchmarks.cs; benchmarks/Agentor.Benchmarks/README.md; docs/developer/phase15-performance-baselines.md"
+                            },
+                            {
+                                "id":  "PR73-CI-RELEASE-PIPELINE",
+                                "pr":  73,
+                                "description":  "CI: restore/build/test, EF migrations list, evaluation regression slice, Docker image build, TRX test artifacts.",
+                                "passes":  true,
+                                "evidence":  ".github/workflows/ci.yml"
+                            },
+                            {
+                                "id":  "PR74-MIGRATION-CONTRACT",
+                                "pr":  74,
+                                "description":  "DTO JSON round-trip compatibility tests; contract versioning and migration/rollback docs.",
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Contracts.Tests/ContractDtoCompatibilityTests.cs; docs/developer/CONTRACT_VERSIONING.md; docs/developer/MIGRATION_AND_UPGRADE.md"
+                            },
+                            {
+                                "id":  "PR75-V1-RC-READINESS",
+                                "pr":  75,
+                                "description":  "v1.0 RC notes, architecture boundary review, roadmap pointer.",
+                                "passes":  true,
+                                "evidence":  "docs/RELEASE/v1.0-RC.md; docs/ARCHITECTURE_BOUNDARY_REVIEW.md; docs/ROADMAP.md"
+                            },
+                            {
+                                "id":  "PR75.5-HARNESS-PHASE15",
+                                "pr":  75,
+                                "description":  "Harness reconciliation: phase 15 / PR75.5, verification log, session handoff, verify-harness.ps1.",
+                                "passes":  true,
+                                "evidence":  "scripts/verify-harness.ps1 -ExpectedPhase 15 -ExpectedHarnessPass PR75.5; .agentor-harness/verification-log.md"
                             }
                         ]
 }
