@@ -1,5 +1,15 @@
 # Agentor harness progress
 
+## Phase 17 PR85.5 (2026-05-10)
+
+Policy deferred-item reconciliation after Phase 17.
+
+- **PR52-004 closed**: The versioned `PolicyBundle` enterprise policy model is fully implemented by Phase 17. Row flipped to `passes: true` in `feature-list.json`. Engineering note added to `v1.0-RC-DEFERRED-ITEMS.md`.
+- **SCOPE-001 documented**: `PolicyRuleScope` (Global/Tenant/Workspace/Project) is modeled on `PolicyRule` but `PolicyBundleRulesAdapter.ToProfileRules()` does not filter by run identity — all rules are treated as globally effective. Explicit `SCOPE-001` comment added to adapter. "Known limitations" section added to `docs/developer/policy-bundles.md`. New deferred item `SCOPE-001` added to `v1.0-RC-DEFERRED-ITEMS.md` and `feature-list.json` (`passes: false`).
+- **Phase 18 not started.**
+
+Active deferred items (`passes: false`): `SCOPE-001`, `PR53-005`.
+
 ## Phase 17 PR81–PR85 (2026-05-10)
 
 Completed **Phase 17 Enterprise Policy Model**:

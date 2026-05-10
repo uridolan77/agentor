@@ -1,5 +1,25 @@
 # Verification log
 
+## Phase 17 PR85.5 (2026-05-10)
+
+```bash
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 17 -ExpectedHarnessPass PR85.5
+pwsh ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded — 0 warnings, 0 errors
+- Tests: 298 passed, 0 failed (unchanged from PR85 — no new test code in PR85.5)
+- verify-harness: passed (ExpectedPhase=17, ExpectedHarnessPass=PR85.5)
+- verify-repo-clean: passed
+
+---
+
 ## Phase 17 PR81–PR85 (2026-05-10)
 
 ```bash
@@ -62,6 +82,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1
 
 - Benchmark project: `benchmarks/Agentor.Benchmarks` builds with solution.
 - CI workflow updated (docker build, dotnet-ef migrations list, evaluation slice, trx artifact).
+
 ## PR75.6 verification (2026-05-10)
 
 Commands:

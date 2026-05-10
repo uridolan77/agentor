@@ -7,12 +7,19 @@ namespace Agentor.Infrastructure.Policy;
 /// Converts a <see cref="PolicyBundle"/>'s rules into a <see cref="PolicyProfileRules"/> that
 /// <see cref="RuntimePolicyEvaluator"/> can consume directly.
 /// </summary>
+/// <remarks>
+/// <b>Phase 17 scope limitation:</b> All rules are mapped to the flat profile regardless of their
+/// <see cref="PolicyRuleScope"/> value. Tenant / Workspace / Project scoping is modeled on
+/// <see cref="PolicyRule"/> but not yet enforced here (deferred item SCOPE-001). Every rule in the
+/// bundle currently takes effect as if it were <see cref="PolicyRuleScope.Global"/>.
+/// </remarks>
 public static class PolicyBundleRulesAdapter
 {
     public static PolicyProfileRules ToProfileRules(PolicyBundle bundle)
     {
         var profile = new PolicyProfileRules();
 
+        // SCOPE-001: rule.Scope is not evaluated; all rules are applied globally.
         foreach (var rule in bundle.Rules)
         {
             switch (rule.Kind)

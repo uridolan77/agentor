@@ -1,7 +1,7 @@
 {
     "phase":  17,
     "title":  "Phase 17 Enterprise policy model (PR81-PR85) — PolicyBundle, evaluation adapter, management API, fixtures, audit identity",
-    "harnessPass":  "PR85",
+    "harnessPass":  "PR85.5",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
@@ -789,11 +789,11 @@
                                 "evidence":  "RuntimePolicyEvaluatorTests.Evaluate_ActiveProfile_DeniesListedExternalAgentTool"
                             },
                             {
-                                "passes":  false,
-                                "description":  "PR52: Versioned PolicyBundle / full enterprise policy engine (deferred beyond PolicyProfileRules).",
+                                "passes":  true,
+                                "description":  "PR52: Versioned PolicyBundle / full enterprise policy engine (closed by Phase 17 PR81-PR85).",
                                 "pr":  52,
                                 "id":  "PR52-004",
-                                "evidence":  "Not implemented; PolicyProfileRules is a first runtime profile step only."
+                                "evidence":  "PolicyBundle domain aggregate, PolicyRule kind/scope/effect taxonomy, PolicyBundleRulesAdapter, InMemoryPolicyBundleRepository, IPolicyBundleRepository, 4 management API endpoints, audit export policyIdentity, 38 new tests. See docs/developer/policy-bundles.md and Phase 17 harness note."
                             },
                             {
                                 "passes":  true,
@@ -1326,6 +1326,34 @@
                                 "description":  "Audit export includes active policy profile/bundle identity",
                                 "passes":  true,
                                 "evidence":  "GetRunAuditExportQueryHandler: policyIdentity section added; omitted when no active profile (WhenWritingNull)"
+                            },
+                            {
+                                "id":  "SCOPE-001",
+                                "pr":  85.5,
+                                "description":  "Policy scope enforcement: Tenant/Workspace/Project rule scoping against run identity is deferred",
+                                "passes":  false,
+                                "evidence":  "PolicyRuleScope values are stored on PolicyRule but PolicyBundleRulesAdapter.ToProfileRules() applies all rules globally (no scope-identity filtering). Deferred to v1.1. See docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md SCOPE-001 and SCOPE-001 comment in PolicyBundleRulesAdapter.cs."
+                            },
+                            {
+                                "id":  "PR85.5-001",
+                                "pr":  85.5,
+                                "description":  "PR52-004 closed: versioned PolicyBundle system fully implemented by Phase 17",
+                                "passes":  true,
+                                "evidence":  "PR52-004 row flipped to passes:true; docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md engineering notes updated; docs/developer/policy-bundles.md Known limitations section added"
+                            },
+                            {
+                                "id":  "PR85.5-002",
+                                "pr":  85.5,
+                                "description":  "PolicyRuleScope limitation documented in code, developer guide, and deferred-items manifest",
+                                "passes":  true,
+                                "evidence":  "SCOPE-001 comment in PolicyBundleRulesAdapter.cs; PolicyBundleRulesAdapter XML doc remarks; Known limitations section in docs/developer/policy-bundles.md; SCOPE-001 item in v1.0-RC-DEFERRED-ITEMS.md"
+                            },
+                            {
+                                "id":  "PR85.5-003",
+                                "pr":  85.5,
+                                "description":  "Phase 18 multi-step human review resume semantics was not started",
+                                "passes":  true,
+                                "evidence":  ".agentor-harness/session-handoff.md explicit not-started confirmation; no Phase 18 source files exist"
                             }
                         ]
 }

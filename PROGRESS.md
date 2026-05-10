@@ -15,6 +15,7 @@ This file is the agent-maintained handoff. Claude Code should read it before doi
 - **PR11** — `ToolDefinition`, `ToolRiskLevel`, `IToolRegistry`, `ToolRegistry` with PR1 fake tools registered; `StartAgentRunHandler` uses registry; unknown unregistered tool path tested.
 - **PR12** — `RuntimePolicyEvaluator` + `RuntimePolicyOptions` (`Agentor:RuntimePolicy`); allow / deny list / risk-based `RequiresReview`; `AllowAllPolicyEvaluator` removed; tests for allow, deny, requires-review, unknown tool.
 - Verification: `scripts/capture-verification.ps1` run; evidence under `artifacts/verification/` read (including `eval-fixtures.txt`); `test-results.agentor.json` updated for `pr09-pr12-batch`.
+- **Phase 17 PR85.5** — Policy deferred-item reconciliation: PR52-004 closed (PolicyBundle fully implemented by Phase 17); SCOPE-001 documented (PolicyRuleScope stored but not enforced — Tenant/Workspace/Project enforcement deferred to v1.1); scope limitation comment added to `PolicyBundleRulesAdapter.cs` and "Known limitations" section to `docs/developer/policy-bundles.md`; `feature-list.json` harnessPass=PR85.5, PR52-004 passes=true, SCOPE-001 passes=false. verify-harness + verify-repo-clean both passed.
 - **Phase 17 PR81–PR85** — Enterprise policy model: `PolicyBundle` domain aggregate (versioned, immutable after publication, duplicate rule IDs rejected); `PolicyRule` entity with full kind/scope/effect taxonomy and factory helpers; `PolicyProfile` + `ActivePolicyProfile` domain types; `IPolicyBundleRepository` + `IPolicyProfileRepository` application abstractions; `PolicyBundleRulesAdapter` (bundle → `PolicyProfileRules`); `InMemoryPolicyBundleRepository` + `InMemoryPolicyProfileRepository`; `RuntimePolicyEvaluator` bundle-aware 2-constructor pattern; `PolicyProfileRules.RequiresReviewToolKeys`; `PolicyBundleDtos` + 4 API endpoints (`GET/POST /policy-bundles`, `GET /policy-bundles/{id}`, `POST /policy-profiles/{id}/activate`); audit export `policyIdentity` section; 38 new tests (25 domain + 13 evaluation); 3 deterministic fixture JSONs; `docs/developer/policy-bundles.md`. Grand total: **298 tests passing**.
 
 ## In progress
@@ -23,7 +24,7 @@ This file is the agent-maintained handoff. Claude Code should read it before doi
 
 ## Next
 
-- Phase 18+ per roadmap when explicitly scheduled.
+- Phase 18 multi-step human review resume semantics when explicitly scheduled.
 
 ## Notes
 
