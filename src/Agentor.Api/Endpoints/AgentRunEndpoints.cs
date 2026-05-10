@@ -42,14 +42,7 @@ public static class AgentRunEndpoints
                 ? requestTraceId
                 : request.TraceId;
 
-            var command = new StartAgentRunCommand(
-                request.AgentName,
-                request.Objective,
-                commandTraceId,
-                request.TenantId,
-                request.WorkspaceId,
-                request.ProjectId,
-                request.KnowledgeScopeId);
+            var command = StartAgentRunRequestMapping.ToCommand(request, commandTraceId);
             var validation = StartAgentRunValidator.Validate(command);
 
             if (!validation.IsValid)
@@ -77,11 +70,7 @@ public static class AgentRunEndpoints
                 if (idempotencyKey.Length > 0)
                 {
                     var traceIdSpecifiedInBody = !string.IsNullOrWhiteSpace(request.TraceId);
-                    var fingerprint = StartAgentRunFingerprint.Compute(
-                        request.AgentName,
-                        command.Objective,
-                        traceIdSpecifiedInBody,
-                        request.TraceId);
+                    var fingerprint = StartAgentRunFingerprint.Compute(request, traceIdSpecifiedInBody, request.TraceId);
 
                     Func<Task<AgentRun>> startRun = () => handler.HandleAsync(command, cancellationToken);
                     var outcome = await idempotencyService.ExecuteAsync(

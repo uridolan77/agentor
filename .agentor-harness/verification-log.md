@@ -1,5 +1,102 @@
 # Verification log
 
+## Phase 24 PR115 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 24 -ExpectedHarnessPass PR115
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+(Use `pwsh` instead of `powershell` when Core PowerShell is installed; CI uses `pwsh`.)
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **419 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=24`, `ExpectedHarnessPass=PR115`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 72 / Total 72
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 135 / Total 135
+- Agentor.Infrastructure.Tests: Passed 95 / Total 95
+- Agentor.Api.Tests: Passed 104 / Total 104
+
+Scope:
+
+- completed: Phase 24 PR115 public run orchestration kernel + API tests + docs
+- not started: Phase 25+
+
+## Phase 23 PR111 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 23 -ExpectedHarnessPass PR111
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+(Use `pwsh` instead of `powershell` when Core PowerShell is installed; CI uses `pwsh`.)
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **413 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=23`, `ExpectedHarnessPass=PR111`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 72 / Total 72
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 135 / Total 135
+- Agentor.Infrastructure.Tests: Passed 95 / Total 95
+- Agentor.Api.Tests: Passed 98 / Total 98
+
+Scope:
+
+- completed: Phase 23 PR111 README + REPO_TRUTH + ADR-023 + history archive
+- not started: Phase 24+
+
+## Phase 22 PR110.5 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 22 -ExpectedHarnessPass PR110.5
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **413 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=22`, `ExpectedHarnessPass=PR110.5`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 72 / Total 72
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 135 / Total 135
+- Agentor.Infrastructure.Tests: Passed 95 / Total 95
+- Agentor.Api.Tests: Passed 98 / Total 98
+
+Scope:
+
+- completed: Phase 22 PR110.5 operator dashboard OpsRead enforcement + tests + docs
+- not started: Phase 23+
+
 ## Phase 22 PR106–PR110 (2026-05-11)
 
 ```powershell

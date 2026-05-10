@@ -1,10 +1,13 @@
 {
-    "phase":  22,
-    "title":  "Phase 22 operator UX and workflow completeness (PR106–PR110)",
-    "harnessPass":  "PR110",
+    "phase":  24,
+    "title":  "Phase 24 public run orchestration kernel (PR112–PR115)",
+    "harnessPass":  "PR115",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
+                  "PR115 (2026-05-11): Phase 24 — RunOrchestrationRequest + RunExecutionMode; LegacyFakeRunExecutor + GovernedSingleToolRunDriver; IAgentRunOrchestrator/AgentRunOrchestrator (plan/recipe/skill + single-tool paths); StartAgentRunHandler thin routing via StartAgentRunRouting + AgentorPublicRunOptions; POST /agent-runs DTO extended (planId, recipeId, toolKey, skillKey, mode, input); ExceptionHandlingMiddleware maps RunOrchestrationValidationException to 400; DI IAgentPlanExecutor/SequentialAgentPlanExecutor; AgentRunOrchestrationApiTests (Conexus, MCP echo, external invoke, deny, requires-review, explicit legacy); docs REPO_TRUTH + README; appsettings Agentor:PublicRuns. Verification: dotnet test Agentor.sln — 419 passed; verify-harness ExpectedPhase 24 PR115; verify-repo-clean.",
+                  "PR111 (2026-05-11): Phase 23 — README as product documentation; docs/REPO_TRUTH.md; decisions/ADR-023-public-run-kernel-unification.md; legacy package README archived to docs/history/PR1-PR40-package.md. Verification: dotnet test Agentor.sln — 413 passed; verify-harness ExpectedPhase 23 PR111; verify-repo-clean.",
+                  "PR110.5 (2026-05-11): Operator dashboard authorization — GET /api/v1/operator/dashboard requires OpsRead (same family as /api/v1/ops/*); Service role remains denied OpsRead; EndpointAuthorizationApiTests (HumanOperator/System OK, Service 403, actor accessor failure 401); RoleBasedAuthorizationDecisionServiceTests.Authorize_Allows_System_ForOpsRead; docs/security/auth-boundary.md, deployment-threat-notes.md, docs/operator/dashboard-and-inbox.md, docs/operator/debug-run.md, docs/api/phase13-product-surface.md, docs/examples/phase13-workflows.md. Verification: dotnet test — 413 passed; verify-harness phase 22 PR110.5; verify-repo-clean.",
                   "Phase 22 PR106–PR110 (2026-05-11): Operator UX — pending inbox pagination (totalCount/skip/take) + review reason via AgentRunSummary.ErrorMessage (no N+1 loads); policy-driven RequiresReview fixture + ReviewInboxWorkflowApiTests end-to-end approve/inbox; timeline v2 RunTimelineGroupKind groups on GET /runs/{id}/timeline (plan step spans, skill spans, policy/review singletons); dashboard modules queue/outbox/integration readiness/policyRuntime/quality/deferred risks + IIntegrationStatusReader; audit export format=canonical|pretty|redactionReport|hashOnly with stable canonical SHA-256 header; operator docs docs/operator/*.md. Verification: dotnet test Agentor.sln — 408 passed; verify-harness phase 22 PR110; verify-repo-clean.",
                   "PR105.5 (2026-05-11): Integration HTTP error-shape hardening — shared IntegrationHttpError (ThrowIfUnsuccessfulAsync, RedactAndTruncate) used by Athanor, Conexus, MCP, and external-agent HTTP clients; HttpRequestException.StatusCode populated; upstream bodies truncated and best-effort redacted (Bearer, JSON secret keys, token=apiKey-style pairs). Tests: IntegrationHttpErrorTests; adapter tests assert StatusCode. docs/integrations/compatibility-matrix.md updated. Full verification: 400 tests passed; verify-harness phase 21 PR105.5; verify-repo-clean.",
                   "Phase 21 (2026-05-11): Integration HTTP contract test packs — Athanor (HttpKnowledgeStateClientTests + path canonize exclusion), Conexus (HttpModelGatewayClientTests + ModelGatewayToolExecutor declared budget pass-through + HttpModelGatewayClient EnsureSuccess), MCP (HttpMcpRegistryClientExtraTests + ToolRegistryMcpBindingTests + McpDescriptorDomainBoundaryTests), External agents (HttpExternalAgentProtocolClientExtraTests + ExternalAgentInvokeToolExecutorTests + ExternalAgentPolicyPreventsHttpInvocationTests). docs/integrations/compatibility-matrix.md. ModelCallTelemetryAggregator unchanged; evidence ModelCallTelemetryAggregatorTests. Superseded for harness pass by PR105.5 error-shape hardening; see PR105.5 note.",
@@ -41,6 +44,55 @@
                   "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model — PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle→PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
               ],
     "acceptanceItems":  [
+                            {
+                                "id":  "PR111-001",
+                                "pr":  111,
+                                "description":  "Root README is product documentation; legacy Claude Code package README archived under docs/history",
+                                "passes":  true,
+                                "evidence":  "README.md; docs/history/PR1-PR40-package.md"
+                            },
+                            {
+                                "id":  "PR111-002",
+                                "pr":  111,
+                                "description":  "docs/REPO_TRUTH.md documents actual public run path, executor default gap, SCOPE-001, EF save, Jwt principal assumption",
+                                "passes":  true,
+                                "evidence":  "docs/REPO_TRUTH.md"
+                            },
+                            {
+                                "id":  "PR115-001",
+                                "pr":  115,
+                                "description":  "IAgentRunOrchestrator + AgentRunOrchestrator route legacy, single-tool, plan, recipe, and skill starts; StartAgentRunHandler delegates",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Orchestration/AgentRunOrchestrator.cs; src/Agentor.Application/Commands/StartAgentRunHandler.cs; src/Agentor.Infrastructure/DependencyInjection.cs"
+                            },
+                            {
+                                "id":  "PR115-002",
+                                "pr":  115,
+                                "description":  "POST /agent-runs with toolKey conexus.model-complete completes governed model tool path",
+                                "passes":  true,
+                                "evidence":  "AgentRunOrchestrationApiTests.PostAgentRuns_WithToolKey_ConexusModelComplete_Completes"
+                            },
+                            {
+                                "id":  "PR115-003",
+                                "pr":  115,
+                                "description":  "POST /agent-runs exercises MCP echo tool and external-agent.invoke adapter paths",
+                                "passes":  true,
+                                "evidence":  "AgentRunOrchestrationApiTests.PostAgentRuns_WithToolKey_McpEcho_Completes; AgentRunOrchestrationApiTests.PostAgentRuns_WithToolKey_ExternalAgentInvoke_Completes"
+                            },
+                            {
+                                "id":  "PR115-004",
+                                "pr":  115,
+                                "description":  "Policy deny blocks single-tool start; RequiresReview suspends; explicit LegacyFakeTool works when implicit routing disabled",
+                                "passes":  true,
+                                "evidence":  "AgentRunOrchestrationApiTests.PostAgentRuns_PolicyDeny_BlocksBeforeToolExecution; PostAgentRuns_PolicyRequiresReview_SingleToolPr1Fake_SuspendsRun; PostAgentRuns_ModeLegacyExplicit_WorksWhenImplicitDisabled"
+                            },
+                            {
+                                "id":  "PR111-003",
+                                "pr":  111,
+                                "description":  "ADR-023 records public API must call orchestration kernel; fake remains selectable adapter",
+                                "passes":  true,
+                                "evidence":  "decisions/ADR-023-public-run-kernel-unification.md"
+                            },
                             {
                                 "id":  "PR21-001",
                                 "pr":  21,
@@ -1748,6 +1800,20 @@
                                 "description":  "Operator docs cover review workflow, run debugging, and audit export variants aligned with endpoints.",
                                 "passes":  true,
                                 "evidence":  "docs/operator/review-workflow.md; docs/operator/debug-run.md; docs/operator/audit-export.md"
+                            },
+                            {
+                                "id":  "PR110.5-001",
+                                "pr":  110.5,
+                                "description":  "GET /api/v1/operator/dashboard requires OpsRead; Service forbidden; actor resolution failure yields unauthorized.",
+                                "passes":  true,
+                                "evidence":  "Phase13ProductEndpoints.MapOperator EndpointAuthorization.Require(OpsRead); EndpointAuthorizationApiTests (OperatorDashboard_WithHumanOperator_ReturnsOk, WithSystemActor_ReturnsOk, WithServiceActor_ReturnsForbidden, WhenActorAccessorThrows_ReturnsUnauthorized)"
+                            },
+                            {
+                                "id":  "PR110.5-002",
+                                "pr":  110.5,
+                                "description":  "Security and operator docs state dashboard OpsRead requirement aligned with ops endpoints.",
+                                "passes":  true,
+                                "evidence":  "docs/security/auth-boundary.md; docs/security/deployment-threat-notes.md; docs/operator/dashboard-and-inbox.md; docs/api/phase13-product-surface.md; docs/examples/phase13-workflows.md"
                             }
                         ]
 }

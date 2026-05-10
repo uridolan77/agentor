@@ -53,6 +53,17 @@ public sealed class RoleBasedAuthorizationDecisionServiceTests
     }
 
     [Fact]
+    public void Authorize_Allows_System_ForOpsRead()
+    {
+        var sut = new RoleBasedAuthorizationDecisionService();
+        var actor = new ActorContext(ActorId, "sys", ActorRole.System);
+
+        var decision = sut.Authorize(actor, AgentorPermission.OpsRead);
+
+        Assert.True(decision.Allowed);
+    }
+
+    [Fact]
     public void Authorize_Denies_Service_ForOpsRead()
     {
         var sut = new RoleBasedAuthorizationDecisionService();

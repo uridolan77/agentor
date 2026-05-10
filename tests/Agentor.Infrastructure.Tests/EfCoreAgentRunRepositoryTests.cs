@@ -4,9 +4,10 @@ using Agentor.Domain.Enums;
 using Agentor.Domain.Governance;
 using Agentor.Infrastructure;
 using Agentor.Infrastructure.Conexus;
-using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.ExternalAgents;
+using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Persistence;
+using Agentor.Infrastructure.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -113,8 +114,7 @@ public sealed class EfCoreAgentRunRepositoryTests
         var fake = new FakeToolExecutor();
         var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
         var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
-        var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
-        var handler = new StartAgentRunHandler(repo, policy, registry, pipeline, clock);
+        var handler = StartAgentRunTestFactory.CreateHandler(repo, policy, registry, clock);
 
         var run = await handler.HandleAsync(
             new StartAgentRunCommand("Handler EF Agent", "Policy/tool EF round-trip.", "handler-ef-trace"),
@@ -143,8 +143,7 @@ public sealed class EfCoreAgentRunRepositoryTests
         var fake = new FakeToolExecutor();
         var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
         var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
-        var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
-        var handler = new StartAgentRunHandler(repo, policy, registry, pipeline, clock);
+        var handler = StartAgentRunTestFactory.CreateHandler(repo, policy, registry, clock);
 
         var tenantId = Guid.NewGuid();
         var workspaceId = Guid.NewGuid();

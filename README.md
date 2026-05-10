@@ -1,54 +1,135 @@
-# Agentor PR1–PR40 Claude Code Package v2
+# Agentor
 
-Generated: 2026-05-10
+Deterministic, observable, policy-governed agent execution runtime.
 
-This is a recompiled package after reviewing the current Agentor starter repo docs.
+## What Agentor is
 
-## What changed from v1
+Agentor coordinates **runs**, **steps**, **tools**, **skills** (declared packages), **policy decisions**, **execution traces**, **run manifests**, evaluation hooks, and **integration ports** (Athanor-shaped knowledge access, Conexus-shaped model gateway, MCP registry, external-agent protocols). Every tool invocation is intended to flow through **policy evaluation** and **trace emission**.
 
-This version explicitly incorporates:
+See `AGENTS.md` for contributor rules and `docs/ARCHITECTURE.md` for layer boundaries.
 
-- Anthropic CWC workshop lessons:
-  - decompose agents into tools, skills, memory, evals, policies, traces, and subagents later
-  - do not build a giant agent prompt
-  - evals must appear earlier, not only late in the roadmap
-  - skills are not tools
-  - every run/tool/model action must be traceable
-- Framework strategy:
-  - Microsoft Agent Framework / Semantic Kernel / A2A / MCP / LangGraph / AutoGen are adapters, not Agentor core
-  - A2A is post-v0.1 unless a real requirement appears earlier
-  - MCP enters only through tool-registry boundaries
-- Current Agentor starter docs alignment:
-  - `docs/ROADMAP.md` in the starter is too short and should be replaced or superseded
-  - `AGENTS.md` says "small and vertical"; this package changes the doctrine to "medium-long, coherent, reviewable passes"
-  - service-boundary docs need a framework/adapters section
-  - add ADR-006 for external frameworks as adapters
+## What Agentor is not
 
-## Package layout
+- Not a chatbot product, generic RAG system, or canonical knowledge engine  
+- Not a replacement for **Athanor** (knowledge authority) or **Conexus** (model gateway)  
+- Not an MCP marketplace or a thin wrapper around Microsoft Agent Framework, Semantic Kernel, LangGraph, AutoGen, CrewAI, or A2A — those remain **adapters** behind ports
 
-```text
-DOCUMENT_CHANGE_REPORT.md
-INSTALL_INSTRUCTIONS.md
-OVERLAY_FILES/
-  AGENTS.md
-  PROJECT_CHARTER.md
-  docs/
-  decisions/
-docs/planning/pr1-pr40/
-  CLAUDE.md
-  00_START_HERE.md
-  PR_INDEX.md
-  MASTER_ROADMAP.md
-  prs/
-  phases/
-  templates/
-  scripts/
+## Current capabilities
+
+- HTTP API (`Agentor.Api`) for starting runs, reading traces/steps, governance (review, audit export), management CRUD (recipes, plans, skills, policy profiles), operator surfaces, and integration status  
+- Sequential plan execution with policy, skills, session memory bounds, human review suspension, and multi-step resume (in Application — see limitations for public defaults)  
+- Enterprise-style **policy bundles** and profiles; runtime evaluator with allow / deny / requires-review  
+- Durable queue, outbox, execution leases, EF persistence option (PostgreSQL), structured audit export and redaction tooling  
+- Auth modes (**Fake** / **Header** / **Jwt**) with endpoint-level permission checks on sensitive routes (full uniform ASP.NET authorization for every route is still evolving — see `docs/security/auth-boundary.md`)
+
+## Current limitations
+
+For **ground truth** on gaps (public run path vs executor, policy scope enforcement, persistence shape, Jwt assumptions), read **`docs/REPO_TRUTH.md`**. Highlights:
+
+- Public **`POST /api/v1/agent-runs`** now routes through **`IAgentRunOrchestrator`** (plan / recipe / skill / single-tool / explicit legacy). Default **implicit legacy** remains available via **`Agentor:PublicRuns:TreatMissingExecutionSelectorAsLegacyFakeTool`** (see `appsettings.json`); turn it off in production to force explicit selectors. Durable **queue** rows still persist only the original narrow command fields (orchestration selectors on queued work are Phase 25+ unless extended).  
+- **Policy rule scopes** are modeled but **not** fully enforced on evaluation (SCOPE-001).  
+- **EF aggregate save** is not yet append-only / concurrency-hardened for audit immutability.  
+- **Jwt** mode assumes an already-authenticated principal unless you add bearer validation.
+
+## Quickstart
+
+Prerequisites: [.NET 9 SDK](https://dotnet.microsoft.com/download).
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
 ```
 
-## Recommended use
+Run the API (from repo root):
 
-Copy `OVERLAY_FILES/*` into the repo root to update the starter docs.
+```powershell
+dotnet run --project src/Agentor.Api
+```
 
-Then copy `docs/planning/pr1-pr40/` into the repo as the long roadmap package.
+Health check (with defaults, after the app listens):
 
-Do not ask Claude Code to implement all 40 PRs at once.
+```powershell
+pwsh ./scripts/smoke.ps1 -BaseUrl http://localhost:8080
+```
+
+Docker and CI expectations are described in `docs/` and `.github/workflows/ci.yml`.
+
+## API examples
+
+Start a run (minimal body with default **implicit legacy** routing — see `Agentor:PublicRuns` in `appsettings.json` and `docs/REPO_TRUTH.md`):
+
+```http
+POST /api/v1/agent-runs HTTP/1.1
+Content-Type: application/json
+
+{
+  "agentName": "demo-agent",
+  "objective": "Hello"
+}
+```
+
+Execute a specific governed tool (example: Conexus model completion in Fake integration mode):
+
+```json
+{
+  "agentName": "demo-agent",
+  "objective": "Summarize: hello",
+  "toolKey": "conexus.model-complete"
+}
+```
+
+List runs:
+
+```http
+GET /api/v1/agent-runs HTTP/1.1
+```
+
+Product-style aliases and governance endpoints are summarized in `docs/api/phase13-product-surface.md` and `docs/examples/phase13-workflows.md`.
+
+## Architecture
+
+```text
+Api → Application + Contracts + Infrastructure
+Infrastructure → Application + Domain
+Application → Domain
+Domain → (no outward dependencies)
+```
+
+Details: `docs/ARCHITECTURE.md`, `docs/COORDINATION_LAYER.md`, decisions under `decisions/`.
+
+## Runtime model: Run → Step → Tool/Skill → Policy → Trace → Manifest
+
+```text
+Start run → steps → tool or skill invocation
+  → policy decision (allow / deny / requires review)
+  → trace events
+  → run manifest (and eval hooks where configured)
+```
+
+Human review can suspend execution; approval paths can resume multi-step plans. Domain and Application tests document the behavior.
+
+## Human review
+
+Governed tools can yield **RequiresReview** (distinct from **Deny**). Operators apply decisions via governance APIs; see `docs/operator/review-workflow.md` and `docs/security/auth-boundary.md`.
+
+## Integrations: Athanor, Conexus, MCP, external agents
+
+- **Athanor**: knowledge state and provenance ports (`docs/ATHANOR_INTEGRATION_BOUNDARY.md`)  
+- **Conexus**: model gateway port and governed model-call tools  
+- **MCP**: registry/client as adapter surface (`docs/MCP_BOUNDARY.md`)  
+- **External agents**: protocol-shaped clients behind tools  
+
+Integration modes (Fake / Http / Disabled) and readiness: `docs/integrations/compatibility-matrix.md`, `GET /api/v1/integrations/status`.
+
+## Development harness
+
+Acceptance and verification state live under **`.agentor-harness/`** (`feature-list.json`, `verification-log.md`, `session-handoff.md`). Session closeout expects restore, build, test, and harness scripts — see `AGENTS.md`.
+
+## Roadmap
+
+High-level PR phases: `docs/ROADMAP.md`. Consolidation plan (public kernel, queue lifetimes, policy scope, persistence, auth matrix): **`docs/planning/pr111-pr120.md`**.
+
+## History
+
+The previous root README that described this repo as a **“Claude Code Package”** overlay is preserved as **`docs/history/PR1-PR40-package.md`**.

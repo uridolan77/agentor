@@ -35,4 +35,4 @@ Queue, outbox, and lease snapshots live under `GET /api/v1/ops/*` and require **
 
 ## Dashboard entry point
 
-`GET /api/v1/operator/dashboard` returns a read-only JSON document with links and shallow counts (pending review, failed runs, integration readiness flags). It does not embed proprietary business rules—only aggregates available from existing repositories/services.
+`GET /api/v1/operator/dashboard` returns a read-only JSON document with links and shallow counts (pending review, failed runs, integration readiness flags). Callers must hold **`OpsRead`** (same as `/api/v1/ops/*`); the default `Service` role does not. It does not embed proprietary business rules—only aggregates available from existing repositories/services.

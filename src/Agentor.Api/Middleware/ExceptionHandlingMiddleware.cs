@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Agentor.Application.Orchestration;
 using Agentor.Contracts;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
@@ -29,6 +30,24 @@ public sealed class ExceptionHandlingMiddleware
         try
         {
             await _next(context);
+        }
+        catch (RunOrchestrationValidationException ex)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            context.Response.ContentType = "application/json";
+
+            var traceId = context.Response.Headers.TryGetValue(TraceIdHeaderName, out var tv)
+                ? tv.ToString()
+                : null;
+
+            var errorDto = new ApiErrorDto(
+                "RunOrchestrationValidationError",
+                "Run start routing is invalid.",
+                traceId,
+                ex.Errors.ToList());
+
+            var payload = JsonSerializer.Serialize(errorDto, _jsonOptions);
+            await context.Response.WriteAsync(payload);
         }
         catch (Exception ex)
         {

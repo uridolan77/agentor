@@ -1,38 +1,31 @@
-# Session handoff — Phase 22 PR106–PR110
+# Session handoff — Phase 24 PR115 (public run orchestration kernel)
 
 ## Completed
 
-- **PR106 — Review inbox completion**
-  - Pending inbox response includes **totalCount**, **skip**, **take**; items use **reviewReason** from persisted run summary (`AgentRunSummary.ErrorMessage` / list projection).
-  - **ReviewInboxWorkflowApiTests**: configures `RequiresReviewToolKeys` for `pr1.fake-tool`, starts a run via `POST /api/v1/agent-runs`, asserts pending inbox membership, approves via `POST /api/v1/reviews/{id}/decisions`, asserts removal from pending page.
-- **PR107 — Run timeline v2**
-  - `GET /api/v1/runs/{id}/timeline` returns **timelineGroups** (`PlanStep`, `SkillInvocation`, `PolicyDecision`, `ReviewDecision`) with deterministic ordering.
-  - Evidence: `GetRunTimelineQueryHandlerTests.HandleAsync_MultiStepStyleTrace_ProducesOrderedGroups`.
-- **PR108 — Operator dashboard v2**
-  - Dashboard modules: **queue**, **outbox**, expanded **integrations** readiness metrics via **`IIntegrationStatusReader`**, **policyRuntime** (active profile snapshot), **quality** proxies (`failedRunCount`), **deferredRisks** (SCOPE-001 pointer text).
-  - Evidence: `Phase13ProductSurfaceApiTests.GetOperatorDashboard_ReturnsModulesWithLinks`.
-- **PR109 — Audit packet / export variants**
-  - Query `format=canonical|pretty|redactionReport|hashOnly`; **`X-Agentor-Audit-Content-SHA256` always hashes canonical minified redacted JSON**.
-  - Evidence: `GetRunAuditExportQueryHandlerTests`; `ApiContractTests` pretty/hashOnly/bad-format cases.
-- **PR110 — Operator documentation**
-  - Added `docs/operator/review-workflow.md`, `docs/operator/debug-run.md`, `docs/operator/audit-export.md`.
+- **Orchestration model**: `RunExecutionMode` + `RunOrchestrationRequest`; `StartAgentRunRouting` + `AgentorPublicRunOptions` (`Agentor:PublicRuns:TreatMissingExecutionSelectorAsLegacyFakeTool`, default true for backward compatibility).
+- **Executors**: `GovernedSingleToolRunDriver` (policy + pipeline single tool); `LegacyFakeRunExecutor` (PR1 fake path); **`AgentRunOrchestrator`** implements **`IAgentRunOrchestrator`** (legacy, single-tool / model / MCP / external, plan from store, recipe instantiate, skill wrap).
+- **API**: `StartAgentRunRequestDto` extended; `StartAgentRunRequestMapping`; `StartAgentRunFingerprint` includes routing fields; **`RunOrchestrationValidationException`** → **400** in `ExceptionHandlingMiddleware`.
+- **DI**: `IAgentPlanExecutor` → `SequentialAgentPlanExecutor`, `GovernedSingleToolRunDriver`, `LegacyFakeRunExecutor`, `IAgentRunOrchestrator`; `StartAgentRunHandler` now takes orchestrator + options monitor.
+- **Tests**: `AgentRunOrchestrationApiTests` (Conexus, MCP echo, external invoke, deny, requires-review, explicit legacy); `AgentorTestComposition` + `StartAgentRunTestFactory` for handler construction; **419** tests passing solution-wide.
+- **Docs**: `docs/REPO_TRUTH.md`, `README.md` (limitations + API examples).
 
 ## Verification
 
 - `dotnet restore Agentor.sln` succeeded
 - `dotnet build Agentor.sln --no-restore` succeeded
-- `dotnet test Agentor.sln --no-build` succeeded (**408 passed, 0 failed**)
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 22 -ExpectedHarnessPass PR110` succeeded
+- `dotnet test Agentor.sln --no-build` succeeded (**419 passed, 0 failed**)
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 24 -ExpectedHarnessPass PR115` succeeded
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
 ## What is next
 
-- Phase 23 or the next explicitly scheduled planning phase.
+- **Phase 25** — `RunQueueHostedService` scoped queue/lease resolution; queue invokes orchestrator (per `docs/planning/pr111-pr120.md`), or next scheduled phase.
 
 ## What was explicitly not started
 
-- **Phase 23+** product work was not started.
+- **Phase 25+** (queue lifetime refactor, EF queue payload for full orchestration selectors, etc.) was **not** started.
 
 ## Remaining risks / deferred
 
-- **SCOPE-001** remains the active harness deferred item (`passes: false`) — policy rule scope enforcement still not wired into evaluation against run identity.
+- **SCOPE-001** remains **`passes: false`** (policy scope modeled, not enforced on evaluation).
+- **Durable queue** persistence still stores the **narrow** `StartAgentRunCommand` columns only — advanced selectors on queued runs are not carried through EF queue rows until a later migration/phase.

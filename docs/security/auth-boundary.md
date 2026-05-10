@@ -80,6 +80,7 @@ Current enforced endpoints include:
 - `GET /api/v1/ops/queue` -> `OpsRead`
 - `GET /api/v1/ops/outbox` -> `OpsRead`
 - `GET /api/v1/ops/leases` -> `OpsRead`
+- `GET /api/v1/operator/dashboard` -> `OpsRead`
 
 ## Scope note (SCOPE-001)
 

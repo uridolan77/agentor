@@ -58,6 +58,9 @@ builder.Services
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
+builder.Services.Configure<AgentorPublicRunOptions>(
+    builder.Configuration.GetSection(AgentorPublicRunOptions.SectionName));
+
 builder.Services.Configure<RuntimePolicyOptions>(
     builder.Configuration.GetSection(RuntimePolicyOptions.SectionName));
 

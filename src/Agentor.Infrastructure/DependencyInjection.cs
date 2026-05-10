@@ -1,5 +1,7 @@
 using System.Linq;
 using Agentor.Application.Abstractions;
+using Agentor.Application.Coordination;
+using Agentor.Application.Orchestration;
 using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.ExternalAgents;
@@ -120,6 +122,11 @@ public static class DependencyInjection
             sp.GetRequiredService<IExternalAgentProtocolClient>()));
         services.AddScoped<IPolicyEvaluator, RuntimePolicyEvaluator>();
         services.AddSingleton<IToolExecutionPipeline, ToolExecutionPipeline>();
+        services.AddSingleton<IStepGuardEvaluator, StepGuardEvaluator>();
+        services.AddScoped<IAgentPlanExecutor, SequentialAgentPlanExecutor>();
+        services.AddScoped<GovernedSingleToolRunDriver>();
+        services.AddScoped<LegacyFakeRunExecutor>();
+        services.AddScoped<IAgentRunOrchestrator, AgentRunOrchestrator>();
         services.AddSingleton<InMemorySkillPackageCatalog>();
         services.AddSingleton<ISkillPackageCatalog>(sp => sp.GetRequiredService<InMemorySkillPackageCatalog>());
         services.AddSingleton<IntegrationSurfaceService>();

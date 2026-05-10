@@ -32,7 +32,7 @@ This note captures operational risks and deployment controls for Agentor auth mo
 6. Audit and operations data exposure
 
 - Risk: unauthorized actors retrieving audit exports or operational queue/outbox/lease state.
-- Control: `GET /audit-export` requires `AuditRead`; `/api/v1/ops/*` requires `OpsRead`.
+- Control: `GET /audit-export` requires `AuditRead`; `/api/v1/ops/*` and **`GET /api/v1/operator/dashboard`** require `OpsRead`.
 
 7. No-op outbox dispatch in production
 

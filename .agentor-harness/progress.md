@@ -1,5 +1,59 @@
 # Agentor harness progress
 
+## Phase 24 PR115 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **`RunOrchestrationRequest`** + **`RunExecutionMode`** (Domain); **`StartAgentRunRouting`** + **`AgentorPublicRunOptions`**; **`GovernedSingleToolRunDriver`**, **`LegacyFakeRunExecutor`**, **`AgentRunOrchestrator`** + **`IAgentRunOrchestrator`**; **`StartAgentRunHandler`** delegates; Infrastructure DI **`IAgentPlanExecutor`/`SequentialAgentPlanExecutor`**; API **`StartAgentRunRequestMapping`**, extended **`StartAgentRunFingerprint`**, **`RunOrchestrationValidationException`** → 400; **`AgentRunOrchestrationApiTests`**; harness/docs/README/appsettings.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **419 passed, 0 failed**
+- `verify-harness.ps1 -ExpectedPhase 24 -ExpectedHarnessPass PR115` (Windows PowerShell)
+- `verify-repo-clean.ps1`
+
+**Scope guard**: Phase 25 not started.
+
+## Phase 23 PR111 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- Root **README.md**: product identity, capabilities, explicit limitations (with pointer to repo truth), quickstart, API examples, architecture, runtime model, human review, integrations, development harness, roadmap.
+- **`docs/REPO_TRUTH.md`**: factual current-state bullets (public agent-runs, executor default, policy scope, persistence, Jwt).
+- **`decisions/ADR-023-public-run-kernel-unification.md`**: ADR for public run API → orchestration kernel; fake as adapter.
+- **`docs/history/PR1-PR40-package.md`**: archived prior “Claude Code Package” root README.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **413 passed, 0 failed**
+- `verify-harness.ps1 -ExpectedPhase 23 -ExpectedHarnessPass PR111` (Windows PowerShell)
+- `verify-repo-clean.ps1`
+
+**Scope guard**: Phase 24 completed later (see Phase 24 PR115).
+
+## Phase 22 PR110.5 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- `GET /api/v1/operator/dashboard` protected with **`EndpointAuthorization.Require(..., OpsRead)`** (aligned with `/api/v1/ops/*`).
+- API tests: `EndpointAuthorizationApiTests` — HumanOperator/System OK, Service **403**, actor accessor failure **401**.
+- Unit test: `RoleBasedAuthorizationDecisionServiceTests.Authorize_Allows_System_ForOpsRead`.
+- Docs: `auth-boundary.md`, `deployment-threat-notes.md`, `dashboard-and-inbox.md`, `debug-run.md`, `phase13-product-surface.md`, `phase13-workflows` example.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **413 passed, 0 failed**
+- `verify-harness.ps1 -ExpectedPhase 22 -ExpectedHarnessPass PR110.5` (Windows PowerShell)
+- `verify-repo-clean.ps1`
+
+**Scope guard**: Phase 23 not started.
+
 ## Phase 22 PR106–PR110 (2026-05-11)
 
 **Status**: Complete.

@@ -3,11 +3,10 @@ using Agentor.Application.Commands;
 using Agentor.Application.Coordination;
 using Agentor.Application.Options;
 using Agentor.Application.Orchestration;
-using Agentor.Infrastructure;
 using Agentor.Infrastructure.Management;
 using Microsoft.Extensions.Options;
 
-namespace Agentor.Application.Tests;
+namespace Agentor.Infrastructure.Tests.Support;
 
 internal sealed class ConstantPublicRunOptionsMonitor : IOptionsMonitor<AgentorPublicRunOptions>
 {
@@ -29,17 +28,15 @@ internal sealed class ConstantPublicRunOptionsMonitor : IOptionsMonitor<AgentorP
     }
 }
 
-internal static class AgentorTestComposition
+internal static class StartAgentRunTestFactory
 {
-    public static StartAgentRunHandler CreateStartAgentRunHandler(
+    public static StartAgentRunHandler CreateHandler(
         IAgentRunRepository repository,
         IPolicyEvaluator policyEvaluator,
         IToolRegistry toolRegistry,
-        IClock clock,
-        ToolExecutionOptions? toolExecutionOptions = null)
+        IClock clock)
     {
-        var opts = Microsoft.Extensions.Options.Options.Create(toolExecutionOptions ?? new ToolExecutionOptions());
-        var pipeline = new ToolExecutionPipeline(clock, opts);
+        var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
         var planStore = new InMemoryManagementPlanStore();
         var recipeStore = new InMemoryManagementRecipeStore();
         var skills = new InMemorySkillPackageCatalog();
@@ -59,37 +56,5 @@ internal static class AgentorTestComposition
         var publicMon = new ConstantPublicRunOptionsMonitor(
             new AgentorPublicRunOptions { TreatMissingExecutionSelectorAsLegacyFakeTool = true });
         return new StartAgentRunHandler(orchestrator, publicMon);
-    }
-
-    public static SequentialAgentPlanExecutor CreateSequentialPlanExecutor(
-        IToolRegistry toolRegistry,
-        IPolicyEvaluator policyEvaluator,
-        IClock clock,
-        ToolExecutionOptions? toolExecutionOptions = null,
-        IStepGuardEvaluator? guardEvaluator = null,
-        ISkillPackageCatalog? skillCatalog = null)
-    {
-        var opts = Microsoft.Extensions.Options.Options.Create(toolExecutionOptions ?? new ToolExecutionOptions());
-        var pipeline = new ToolExecutionPipeline(clock, opts);
-        return new SequentialAgentPlanExecutor(
-            toolRegistry,
-            policyEvaluator,
-            pipeline,
-            clock,
-            guardEvaluator ?? new StepGuardEvaluator(),
-            skillCatalog ?? new EmptySkillPackageCatalog());
-    }
-
-    public static ExecuteAgentPlanHandler CreateExecuteAgentPlanHandler(
-        IAgentRunRepository repository,
-        IToolRegistry toolRegistry,
-        IPolicyEvaluator policyEvaluator,
-        IClock clock,
-        ToolExecutionOptions? toolExecutionOptions = null,
-        IStepGuardEvaluator? guardEvaluator = null,
-        ISkillPackageCatalog? skillCatalog = null)
-    {
-        var executor = CreateSequentialPlanExecutor(toolRegistry, policyEvaluator, clock, toolExecutionOptions, guardEvaluator, skillCatalog);
-        return new ExecuteAgentPlanHandler(executor, repository);
     }
 }

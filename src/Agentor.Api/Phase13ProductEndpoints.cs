@@ -300,11 +300,26 @@ internal static class Phase13ProductEndpoints
     {
         v1.MapGet("/operator/dashboard", async (
                 OperatorDashboardQueryHandler handler,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext,
                 CancellationToken cancellationToken) =>
-            Results.Ok(await handler.HandleAsync(cancellationToken)))
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.OpsRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                return Results.Ok(await handler.HandleAsync(cancellationToken));
+            })
             .WithName("GetOperatorDashboard")
             .WithTags("Operator")
-            .WithSummary("Read-only dashboard DTO: links and counts; all business state comes from runtime/API models.");
+            .WithSummary("Read-only dashboard DTO (requires OpsRead): links and operational aggregates; same permission family as /api/v1/ops/*.");
     }
 
     private static void MapReviews(RouteGroupBuilder v1)

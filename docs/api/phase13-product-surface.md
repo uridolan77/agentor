@@ -25,7 +25,7 @@ Validation failures return `400` with `ApiErrorDto` (machine-oriented codes and 
 
 | Route | Purpose |
 |-------|---------|
-| `GET /operator/dashboard` | Read-only DTO: module links and counts from existing queries. |
+| `GET /operator/dashboard` | Read-only DTO: module links and counts; requires **`OpsRead`** (aligned with `/ops/*`). |
 | `GET /reviews/pending` | Inbox: runs in `RequiresReview`. |
 | `POST /reviews/{runId}/decisions` | Alias of `POST /agent-runs/{runId}/human-review` (governance; actor context via `X-Agentor-Actor-Id` where configured). |
 

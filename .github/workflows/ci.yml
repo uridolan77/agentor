@@ -37,8 +37,8 @@ jobs:
       - name: Benchmark project compile (release baseline harness)
         run: dotnet build benchmarks/Agentor.Benchmarks/Agentor.Benchmarks.csproj --configuration Release --no-restore
 
-      - name: Verify harness (phase 22 PR110)
-        run: pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 22 -ExpectedHarnessPass PR110
+      - name: Verify harness (phase 22 PR110.5)
+        run: pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 24 -ExpectedHarnessPass PR115
 
       - name: Verify repository cleanliness
         run: pwsh ./scripts/verify-repo-clean.ps1

@@ -19,6 +19,8 @@ Assume response `202` with JSON containing `id` as `{runId}`.
 
 ## B. Operator dashboard
 
+Requires **`OpsRead`** when endpoint authorization is enabled (same permission as `/api/v1/ops/*`). Ensure your actor principal maps to a role that includes `OpsRead` (default: `HumanOperator`, `System`; not `Service`).
+
 ```http
 GET /api/v1/operator/dashboard HTTP/1.1
 ```

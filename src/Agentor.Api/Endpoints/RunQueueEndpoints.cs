@@ -1,3 +1,4 @@
+using Agentor.Api.Mapping;
 using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Application.RunQueue;
@@ -23,14 +24,7 @@ public static class RunQueueEndpoints
                 ? requestTraceId
                 : request.TraceId;
 
-            var command = new StartAgentRunCommand(
-                request.AgentName,
-                request.Objective,
-                commandTraceId,
-                request.TenantId,
-                request.WorkspaceId,
-                request.ProjectId,
-                request.KnowledgeScopeId);
+            var command = StartAgentRunRequestMapping.ToCommand(request, commandTraceId);
             var validation = StartAgentRunValidator.Validate(command);
 
             if (!validation.IsValid)

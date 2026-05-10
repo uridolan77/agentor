@@ -2,6 +2,8 @@
 
 ## Dashboard (`GET /api/v1/operator/dashboard`)
 
+Requires **`OpsRead`** (same permission family as `GET /api/v1/ops/*`). The `Service` role does not receive `OpsRead` in the default role mapping.
+
 The dashboard response is **read-only** and **API-shaped**: it exposes links to primary modules (runs, plans, skills, policies, reviews, integrations, quality) and simple counts where cheaply available (for example pending human reviews). It does not embed business rules beyond what existing query handlers already compute.
 
 **Design rule:** UIs and operators consume this DTO plus the underlying resource APIs. No dashboard-only source of truth.
