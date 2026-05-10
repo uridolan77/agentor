@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+.idea/
+.vscode/
+TestResults/
+coverage/
+*.user
+*.suo
+*.rsuser
+*.nupkg
+.env
+.env.local
+appsettings.Development.json
+artifacts/

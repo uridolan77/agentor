@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Agentor.Domain</RootNamespace>
+    <AssemblyName>Agentor.Domain</AssemblyName>
+  </PropertyGroup>
+</Project>

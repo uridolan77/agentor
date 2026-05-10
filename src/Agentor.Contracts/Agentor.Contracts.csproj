@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Agentor.Contracts</RootNamespace>
+    <AssemblyName>Agentor.Contracts</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Agentor.Domain\Agentor.Domain.csproj" />
+  </ItemGroup>
+</Project>

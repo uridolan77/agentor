@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <RootNamespace>Agentor.Api</RootNamespace>
+    <AssemblyName>Agentor.Api</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Agentor.Application\Agentor.Application.csproj" />
+    <ProjectReference Include="..\Agentor.Contracts\Agentor.Contracts.csproj" />
+    <ProjectReference Include="..\Agentor.Domain\Agentor.Domain.csproj" />
+    <ProjectReference Include="..\Agentor.Infrastructure\Agentor.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

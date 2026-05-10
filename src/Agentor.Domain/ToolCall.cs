@@ -1,0 +1,88 @@
+using Agentor.Domain.Enums;
+
+namespace Agentor.Domain;
+
+public sealed class ToolCall
+{
+    private readonly Dictionary<string, string> _input;
+    private readonly Dictionary<string, string> _output = new();
+
+    private ToolCall(Guid id, Guid runId, Guid stepId, string toolKey, IReadOnlyDictionary<string, string> input, DateTimeOffset startedAt)
+    {
+        Id = id;
+        RunId = runId;
+        StepId = stepId;
+        ToolKey = toolKey;
+        _input = new Dictionary<string, string>(input, StringComparer.OrdinalIgnoreCase);
+        StartedAt = startedAt;
+        Status = ToolCallStatus.Running;
+    }
+
+    public Guid Id { get; }
+
+    public Guid RunId { get; }
+
+    public Guid StepId { get; }
+
+    public string ToolKey { get; }
+
+    public ToolCallStatus Status { get; private set; }
+
+    public IReadOnlyDictionary<string, string> Input => _input;
+
+    public IReadOnlyDictionary<string, string> Output => _output;
+
+    public DateTimeOffset StartedAt { get; }
+
+    public DateTimeOffset? CompletedAt { get; private set; }
+
+    public string? ErrorMessage { get; private set; }
+
+    public static ToolCall Start(Guid runId, Guid stepId, string toolKey, IReadOnlyDictionary<string, string> input, DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(toolKey))
+        {
+            throw new ArgumentException("Tool key is required.", nameof(toolKey));
+        }
+
+        return new ToolCall(Guid.NewGuid(), runId, stepId, toolKey.Trim(), input, now);
+    }
+
+    public void Succeed(IReadOnlyDictionary<string, string> output, DateTimeOffset now)
+    {
+        EnsureRunning();
+        _output.Clear();
+
+        foreach (var item in output)
+        {
+            _output[item.Key] = item.Value;
+        }
+
+        Status = ToolCallStatus.Succeeded;
+        CompletedAt = now;
+    }
+
+    public void Fail(string errorMessage, DateTimeOffset now)
+    {
+        EnsureRunning();
+        Status = ToolCallStatus.Failed;
+        ErrorMessage = errorMessage;
+        CompletedAt = now;
+    }
+
+    public void Deny(string reason, DateTimeOffset now)
+    {
+        EnsureRunning();
+        Status = ToolCallStatus.Denied;
+        ErrorMessage = reason;
+        CompletedAt = now;
+    }
+
+    private void EnsureRunning()
+    {
+        if (Status != ToolCallStatus.Running)
+        {
+            throw new InvalidOperationException($"Tool call is not running. Current status: {Status}");
+        }
+    }
+}

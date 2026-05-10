@@ -1,0 +1,63 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agentor.Domain", "src\Agentor.Domain\Agentor.Domain.csproj", "{1E0EF701-5168-4692-9D69-C42C1B01D001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agentor.Application", "src\Agentor.Application\Agentor.Application.csproj", "{1E0EF701-5168-4692-9D69-C42C1B01D002}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agentor.Contracts", "src\Agentor.Contracts\Agentor.Contracts.csproj", "{1E0EF701-5168-4692-9D69-C42C1B01D003}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agentor.Infrastructure", "src\Agentor.Infrastructure\Agentor.Infrastructure.csproj", "{1E0EF701-5168-4692-9D69-C42C1B01D004}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agentor.Api", "src\Agentor.Api\Agentor.Api.csproj", "{1E0EF701-5168-4692-9D69-C42C1B01D005}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agentor.Domain.Tests", "tests\Agentor.Domain.Tests\Agentor.Domain.Tests.csproj", "{1E0EF701-5168-4692-9D69-C42C1B01D006}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agentor.Application.Tests", "tests\Agentor.Application.Tests\Agentor.Application.Tests.csproj", "{1E0EF701-5168-4692-9D69-C42C1B01D007}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Agentor.Api.Tests", "tests\Agentor.Api.Tests\Agentor.Api.Tests.csproj", "{1E0EF701-5168-4692-9D69-C42C1B01D008}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1E0EF701-5168-4692-9D69-C42C1B01D001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D003}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D004}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D005}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D005}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D006}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D006}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D006}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D006}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D007}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D007}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D007}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D007}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D008}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D008}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D008}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E0EF701-5168-4692-9D69-C42C1B01D008}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

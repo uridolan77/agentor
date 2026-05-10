@@ -1,0 +1,35 @@
+---
+description: Agentor architectural invariants and PR1 scope
+globs:
+  - "**/*.cs"
+  - "**/*.md"
+alwaysApply: true
+---
+
+# Agentor Rules
+
+Agentor is an agent execution runtime, not a knowledge-state engine.
+
+Keep these boundaries:
+
+- Agentor executes agents, steps, tools, policies, traces, and manifests.
+- Athanor remains the canonical knowledge-state service.
+- Conexus remains the LLM/model gateway.
+- MCP integration comes later.
+
+PR1 scope is deliberately small:
+
+- deterministic fake run only
+- no LLM calls
+- no Athanor runtime call
+- no Conexus runtime call
+- no MCP
+- no vector store
+- no background jobs
+- no dashboard
+
+Do not add new abstractions unless they are used by PR1 tests.
+
+Every tool call must have a PolicyDecision.
+Every run must emit ExecutionTraceEvent items.
+Every completed run must produce a RunManifest.
