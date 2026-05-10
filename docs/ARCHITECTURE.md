@@ -21,6 +21,18 @@ Contracts → Domain only if needed
 Domain → nothing
 ```
 
+Domain must not reference:
+- HTTP
+- EF Core
+- JSON serialization concerns
+- provider SDKs
+- Athanor HTTP client
+- Conexus HTTP client
+- MCP client
+- Microsoft Agent Framework
+- Semantic Kernel
+- A2A libraries
+
 ## Runtime loop
 
 ```text
@@ -36,6 +48,44 @@ StartAgentRunCommand
   → persist run
   → expose RunManifest
 ```
+
+## CWC decomposition model
+
+Agentor applies the Anthropic CWC workshop lesson by decomposing agent systems into separable runtime parts:
+
+```text
+AgentRun        = execution instance
+AgentPlan       = structured execution plan
+ToolCall        = deterministic or external action
+SkillInvocation = procedural guidance / reusable capability
+SessionMemory   = bounded context
+PolicyDecision  = runtime authorization/safety decision
+ExecutionTrace  = audit trail
+RunManifest     = reproducible summary
+Evaluation      = measurable quality/safety/cost outcome
+Adapter         = external system boundary
+```
+
+The goal is not to build a giant agent prompt. The goal is to build a system where tools, skills, memory, traces, policies, evals, and adapters are independently testable.
+
+## Framework strategy
+
+External frameworks are adapters, not core.
+
+Allowed later through Infrastructure adapters:
+- MCP
+- Microsoft Agent Framework
+- Semantic Kernel
+- A2A
+- LangGraph
+- AutoGen
+- CrewAI
+
+Not allowed in core Domain/Application:
+- framework-specific agent types
+- provider-specific model calls
+- external framework state machines
+- direct tool execution outside Agentor policy
 
 ## PR1 execution mode
 

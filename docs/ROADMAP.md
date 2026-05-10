@@ -1,51 +1,28 @@
 # Agentor Roadmap
 
-## PR1 — Runtime foundation
+The active detailed roadmap is:
 
-- deterministic fake run
-- policy decision shape
-- tool call shape
-- trace shape
-- manifest shape
-- in-memory repository
-- minimal API
+```text
+docs/planning/pr1-pr40/PR_INDEX.md
+```
 
-## PR2 — Athanor client boundary
+## Summary
 
-- define `IKnowledgeStateClient`
-- add `Agentor.Athanor.Client`
-- support read-only latest snapshot/search evidence stubs
-- no canonization
+```text
+PR01–PR05   Runtime kernel and API hardening
+PR06–PR10   Persistence, read models, and eval fixture baseline
+PR11–PR15   Tools and runtime policy
+PR16–PR20   Plans, recipes, and execution orchestration
+PR21–PR25   Athanor integration
+PR26–PR30   Conexus integration
+PR31–PR35   Skills, memory, and evaluation
+PR36–PR40   MCP boundary, observability, deployment, release
+PR41+       A2A / external-agent protocols and optional framework adapters
+```
 
-## PR3 — Conexus client boundary
+## Roadmap principles
 
-- define `IModelGatewayClient`
-- call Conexus through abstraction
-- no provider SDKs in Agentor
-
-## PR4 — Tool registry
-
-- ToolDefinition registry
-- tool execution dispatch
-- policy per tool
-- no MCP yet
-
-## PR5 — MCP adapter
-
-- MCP tool discovery
-- capability negotiation
-- external tool binding
-
-## PR6 — Evaluation
-
-- run-level quality/safety/cost/latency evaluation
-- regression fixtures
-
-## PR7 — Agent planning
-
-- recipe / plan model
-- multi-step deterministic workflows
-
-## PR8 — UI or dashboard
-
-Only after runtime + traces + manifests are stable.
+- PRs are medium-long, coherent, reviewable passes.
+- Agentor executes; Athanor canonizes; Conexus routes models.
+- External frameworks are adapters, not Agentor core.
+- Evaluation fixtures appear early and mature over time.

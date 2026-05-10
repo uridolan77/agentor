@@ -35,12 +35,19 @@ GET  /agent-runs/{runId}/manifest
 - run has trace events
 - manifest endpoint returns reproducible summary
 - docs state that Athanor remains external
+- docs state that external frameworks are adapters, not core
 
 ## Forbidden in PR1
 
 - real Athanor client
 - real Conexus client
 - real MCP
+- Microsoft Agent Framework
+- Semantic Kernel
+- A2A
+- LangGraph
+- AutoGen
+- CrewAI
 - model calls
 - memory subsystem
 - vector database

@@ -21,6 +21,8 @@ Agentor owns:
 - execution traces
 - run manifests
 - run-level evaluation
+- skills as procedural runtime packages
+- runtime memory boundaries
 
 Agentor does not own:
 - canonical knowledge
@@ -30,6 +32,7 @@ Agentor does not own:
 - model routing
 - model pricing
 - protocol marketplaces
+- external framework ontology
 
 ## External services
 
@@ -49,6 +52,20 @@ Conexus:
 
 MCP:
 - future tool/protocol connectivity layer
+
+A2A / external-agent protocols:
+- future external-agent communication layer
+- not part of v0.1 core
+
+Microsoft Agent Framework / Semantic Kernel / LangGraph / AutoGen / CrewAI:
+- possible adapter integrations
+- not Agentor's core runtime ontology
+
+## Framework compatibility principle
+
+Agentor should be framework-compatible, not framework-dependent.
+
+Frameworks may plug into Agentor through Infrastructure adapters after the runtime model is stable. They must not define Agentor's Domain primitives.
 
 ## First product milestone
 

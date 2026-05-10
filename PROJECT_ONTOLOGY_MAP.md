@@ -9,8 +9,11 @@ AgentProfile
 AgentRun
   one execution instance of an agent profile against an objective
 
+AgentPlan
+  an execution plan composed of ordered/guarded steps
+
 AgentStep
-  one ordered step inside a run
+  one ordered step inside a run or plan
 
 ToolDefinition
   a tool capability known to the runtime
@@ -29,9 +32,18 @@ RunManifest
 
 AgentEvaluationResult
   measured quality/safety/cost/latency result for a run
+
+SkillDefinition
+  reusable procedural knowledge package, not directly a tool
+
+SkillInvocation
+  invocation of a skill within a run or plan
+
+SessionMemory
+  bounded run/session context, not canonical knowledge
 ```
 
-## Later integration entities
+## Integration entities
 
 ```text
 AthanorCandidateSubmission
@@ -45,6 +57,15 @@ ConexusModelCall
 
 McpToolBinding
   external tool exposed through MCP
+
+ExternalFrameworkAdapter
+  adapter wrapper around an external agent framework
+
+A2AExternalAgentCall
+  future governed call to an external agent through A2A-like protocol
+
+SemanticKernelAdapter
+  future adapter for prompt/function abstractions, not core runtime
 ```
 
 ## Forbidden ontology collapse
@@ -58,4 +79,10 @@ Agent proposal ≠ canonical state
 Execution trace ≠ review event
 Run manifest ≠ canonical snapshot
 Agentor policy ≠ Athanor authority
+Skill ≠ tool
+Memory ≠ Athanor
+MCP ≠ Agentor core
+A2A ≠ Agentor core
+Semantic Kernel ≠ Agentor core
+Microsoft Agent Framework ≠ Agentor core
 ```
