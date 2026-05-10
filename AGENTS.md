@@ -168,12 +168,13 @@ After updating harness files, run:
 
 ```powershell
 pwsh ./scripts/verify-harness.ps1
+pwsh ./scripts/verify-repo-clean.ps1
 ```
 
 For phase-specific closeout, pass expected values:
 
 ```powershell
-pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 11 -ExpectedHarnessPass PR55.5
+pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 15 -ExpectedHarnessPass PR75.6
 ```
 
 See `.agentor-harness/SESSION_CLOSEOUT_PROTOCOL.md` for the canonical closeout procedure.

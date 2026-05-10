@@ -1,23 +1,28 @@
 # Session handoff
 
-## Completed (Phase 15 / PR75.5)
+## Completed (PR75.6)
 
-- **PR71-style redaction**: `SensitiveFieldCatalog`, `RedactionPolicy`, `RedactionResult`, `JsonRedaction`; audit export uses `RedactionPolicy.FromAuditExportOptions`; `EvaluationReportGenerator.BuildJson` applies catalog-default redaction before string output.
-- **PR72**: BenchmarkDotNet `benchmarks/Agentor.Benchmarks` (audit export + manifest paths); `docs/developer/phase15-performance-baselines.md`.
-- **PR73**: `.github/workflows/ci.yml` hardened (dotnet-ef migrations list, evaluation `FullyQualifiedName~Agentor.Application.Tests.Evaluation`, Docker build, TRX upload, benchmark Release build).
-- **PR74**: `Agentor.Contracts.Tests` JSON round-trips; `CONTRACT_VERSIONING.md`; `MIGRATION_AND_UPGRADE.md`.
-- **PR75**: `docs/RELEASE/v1.0-RC.md`, `docs/ARCHITECTURE_BOUNDARY_REVIEW.md`, harness reconciliation (phase 15 / PR75.5).
-- Full solution verification recorded in `.agentor-harness/verification-log.md`.
+- Removed tracked root scratch Python patch scripts (`git rm` of `_*.py`, `write_phase9_payload.py`, and related files).
+- Added `.gitignore` root-only hygiene patterns; `scripts/verify-repo-clean.ps1`; `scripts/run-benchmarks.ps1`.
+- Compacted `.agentor-harness/current-pr.md`; updated harness to **PR75.6**; appended `progress.md` and `verification-log.md`.
+- `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` lists all `passes: false` acceptance rows with disposition notes.
+- Strengthened redaction tests (`JsonRedactionTests`, `RedactionPolicyTests`) and expanded `ContractDtoCompatibilityTests` for representative public DTOs.
+- Documentation: `phase15-performance-baselines.md`, `phase15-redaction.md`, `v1.0-RC.md`, `benchmarks/Agentor.Benchmarks/README.md`; closeout docs now require both harness and repo-clean scripts.
 
-## Next (not started here)
+## Deliberately not changed
 
-- **Post Phase 15** roadmap or a new phase from `docs/planning/` only when explicitly scoped and requested.
+- **Program.cs** was not split into `Endpoints/*.cs` (deferred; see `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`).
+- No CI change to execute full BenchmarkDotNet runs (still compile-only benchmark build).
+- `Phase13ProductEndpoints.cs` was not modified in this hygiene pass.
 
 ## Not started
 
-- No runtime feature work beyond Phase 15 scope was started in this pass (no new phase PRs).
+- **Phase 16+** roadmap or any post-Phase-15 product/runtime features were **not** started.
 
-## Risks / remaining `passes: false`
+## Remaining risks / false acceptance items
 
-- Earlier-phase `acceptanceItems` that were already `passes: false` in git HEAD (for example legacy API contract rows) remain **unchanged** and still false unless separately verified; Phase 15 rows are marked passing with named file/test evidence in `feature-list.json`.
-- Redaction is **key-name substring** based; values in non-JSON surfaces or unusual key names may still leak secrets until extended.
+- All historical `passes: false` rows remain in `feature-list.json`; see `v1.0-RC-DEFERRED-ITEMS.md` for triage. PR75.6 acceptance rows are marked true only with named evidence.
+
+## Next recommended step
+
+- When ready for API ergonomics only: small PR to extract `Program.cs` endpoint groups behind stable extension methods (no route changes), or continue deferred items with explicit evidence updates.

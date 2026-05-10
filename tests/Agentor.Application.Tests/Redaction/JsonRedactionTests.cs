@@ -43,4 +43,37 @@ public sealed class JsonRedactionTests
         Assert.Contains("customSecret", policy.KeyNameSubstrings, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("authorization", policy.KeyNameSubstrings, StringComparer.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Apply_RedactsSubstringMatch_InMiddleOfPropertyName()
+    {
+        var json = "{\"x_apiKey_y\":\"secret\",\"plain\":\"keep\"}";
+        var node = JsonNode.Parse(json)!;
+        var policy = new RedactionPolicy(["apikey"]);
+
+        var result = JsonRedaction.Apply(node, policy);
+
+        Assert.Contains("/x_apiKey_y", result.RedactedKeyPaths, StringComparer.Ordinal);
+        var text = node.ToJsonString();
+        Assert.DoesNotContain("secret", text, StringComparison.Ordinal);
+        Assert.Contains("\"plain\":\"keep\"", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Apply_RedactsEachObject_InArray()
+    {
+        var json = "{\"items\":[{\"token\":\"a\"},{\"token\":\"b\"}],\"ok\":1}";
+        var node = JsonNode.Parse(json)!;
+        var policy = new RedactionPolicy(["token"]);
+
+        var result = JsonRedaction.Apply(node, policy);
+
+        Assert.Contains("/items/0/token", result.RedactedKeyPaths, StringComparer.Ordinal);
+        Assert.Contains("/items/1/token", result.RedactedKeyPaths, StringComparer.Ordinal);
+        Assert.Equal(2, result.RedactedPropertyCount);
+        var text = node.ToJsonString();
+        Assert.DoesNotContain("a", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("b", text, StringComparison.Ordinal);
+        Assert.Contains("\"ok\":1", text, StringComparison.Ordinal);
+    }
 }

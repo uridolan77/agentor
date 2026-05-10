@@ -1,10 +1,11 @@
 {
     "phase":  15,
-    "title":  "Phase 15 v1.0 platform hardening (PR71-PR75) + PR75.5 harness reconciliation",
-    "harnessPass":  "PR75.5",
+    "title":  "Phase 15 v1.0 platform hardening (PR71-PR75) + PR75.6 repository hygiene",
+    "harnessPass":  "PR75.6",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
+                  "PR75.6: repository hygiene - removed root scratch Python; verify-repo-clean.ps1 + run-benchmarks.ps1; compact current-pr; v1.0-RC-DEFERRED-ITEMS.md; contract/redaction tests; no Phase 16 work.",
                   "Phase 15 PR71-PR75: v1.0 platform hardening — SensitiveFieldCatalog/RedactionPolicy/JsonRedaction for audit export + evaluation JSON; BenchmarkDotNet project benchmarks/Agentor.Benchmarks; CI (.github/workflows/ci.yml: dotnet ef migrations list, evaluation test slice, Docker image build, TRX artifacts); Agentor.Contracts.Tests DTO round-trips; docs phase15-redaction.md, phase15-performance-baselines.md, CONTRACT_VERSIONING.md, MIGRATION_AND_UPGRADE.md, docs/RELEASE/v1.0-RC.md, ARCHITECTURE_BOUNDARY_REVIEW.md.",
                   "Phase 14 PR66-PR70: versioned evaluation fixture registry (schema 4, kind EvaluationFixtureRegistry), harness fixture parse (schema \u003e=2), coordination profiles (SequentialPipeline, SkillWrappedSequential, McpToolBoundPlan, ExternalAgentTool, ReviewGatedPlan) via HarnessProfileMaterializer, quality rule sets (QualityRuleSetEvaluator, JSON predicates only), CoordinationEvaluationMetrics from run/manifest artifacts, deterministic EvaluationReportGenerator (Markdown/JSON/CSV + CI folder). Tests: tests/Agentor.Application.Tests/Evaluation/*.cs; fixtures: tests/Agentor.Application.Tests/fixtures/eval/registry.json, quality-rules-*.json.",
                   "Phase 12 PR56-PR60: run queue (inline + in-memory background), durable outbox + dispatcher, execution leases + distributed op ledger, HTTP transport resilience registry, EF persistence + migration 20260512080000_Phase12Reliability.",
@@ -1071,6 +1072,55 @@
                                 "description":  "Harness reconciliation: phase 15 / PR75.5, verification log, session handoff, verify-harness.ps1.",
                                 "passes":  true,
                                 "evidence":  "scripts/verify-harness.ps1 -ExpectedPhase 15 -ExpectedHarnessPass PR75.5; .agentor-harness/verification-log.md"
+                            },
+                            {
+                                "id":  "PR75.6-001",
+                                "pr":  75.6,
+                                "description":  "Root scratch Python files removed from repository root.",
+                                "passes":  true,
+                                "evidence":  "git rm of 18 tracked root *.py scripts; repo root has no .py after PR75.6"
+                            },
+                            {
+                                "id":  "PR75.6-002",
+                                "pr":  75.6,
+                                "description":  ".gitignore prevents future root scratch filename patterns.",
+                                "passes":  true,
+                                "evidence":  ".gitignore root-only patterns /_*.py, /write_*_payload.py, scratch temp globs, /scratch/, /tmp/, /artifacts/local/, /agent-output/, /cursor-output/"
+                            },
+                            {
+                                "id":  "PR75.6-003",
+                                "pr":  75.6,
+                                "description":  "scripts/verify-repo-clean.ps1 repository cleanliness verifier added.",
+                                "passes":  true,
+                                "evidence":  "scripts/verify-repo-clean.ps1 (exit 0 in PR75.6 verification)"
+                            },
+                            {
+                                "id":  "PR75.6-004",
+                                "pr":  75.6,
+                                "description":  "Closeout protocol docs require verify-repo-clean.ps1 alongside verify-harness.ps1.",
+                                "passes":  true,
+                                "evidence":  "AGENTS.md; .cursor/rules/agentor-session-closeout.mdc; .agentor-harness/SESSION_CLOSEOUT_PROTOCOL.md"
+                            },
+                            {
+                                "id":  "PR75.6-005",
+                                "pr":  75.6,
+                                "description":  "current-pr.md is a compact harness marker (Completed/Next only).",
+                                "passes":  true,
+                                "evidence":  ".agentor-harness/current-pr.md"
+                            },
+                            {
+                                "id":  "PR75.6-006",
+                                "pr":  75.6,
+                                "description":  "Touched text files UTF-8 without BOM where applicable; encoding guard passes.",
+                                "passes":  true,
+                                "evidence":  "scripts/verify-repo-clean.ps1 (encoding scan: .agentor-harness/, scripts/, .github/workflows/); scripts/smoke.ps1 normalized to UTF-8 in PR75.6"
+                            },
+                            {
+                                "id":  "PR75.6-007",
+                                "pr":  75.6,
+                                "description":  "No post-Phase-15 roadmap or product feature implementation in this pass.",
+                                "passes":  true,
+                                "evidence":  "session-handoff.md Not started (Phase 16+); progress.md PR75.6 section"
                             }
                         ]
 }

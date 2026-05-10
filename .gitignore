@@ -14,6 +14,19 @@ coverage/
 appsettings.Development.json
 artifacts/
 
+# PR75.6 — root scratch / agent construction debris (paths are repo-root only)
+/_*.py
+/write_*_payload.py
+/*.scratch.*
+/*.tmp
+/*.bak
+/*.orig
+/scratch/
+/tmp/
+/artifacts/local/
+/agent-output/
+/cursor-output/
+
 # CWC/Agentor verification artifacts
 artifacts/verification/
 .claude/.evidence-reads

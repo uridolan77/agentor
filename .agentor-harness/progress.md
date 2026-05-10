@@ -1,5 +1,19 @@
 # Agentor harness progress
 
+## Phase 15 + PR75.6 (2026-05-10)
+
+Completed **PR75.6** repository hygiene after **Phase 15 PR71-PR75** + **PR75.5** harness reconciliation.
+
+- Removed tracked root scratch Python (`git rm` of `_*.py`, `write_phase9_payload.py`, and related one-off scripts).
+- `.gitignore` root-only patterns for future `_*.py`, `write_*_payload.py`, scratch temp names, and disposable root folders (`scratch/`, `tmp/`, etc.).
+- `scripts/verify-repo-clean.ps1` - root Python guard, UTF-8/BOM/null-byte scan for harness/scripts/.github/benchmarks/docs/src/tests plus root text files, harness shape checks, `passes=true` requires evidence.
+- `scripts/run-benchmarks.ps1` - local `dotnet run -c Release` for BenchmarkDotNet (CI remains compile-only on `benchmarks/Agentor.Benchmarks`).
+- Harness marker compacted in `current-pr.md`; `feature-list.json` harnessPass **PR75.6**; `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` lists every `passes: false` acceptance row with disposition notes.
+- Tests: extended `JsonRedactionTests` / `RedactionPolicyTests`; expanded `ContractDtoCompatibilityTests` for representative public DTOs.
+- **No** post-Phase 15 product features or new roadmap phases started.
+
+Next harness marker: **post Phase 15** roadmap items only when explicitly scheduled.
+
 ## Phase 15 + PR75.5 (2026-05-10)
 
 Completed **PR75.5** harness reconciliation after **Phase 15 PR71-PR75** v1.0 platform hardening.

@@ -24,6 +24,15 @@ dotnet build Agentor.sln --no-restore
 dotnet test Agentor.sln --no-build
 ```
 
+After harness files are updated, also run (PowerShell):
+
+```powershell
+pwsh ./scripts/verify-harness.ps1
+pwsh ./scripts/verify-repo-clean.ps1
+```
+
+Use `-ExpectedPhase` / `-ExpectedHarnessPass` on `verify-harness.ps1` when closing a numbered phase pass.
+
 Record the exact results and test counts in:
 
 ```text

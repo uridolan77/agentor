@@ -41,10 +41,11 @@ Before any final response that claims completion, you must do the following:
    - Do not start the next PR or phase unless explicitly requested.
    - If later-phase work was accidentally included, document it honestly.
 
-6. Verification script:
+6. Verification scripts:
    - Run `pwsh ./scripts/verify-harness.ps1`.
+   - Run `pwsh ./scripts/verify-repo-clean.ps1` (encoding, root debris, harness shape, acceptance evidence).
    - For phase closeout, pass expected values, for example:
-     `pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 11 -ExpectedHarnessPass PR55.5`.
+     `pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 15 -ExpectedHarnessPass PR75.6`.
 
 Final response must include:
 - files changed

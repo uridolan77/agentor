@@ -11,20 +11,37 @@ Targets from `docs/planning/pr41-pr75/PHASE_15_V1_HARDENING.md` (PR72):
 
 ## Harness project
 
-`benchmarks/Agentor.Benchmarks` (BenchmarkDotNet). Build:
+`benchmarks/Agentor.Benchmarks` (BenchmarkDotNet).
+
+### CI (compile-only)
+
+GitHub Actions runs:
 
 ```powershell
-dotnet build benchmarks/Agentor.Benchmarks -c Release
-dotnet run -c Release --project benchmarks/Agentor.Benchmarks -- --filter '*'
+dotnet build benchmarks/Agentor.Benchmarks/Agentor.Benchmarks.csproj --configuration Release --no-restore
 ```
 
-Local developer machines produce **median / mean** rows in BenchmarkDotNet output; CI compiles the benchmark project in Release to guard drift.
+This proves the harness **compiles** against current contracts; it does **not** collect timings.
+
+### Local execution (timings)
+
+Use the repo helper (same as `dotnet run`):
+
+```powershell
+pwsh ./scripts/run-benchmarks.ps1 -- --filter '*'
+```
+
+Or:
+
+```powershell
+dotnet run -c Release --project benchmarks/Agentor.Benchmarks/Agentor.Benchmarks.csproj -- --filter '*'
+```
 
 ## Regression policy
 
-- **Do not** gate CI on absolute nanosecond thresholds (hardware-dependent).
+- **Do not** gate CI on absolute nanosecond thresholds (hardware-dependent); CI only enforces **compile health** for the benchmark project.
 - Use BenchmarkDotNet trends locally when investigating regressions; compare baselines before/after change on the same machine configuration.
-- Smoke expectation: CI benchmark **compile** step ensures the harness stays buildable.
+- Future work may snapshot medians into this doc or add a separate perf gate — **not enforced** in v1.0 RC.
 
 ## Documented reference (replace with your local median after `dotnet run`)
 
