@@ -1,4 +1,4 @@
-﻿# Agentor harness - progress
+# Agentor harness - progress
 
 ## Phase 5 - Athanor integration (2026-05-10)
 
@@ -26,5 +26,6 @@ PR26–PR30: Conexus port (`IModelGatewayClient`), `FakeModelGatewayClient`, `co
 | PR28 | Prompt/model profile contract | Done |
 | PR29 | Cost/latency budget policy | Done |
 | PR30 | Model-call telemetry in manifests | Done |
+| PR30.5 | Conexus/manifest boundary + declared budget docs/tests | Done |
 
-Next: PR31 Skills / Phase 7 (not started).
+Next: PR31 Skills / Phase 7 (not started; PR30.5 completed first).

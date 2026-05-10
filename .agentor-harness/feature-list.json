@@ -1,218 +1,246 @@
-﻿{
-    "phase":  6,
-    "title":  "Conexus integration",
-    "harnessPass":  "PR30",
-    "encoding":  "utf-8",
-    "lastVerified":  "2026-05-10",
-    "notes":  [
-                  "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
-                  "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
-                  "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry."
-              ],
-    "acceptanceItems":  [
-                            {
-                                "id":  "PR21-001",
-                                "pr":  21,
-                                "description":  "IKnowledgeStateClient port defines read + candidate + review operations without Canonize",
-                                "passes":  true,
-                                "evidence":  "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations; src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs"
-                            },
-                            {
-                                "id":  "PR21-002",
-                                "pr":  21,
-                                "description":  "FakeKnowledgeStateClient implements port with in-memory behavior",
-                                "passes":  true,
-                                "evidence":  "FakeKnowledgeStateClientTests (all methods)"
-                            },
-                            {
-                                "id":  "PR21-003",
-                                "pr":  21,
-                                "description":  "DI registers IKnowledgeStateClient to FakeKnowledgeStateClient",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs (AddSingleton\u003cIKnowledgeStateClient, FakeKnowledgeStateClient\u003e)"
-                            },
-                            {
-                                "id":  "PR22-001",
-                                "pr":  22,
-                                "description":  "LookupCanonicalEntryAsync resolves from seeded snapshot",
-                                "passes":  true,
-                                "evidence":  "FakeKnowledgeStateClientTests.LookupCanonicalEntryAsync_UsesSeededSnapshot"
-                            },
-                            {
-                                "id":  "PR22-002",
-                                "pr":  22,
-                                "description":  "Latest snapshot query returns seeded data when run exists",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.GetLatestSnapshot_ReturnsSeededSnapshot_WhenRunExists"
-                            },
-                            {
-                                "id":  "PR22-003",
-                                "pr":  22,
-                                "description":  "Canonical lookup returns RunExists=false for unknown run",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.LookupCanonical_UnknownRun_ReturnsRunNotExists"
-                            },
-                            {
-                                "id":  "PR22-004",
-                                "pr":  22,
-                                "description":  "Canonical lookup rejects empty canonical key",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.LookupCanonical_EmptyKey_ThrowsArgumentException"
-                            },
-                            {
-                                "id":  "PR22-API-001",
-                                "pr":  22,
-                                "description":  "GET latest snapshot returns 404 for unknown run",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.GetLatestSnapshot_UnknownRun_Returns404"
-                            },
-                            {
-                                "id":  "PR22-API-002",
-                                "pr":  22,
-                                "description":  "GET canonical returns 404 for unknown run",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.GetCanonical_UnknownRun_Returns404"
-                            },
-                            {
-                                "id":  "PR22-API-003",
-                                "pr":  22,
-                                "description":  "GET canonical returns 400 when key is empty",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.GetCanonical_EmptyKey_ReturnsBadRequest"
-                            },
-                            {
-                                "id":  "PR23-001",
-                                "pr":  23,
-                                "description":  "Evidence search provenance attaches trace when run is Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.AttachEvidenceProvenance_WritesTrace_WhenRunRunning"
-                            },
-                            {
-                                "id":  "PR23-API-001",
-                                "pr":  23,
-                                "description":  "POST evidence-provenance returns 409 when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.PostEvidenceProvenance_AfterCompletedStartRun_Returns409"
-                            },
-                            {
-                                "id":  "PR23-API-003",
-                                "pr":  23,
-                                "description":  "Public API returns 2xx for evidence-provenance while run is Running",
-                                "passes":  false,
-                                "evidence":  "TODO: running-run fixture or plan-integrated call"
-                            },
-                            {
-                                "id":  "PR24-001",
-                                "pr":  24,
-                                "description":  "Candidate submission records trace when run is Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
-                            },
-                            {
-                                "id":  "PR24-002",
-                                "pr":  24,
-                                "description":  "Submit candidate returns false without trace when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_WhenRunNotRunning_ReturnsFalseWithoutTrace"
-                            },
-                            {
-                                "id":  "PR24-API-001",
-                                "pr":  24,
-                                "description":  "POST candidates returns 409 when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.PostCandidate_AfterCompletedStartRun_Returns409"
-                            },
-                            {
-                                "id":  "PR24-API-003",
-                                "pr":  24,
-                                "description":  "Public API returns 2xx for candidate submit while run is Running",
-                                "passes":  false,
-                                "evidence":  "TODO: same as PR23-API-003"
-                            },
-                            {
-                                "id":  "PR25-001",
-                                "pr":  25,
-                                "description":  "IKnowledgeStateClient has no Canonize-named operations",
-                                "passes":  true,
-                                "evidence":  "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
-                            },
-                            {
-                                "id":  "PR25-002",
-                                "pr":  25,
-                                "description":  "AgentRun declared public surface has no Canonize-named methods",
-                                "passes":  true,
-                                "evidence":  "NonCanonizationBoundaryTests.AgentRun_public_declared_surface_has_no_Canonize_methods"
-                            },
-                            {
-                                "id":  "PR25-003",
-                                "pr":  25,
-                                "description":  "Fake submit status documents non-canon outcome",
-                                "passes":  true,
-                                "evidence":  "NonCanonizationBoundaryTests.FakeKnowledgeStateClient_submit_status_is_explicitly_non_canon"
-                            },
-                            {
-                                "id":  "PR25-004",
-                                "pr":  25,
-                                "description":  "Review queue records AthanorReviewQueued when run is Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
-                            },
-                            {
-                                "id":  "PR25-005",
-                                "pr":  25,
-                                "description":  "Queue review returns false without trace when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.QueueReview_WhenRunNotRunning_ReturnsFalseWithoutTrace"
-                            },
-                            {
-                                "id":  "PR25-API-001",
-                                "pr":  25,
-                                "description":  "POST review-queue returns 409 when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.PostReviewQueue_AfterCompletedStartRun_Returns409"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "IModelGatewayClient port + ModelCallRequestDto/ModelCallResultDto + FakeModelGatewayClient + DI",
-                                "pr":  26,
-                                "id":  "PR26-001",
-                                "evidence":  "src/Agentor.Application/Abstractions/IModelGatewayClient.cs; src/Agentor.Contracts/Conexus/ModelGatewayDtos.cs; src/Agentor.Infrastructure/Conexus/FakeModelGatewayClient.cs; DependencyInjection.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Fake gateway deterministic CompleteAsync",
-                                "pr":  26,
-                                "id":  "PR26-002",
-                                "evidence":  "tests/Agentor.Infrastructure.Tests/FakeModelGatewayClientTests.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "conexus.model-complete tool routes through ModelGatewayToolExecutor",
-                                "pr":  27,
-                                "id":  "PR27-001",
-                                "evidence":  "WellKnownToolKeys.ConexusModelComplete; ToolRegistry.CreateDefault; ModelGatewayToolExecutorTests"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "PromptProfileRef and ModelProfileRef on gateway DTOs and tool I/O",
-                                "pr":  28,
-                                "id":  "PR28-001",
-                                "evidence":  "ModelGatewayDtos.cs; ModelGatewayToolExecutor.cs; ModelGatewayToolExecutorTests.ExecuteAsync_EchoesProfileRefs_InOutput"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Runtime budget caps for declaredCostUnits / declaredLatencyMs on model tool",
-                                "pr":  29,
-                                "id":  "PR29-001",
-                                "evidence":  "RuntimePolicyOptions.MaxDeclaredModelCallCostUnits/LatencyMs; RuntimePolicyEvaluator; RuntimePolicyEvaluatorTests budget tests"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Run manifest v1.1 + RunManifestDto expose aggregated model-call telemetry",
-                                "pr":  30,
-                                "id":  "PR30-001",
-                                "evidence":  "RunManifest.cs SummarizeConexusModelCalls; RunManifestDto; DtoMappings; ApiContractTests manifest version 1.1"
-                            }
-                        ]
+{
+    "phase": 6,
+    "title": "Conexus integration",
+    "harnessPass": "PR30.5",
+    "encoding": "utf-8",
+    "lastVerified": "2026-05-10",
+    "notes": [
+        "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
+        "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
+        "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
+        "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests)."
+    ],
+    "acceptanceItems": [
+        {
+            "id": "PR21-001",
+            "pr": 21,
+            "description": "IKnowledgeStateClient port defines read + candidate + review operations without Canonize",
+            "passes": true,
+            "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations; src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs"
+        },
+        {
+            "id": "PR21-002",
+            "pr": 21,
+            "description": "FakeKnowledgeStateClient implements port with in-memory behavior",
+            "passes": true,
+            "evidence": "FakeKnowledgeStateClientTests (all methods)"
+        },
+        {
+            "id": "PR21-003",
+            "pr": 21,
+            "description": "DI registers IKnowledgeStateClient to FakeKnowledgeStateClient",
+            "passes": true,
+            "evidence": "src/Agentor.Infrastructure/DependencyInjection.cs (AddSingleton<IKnowledgeStateClient, FakeKnowledgeStateClient>)"
+        },
+        {
+            "id": "PR22-001",
+            "pr": 22,
+            "description": "LookupCanonicalEntryAsync resolves from seeded snapshot",
+            "passes": true,
+            "evidence": "FakeKnowledgeStateClientTests.LookupCanonicalEntryAsync_UsesSeededSnapshot"
+        },
+        {
+            "id": "PR22-002",
+            "pr": 22,
+            "description": "Latest snapshot query returns seeded data when run exists",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.GetLatestSnapshot_ReturnsSeededSnapshot_WhenRunExists"
+        },
+        {
+            "id": "PR22-003",
+            "pr": 22,
+            "description": "Canonical lookup returns RunExists=false for unknown run",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.LookupCanonical_UnknownRun_ReturnsRunNotExists"
+        },
+        {
+            "id": "PR22-004",
+            "pr": 22,
+            "description": "Canonical lookup rejects empty canonical key",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.LookupCanonical_EmptyKey_ThrowsArgumentException"
+        },
+        {
+            "id": "PR22-API-001",
+            "pr": 22,
+            "description": "GET latest snapshot returns 404 for unknown run",
+            "passes": true,
+            "evidence": "AthanorApiTests.GetLatestSnapshot_UnknownRun_Returns404"
+        },
+        {
+            "id": "PR22-API-002",
+            "pr": 22,
+            "description": "GET canonical returns 404 for unknown run",
+            "passes": true,
+            "evidence": "AthanorApiTests.GetCanonical_UnknownRun_Returns404"
+        },
+        {
+            "id": "PR22-API-003",
+            "pr": 22,
+            "description": "GET canonical returns 400 when key is empty",
+            "passes": true,
+            "evidence": "AthanorApiTests.GetCanonical_EmptyKey_ReturnsBadRequest"
+        },
+        {
+            "id": "PR23-001",
+            "pr": 23,
+            "description": "Evidence search provenance attaches trace when run is Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.AttachEvidenceProvenance_WritesTrace_WhenRunRunning"
+        },
+        {
+            "id": "PR23-API-001",
+            "pr": 23,
+            "description": "POST evidence-provenance returns 409 when run is not Running",
+            "passes": true,
+            "evidence": "AthanorApiTests.PostEvidenceProvenance_AfterCompletedStartRun_Returns409"
+        },
+        {
+            "id": "PR23-API-003",
+            "pr": 23,
+            "description": "Public API returns 2xx for evidence-provenance while run is Running",
+            "passes": false,
+            "evidence": "TODO: running-run fixture or plan-integrated call"
+        },
+        {
+            "id": "PR24-001",
+            "pr": 24,
+            "description": "Candidate submission records trace when run is Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
+        },
+        {
+            "id": "PR24-002",
+            "pr": 24,
+            "description": "Submit candidate returns false without trace when run is not Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_WhenRunNotRunning_ReturnsFalseWithoutTrace"
+        },
+        {
+            "id": "PR24-API-001",
+            "pr": 24,
+            "description": "POST candidates returns 409 when run is not Running",
+            "passes": true,
+            "evidence": "AthanorApiTests.PostCandidate_AfterCompletedStartRun_Returns409"
+        },
+        {
+            "id": "PR24-API-003",
+            "pr": 24,
+            "description": "Public API returns 2xx for candidate submit while run is Running",
+            "passes": false,
+            "evidence": "TODO: same as PR23-API-003"
+        },
+        {
+            "id": "PR25-001",
+            "pr": 25,
+            "description": "IKnowledgeStateClient has no Canonize-named operations",
+            "passes": true,
+            "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
+        },
+        {
+            "id": "PR25-002",
+            "pr": 25,
+            "description": "AgentRun declared public surface has no Canonize-named methods",
+            "passes": true,
+            "evidence": "NonCanonizationBoundaryTests.AgentRun_public_declared_surface_has_no_Canonize_methods"
+        },
+        {
+            "id": "PR25-003",
+            "pr": 25,
+            "description": "Fake submit status documents non-canon outcome",
+            "passes": true,
+            "evidence": "NonCanonizationBoundaryTests.FakeKnowledgeStateClient_submit_status_is_explicitly_non_canon"
+        },
+        {
+            "id": "PR25-004",
+            "pr": 25,
+            "description": "Review queue records AthanorReviewQueued when run is Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
+        },
+        {
+            "id": "PR25-005",
+            "pr": 25,
+            "description": "Queue review returns false without trace when run is not Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.QueueReview_WhenRunNotRunning_ReturnsFalseWithoutTrace"
+        },
+        {
+            "id": "PR25-API-001",
+            "pr": 25,
+            "description": "POST review-queue returns 409 when run is not Running",
+            "passes": true,
+            "evidence": "AthanorApiTests.PostReviewQueue_AfterCompletedStartRun_Returns409"
+        },
+        {
+            "passes": true,
+            "description": "IModelGatewayClient port + ModelCallRequestDto/ModelCallResultDto + FakeModelGatewayClient + DI",
+            "pr": 26,
+            "id": "PR26-001",
+            "evidence": "src/Agentor.Application/Abstractions/IModelGatewayClient.cs; src/Agentor.Contracts/Conexus/ModelGatewayDtos.cs; src/Agentor.Infrastructure/Conexus/FakeModelGatewayClient.cs; DependencyInjection.cs"
+        },
+        {
+            "passes": true,
+            "description": "Fake gateway deterministic CompleteAsync",
+            "pr": 26,
+            "id": "PR26-002",
+            "evidence": "tests/Agentor.Infrastructure.Tests/FakeModelGatewayClientTests.cs"
+        },
+        {
+            "passes": true,
+            "description": "conexus.model-complete tool routes through ModelGatewayToolExecutor",
+            "pr": 27,
+            "id": "PR27-001",
+            "evidence": "WellKnownToolKeys.ConexusModelComplete; ToolRegistry.CreateDefault; ModelGatewayToolExecutorTests"
+        },
+        {
+            "passes": true,
+            "description": "PromptProfileRef and ModelProfileRef on gateway DTOs and tool I/O",
+            "pr": 28,
+            "id": "PR28-001",
+            "evidence": "ModelGatewayDtos.cs; ModelGatewayToolExecutor.cs; ModelGatewayToolExecutorTests.ExecuteAsync_EchoesProfileRefs_InOutput"
+        },
+        {
+            "passes": true,
+            "description": "Runtime budget caps for declaredCostUnits / declaredLatencyMs on model tool",
+            "pr": 29,
+            "id": "PR29-001",
+            "evidence": "RuntimePolicyOptions.MaxDeclaredModelCallCostUnits/LatencyMs; RuntimePolicyEvaluator; RuntimePolicyEvaluatorTests budget tests"
+        },
+        {
+            "passes": true,
+            "description": "Run manifest v1.1 + RunManifestDto expose aggregated model-call telemetry",
+            "pr": 30,
+            "id": "PR30-001",
+            "evidence": "RunManifest.cs SummarizeConexusModelCalls; RunManifestDto; DtoMappings; ApiContractTests manifest version 1.1"
+        },
+        {
+            "id": "PR30.5-001",
+            "pr": 30.5,
+            "description": "RunManifest domain stays integration-agnostic; model-call output parsing lives in Application ModelCallTelemetryAggregator",
+            "passes": true,
+            "evidence": "src/Agentor.Application/Manifest/ModelCallTelemetryAggregator.cs; src/Agentor.Domain/RunManifestModelTelemetry.cs; GetRunManifestQueryHandler"
+        },
+        {
+            "id": "PR30.5-002",
+            "pr": 30.5,
+            "description": "Declared budget caps documented as optional pre-execution tool-input checks (not post-run spend enforcement)",
+            "passes": true,
+            "evidence": "docs/CONEXUS_INTEGRATION_BOUNDARY.md; RuntimePolicyOptions XML comments"
+        },
+        {
+            "id": "PR30.5-003",
+            "pr": 30.5,
+            "description": "Runtime policy allows model tool when declaredCostUnits/declaredLatencyMs omitted even if caps are configured",
+            "passes": true,
+            "evidence": "RuntimePolicyEvaluatorTests.Evaluate_AllowsModelCallWhenDeclaredBudgetKeysAbsentEvenIfCapsConfigured"
+        },
+        {
+            "id": "PR30.5-004",
+            "pr": 30.5,
+            "description": "Successful conexus.model-complete output rolls into manifest v1.1 token/cost/latency aggregates (non-zero path)",
+            "passes": true,
+            "evidence": "ModelCallTelemetryAggregatorTests"
+        }
+    ]
 }
-

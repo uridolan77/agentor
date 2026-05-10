@@ -1,5 +1,11 @@
 # Session handoff - Agentor harness
 
+## Done (PR30.5 — hardening after Phase 6)
+
+- Model-call telemetry aggregation moved out of Domain: RunManifest.FromRun(run, RunManifestModelTelemetry); ModelCallTelemetryAggregator in Application parses successful conexus.model-complete tool outputs.
+- Declared budget semantics documented as optional pre-execution checks (declaredCostUnits, declaredLatencyMs vs caps); tests when keys omitted with caps configured.
+- Harness feature-list: PR30.5-001 … PR30.5-004.
+
 ## Done (Phase 6 — PR26–PR30)
 
 - Conexus port (IModelGatewayClient), Contracts gateway DTOs, FakeModelGatewayClient, DI registration.

@@ -131,4 +131,31 @@ public sealed class RuntimePolicyEvaluatorTests
         Assert.Equal(PolicyDecisionOutcome.Deny, decision.Outcome);
         Assert.Equal("BUDGET_DECLARED_LATENCY", decision.ReasonCode);
     }
+
+    [Fact]
+    public async Task Evaluate_AllowsModelCallWhenDeclaredBudgetKeysAbsentEvenIfCapsConfigured()
+    {
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient());
+        var clock = new SystemClock();
+        var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
+        {
+            MaxDeclaredModelCallCostUnits = 0.001m,
+            MaxDeclaredModelCallLatencyMs = 10
+        });
+        var policy = new RuntimePolicyEvaluator(registry, clock, opts);
+
+        var decision = await policy.EvaluateToolCallAsync(
+            new PolicyEvaluationRequest(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                WellKnownToolKeys.ConexusModelComplete,
+                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["prompt"] = "Only prompt; no declaredCostUnits or declaredLatencyMs."
+                }),
+            CancellationToken.None);
+
+        Assert.Equal(PolicyDecisionOutcome.Allow, decision.Outcome);
+    }
 }

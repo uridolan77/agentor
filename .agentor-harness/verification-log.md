@@ -48,3 +48,25 @@ Scope: Conexus application port `IModelGatewayClient`; Contracts `ModelCallReque
 ### Encoding note
 
 Several edits used UTF-8-safe rewrites (PowerShell `WriteAllText` / Python) where tooling wrote UTF-16 to `.cs` sources; final tree builds cleanly under UTF-8.
+
+## PR30.5 verification -- Conexus boundary and budget hardening (2026-05-10)
+
+Commands (repository root):
+
+`
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+`
+
+Results: restore OK; build OK; test OK.
+
+Counts: Domain 24, Application 56, Infrastructure 21, Api 34 (total 135).
+
+Scope: `RunManifestModelTelemetry` + `ModelCallTelemetryAggregator` (Application) remove Conexus/tool-key coupling from Domain `RunManifest`; docs + `RuntimePolicyOptions` clarify **declared** pre-execution budget gating (optional `declaredCostUnits` / `declaredLatencyMs`); tests for missing declared keys when caps set; tests for non-zero manifest v1.1 aggregates from successful `conexus.model-complete`. No real Conexus HTTP; PR31 / Skills not started.
+
+### Completion notes
+
+- **Boundary**: Domain manifest hashes generic telemetry inputs; gateway-shaped JSON parsing stays in Application.
+- **Budget**: Caps apply only when corresponding declared fields are present on the tool input.
+

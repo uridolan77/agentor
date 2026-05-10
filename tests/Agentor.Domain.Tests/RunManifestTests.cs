@@ -18,7 +18,7 @@ public sealed class RunManifestTests
     public void FromRun_SetsManifestVersionTo_1_1()
     {
         var run = BuildCompletedRun();
-        var manifest = RunManifest.FromRun(run);
+        var manifest = RunManifest.FromRun(run, RunManifestModelTelemetry.Empty);
 
         Assert.Equal(RunManifest.CurrentVersion, manifest.ManifestVersion);
         Assert.Equal("1.1", manifest.ManifestVersion);
@@ -28,7 +28,7 @@ public sealed class RunManifestTests
     public void FromRun_ProducesNonEmptyContentHash()
     {
         var run = BuildCompletedRun();
-        var manifest = RunManifest.FromRun(run);
+        var manifest = RunManifest.FromRun(run, RunManifestModelTelemetry.Empty);
 
         Assert.False(string.IsNullOrWhiteSpace(manifest.ContentHash));
     }
@@ -37,7 +37,7 @@ public sealed class RunManifestTests
     public void FromRun_ContentHash_IsHexString()
     {
         var run = BuildCompletedRun();
-        var manifest = RunManifest.FromRun(run);
+        var manifest = RunManifest.FromRun(run, RunManifestModelTelemetry.Empty);
 
         Assert.Matches("^[0-9a-f]{64}$", manifest.ContentHash);
     }
@@ -47,10 +47,38 @@ public sealed class RunManifestTests
     {
         var run = BuildCompletedRun("determinism-trace");
 
-        var manifest1 = RunManifest.FromRun(run);
-        var manifest2 = RunManifest.FromRun(run);
+        var manifest1 = RunManifest.FromRun(run, RunManifestModelTelemetry.Empty);
+        var manifest2 = RunManifest.FromRun(run, RunManifestModelTelemetry.Empty);
 
         Assert.Equal(manifest1.ContentHash, manifest2.ContentHash);
+    }
+
+    [Fact]
+    public void FromRun_PropagatesSuppliedModelTelemetry_ToManifestFields()
+    {
+        var run = BuildCompletedRun();
+        var tel = new RunManifestModelTelemetry(
+            ModelCallCount: 1,
+            TotalPromptTokens: 10,
+            TotalCompletionTokens: 20,
+            TotalEstimatedCostUnits: 0.042m,
+            TotalLatencyMs: 77,
+            PrimaryProviderName: "prov-a",
+            PrimaryModelId: "model-a",
+            PrimaryPromptProfileRef: "pref/a",
+            PrimaryModelProfileRef: "mref/a");
+
+        var manifest = RunManifest.FromRun(run, tel);
+
+        Assert.Equal(1, manifest.ModelCallCount);
+        Assert.Equal(10, manifest.TotalModelPromptTokens);
+        Assert.Equal(20, manifest.TotalModelCompletionTokens);
+        Assert.Equal(0.042m, manifest.TotalModelEstimatedCostUnits);
+        Assert.Equal(77, manifest.TotalModelLatencyMs);
+        Assert.Equal("prov-a", manifest.PrimaryModelProviderName);
+        Assert.Equal("model-a", manifest.PrimaryModelId);
+        Assert.Equal("pref/a", manifest.PrimaryPromptProfileRef);
+        Assert.Equal("mref/a", manifest.PrimaryModelProfileRef);
     }
 
     [Fact]
