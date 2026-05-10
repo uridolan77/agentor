@@ -2,6 +2,7 @@ using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Domain.Governance;
 
 namespace Agentor.Application.Coordination;
 
@@ -255,6 +256,12 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
             if (inner.ReturnFromExecutor)
             {
+                // Record a resume cursor if review was triggered with remaining plan steps.
+                if (inner.BlockedToolKeyForCursor is not null)
+                {
+                    RecordResumeCursorIfNeeded(run, plan, ps, inner.BlockedToolKeyForCursor, ctx);
+                }
+
                 run.RecordTrace(
                     TraceEventKind.SkillInvocationCompleted,
                     "Skill invocation ended (terminal state).",
@@ -308,7 +315,8 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         int PipelineAttempts,
         PolicyDecisionOutcome? PolicyOutcome,
         StepFailureSummary? Failure,
-        IReadOnlyDictionary<string, string>? Output);
+        IReadOnlyDictionary<string, string>? Output,
+        string? BlockedToolKeyForCursor = null);
 
     private async Task<InnerToolResult> ExecuteSkillInnerToolAsync(
         AgentRun run,
@@ -399,7 +407,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 "Plan execution requires review (policy during skill).",
                 _clock.UtcNow,
                 TraceData(run, plan, ps, "procedureStepId", skillProcedureStepId, "toolKey", toolKey));
-            return new InnerToolResult(true, false, 0, policyDecision.Outcome, null, null);
+            return new InnerToolResult(true, false, 0, policyDecision.Outcome, null, null, BlockedToolKeyForCursor: toolKey);
         }
 
         run.RecordTrace(
@@ -560,6 +568,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 TraceData(run, plan, ps));
             stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, policyDecision.Outcome, 0, null, state.Escalation));
             ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
+            RecordResumeCursorIfNeeded(run, plan, ps, toolKey, ctx);
             return true;
         }
 
@@ -803,6 +812,54 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         }
 
         return output;
+    }
+
+    /// <summary>
+    /// Records a <see cref="PlanResumeCursor"/> on the run when execution suspends for review mid-plan.
+    /// Only records when there are steps after the blocked step (multi-step resume is needed).
+    /// </summary>
+    private void RecordResumeCursorIfNeeded(
+        AgentRun run,
+        AgentPlan plan,
+        AgentPlanStep blockedStep,
+        string blockedToolKey,
+        PlanExecutionContext ctx)
+    {
+        var remaining = plan.Steps
+            .Where(s => s.OrderIndex > blockedStep.OrderIndex)
+            .OrderBy(s => s.OrderIndex)
+            .Select(s => new PendingPlanStep(
+                s.Id,
+                s.SourceStepId,
+                s.OrderIndex,
+                s.ToolKey,
+                s.Kind,
+                s.OnFailure,
+                s.InputBinding?.Parameters,
+                s.OutputBinding))
+            .ToList();
+
+        if (remaining.Count == 0)
+        {
+            return;
+        }
+
+        // Only include steps that completed successfully — RequiresReview/Failed steps are not part of the resume context.
+        var history = ctx.History
+            .Where(h => h.ToolSucceeded)
+            .Select(h => new PlanStepResumeSnapshot(h.PlanStepId, h.SourceStepId, h.Status, h.ToolSucceeded, h.ToolOutput))
+            .ToList();
+
+        var cursor = new PlanResumeCursor(
+            plan.Id,
+            blockedStep.Id,
+            blockedStep.SourceStepId,
+            blockedToolKey,
+            remaining,
+            history,
+            _clock.UtcNow);
+
+        run.RecordPlanResumeCursor(cursor, _clock.UtcNow);
     }
 
     private static Dictionary<string, string> TraceData(AgentRun run, AgentPlan plan, AgentPlanStep? step = null, params string[] extraPairs)

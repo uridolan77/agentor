@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 5,
+  "kind": "MultiStepReviewResumeEvaluation",
+  "description": "PR90 Phase 18 — 3-step sequential plan suspends at step 2 (RequiresReview) with cursor pointing to step 3; Approve resumes and completes the full plan.",
+  "scenario": {
+    "planSteps": [
+      { "stepId": "s1", "orderIndex": 1, "kind": "Tool", "toolKey": "pr1.fake-tool", "onFailure": "FailFast" },
+      { "stepId": "s2", "orderIndex": 2, "kind": "Tool", "toolKey": "pr1.high-risk-fake-tool", "onFailure": "FailFast" },
+      { "stepId": "s3", "orderIndex": 3, "kind": "Tool", "toolKey": "pr1.fake-tool", "onFailure": "FailFast" }
+    ],
+    "reviewPolicy": {
+      "requiresReviewToolKeys": ["pr1.high-risk-fake-tool"]
+    },
+    "decisionKind": "Approve"
+  },
+  "expectedOutcome": {
+    "runStatus": "Completed",
+    "cursorPresentAfterPlanSuspension": true,
+    "cursorRemainingStepIds": ["s3"],
+    "cursorBlockedAtStepId": "s2",
+    "cursorClearedAfterResume": true,
+    "requiredTraceEvents": [
+      "PlanExecutionStarted",
+      "PlanExecutionRequiresReview",
+      "PlanResumeCursorRecorded",
+      "HumanReviewDecisionRecorded",
+      "RunResumedAfterHumanReview",
+      "MultiStepPlanResumed",
+      "PlanResumeCursorCleared",
+      "PlanExecutionStepCompleted",
+      "PlanExecutionCompleted"
+    ]
+  },
+  "invariants": [
+    "Approval never overrides Deny — post-approval policy re-evaluated for each resumed step.",
+    "Approval does not canonize knowledge — no Athanor writes.",
+    "Cursor is cleared immediately before resumed execution begins.",
+    "Cursor records completed step history for context rebuild on resume."
+  ]
+}

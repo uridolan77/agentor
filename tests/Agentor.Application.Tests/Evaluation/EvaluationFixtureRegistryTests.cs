@@ -27,9 +27,11 @@ public sealed class EvaluationFixtureRegistryTests
     {
         var (dir, regPath) = Paths();
         var reg = EvaluationFixtureRegistry.Load(regPath, dir);
-        Assert.Equal(2, reg.Entries.Count);
+        Assert.Equal(4, reg.Entries.Count); // Phase 18 added review-gated-multistep-plan and review-resume-audit-export
         Assert.Contains(reg.Entries, e => e.Id == "one-step-fake-tool");
         Assert.Contains(reg.Entries, e => e.Id == "external-agent-one-call");
+        Assert.Contains(reg.Entries, e => e.Id == "review-gated-multistep-plan");
+        Assert.Contains(reg.Entries, e => e.Id == "review-resume-audit-export");
     }
 
     [Fact]

@@ -1,5 +1,23 @@
 # Verification log
 
+## Phase 18 PR90 (2026-05-10)
+
+```bash
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded — 0 warnings, 0 errors
+- Tests: **331 passed, 0 failed** (+33 new tests vs Phase 17: 13 domain cursor tests, 9 executor/handler resume tests, 3 fixture tests, 6 API integration tests, 1 eval registry update, 1 eval fixture test)
+- New test files: `PlanResumeCursorTests.cs`, `MultiStepReviewResumeTests.cs`, `Phase18FixtureTests.cs`, `GovernanceResumeApiTests.cs`
+- Updated test: `EvaluationFixtureRegistryTests` (expected entry count 2→4)
+- Evidence artifacts: `artifacts/verification/dotnet-{info,restore,build,test}.txt`
+- `verify-harness.ps1` and `verify-repo-clean.ps1` could not execute (PowerShell execution policy blocks unsigned scripts in this environment). All harness conditions verified manually: current-pr.md has Completed/Next, feature-list.json is valid JSON with phase=18/harnessPass=PR90/all passes:true items have evidence, verification-log.md has all required commands, session-handoff.md has not-started statement.
+
 ## Phase 17 PR85.5 (2026-05-10)
 
 ```bash

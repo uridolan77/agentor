@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 5,
+  "kind": "ReviewResumeAuditExport",
+  "description": "PR90 Phase 18 — Audit export for multi-step plan review and resume. Shows trace event sequence from plan start through review suspension, human approval, cursor-based resume, and plan completion.",
+  "auditSequence": [
+    {
+      "event": "RunStarted",
+      "description": "Agent run began for 3-step sequential plan."
+    },
+    {
+      "event": "PlanExecutionStarted",
+      "description": "Sequential plan execution started."
+    },
+    {
+      "event": "PlanExecutionStepStarted",
+      "data": { "sourceStepId": "s1" },
+      "description": "Step s1 started."
+    },
+    {
+      "event": "ToolCallStarted",
+      "description": "s1 tool call started (pr1.fake-tool, policy: Allow)."
+    },
+    {
+      "event": "PlanExecutionStepCompleted",
+      "data": { "sourceStepId": "s1" },
+      "description": "Step s1 completed successfully."
+    },
+    {
+      "event": "PlanExecutionStepStarted",
+      "data": { "sourceStepId": "s2" },
+      "description": "Step s2 started."
+    },
+    {
+      "event": "PolicyEvaluated",
+      "data": { "outcome": "RequiresReview", "reasonCode": "REQUIRES_REVIEW" },
+      "description": "Policy evaluated for s2 tool (pr1.high-risk-fake-tool): RequiresReview."
+    },
+    {
+      "event": "PlanExecutionRequiresReview",
+      "description": "Plan execution suspended at s2 pending human review."
+    },
+    {
+      "event": "RunRequiresReview",
+      "description": "Run status set to RequiresReview."
+    },
+    {
+      "event": "PlanResumeCursorRecorded",
+      "data": {
+        "blockedAtSourceStepId": "s2",
+        "remainingSteps": 1
+      },
+      "description": "Resume cursor recorded: 1 remaining step (s3) after the blocked step s2."
+    },
+    {
+      "event": "HumanReviewDecisionRecorded",
+      "data": {
+        "kind": "Approve",
+        "resolution": "ResolvedApproved"
+      },
+      "description": "Human reviewer approved the blocked tool call. Decision recorded (does not canonize knowledge)."
+    },
+    {
+      "event": "RunResumedAfterHumanReview",
+      "description": "Run status returned to Running for approved tool execution."
+    },
+    {
+      "event": "PolicyEvaluated",
+      "data": { "outcome": "Allow", "context": "ResumeAfterApprovedHumanReview=true" },
+      "description": "Post-approval policy re-evaluated for s2 tool: Allowed (resume context)."
+    },
+    {
+      "event": "ToolCallStarted",
+      "description": "s2 tool call started after approval."
+    },
+    {
+      "event": "ToolCallCompleted",
+      "description": "s2 tool call completed."
+    },
+    {
+      "event": "StepCompleted",
+      "data": { "stepId": "s2" },
+      "description": "Step s2 completed."
+    },
+    {
+      "event": "PlanResumeCursorCleared",
+      "description": "Resume cursor cleared; beginning multi-step continuation."
+    },
+    {
+      "event": "MultiStepPlanResumed",
+      "data": { "remainingSteps": 1 },
+      "description": "Multi-step plan resuming 1 remaining step (s3) after approval of s2."
+    },
+    {
+      "event": "PolicyEvaluated",
+      "data": { "outcome": "Allow", "sourceStepId": "s3", "context": "ResumeAfterApprovedHumanReview=true" },
+      "description": "Policy evaluated for resumed step s3 (pr1.fake-tool): Allowed."
+    },
+    {
+      "event": "ToolCallStarted",
+      "description": "s3 tool call started (resumed)."
+    },
+    {
+      "event": "PlanExecutionStepCompleted",
+      "data": { "sourceStepId": "s3" },
+      "description": "Resumed step s3 completed."
+    },
+    {
+      "event": "PlanExecutionCompleted",
+      "description": "Multi-step plan execution completed after human review resume."
+    },
+    {
+      "event": "RunCompleted",
+      "description": "Agent run completed. All 3 plan steps executed (s1 before review, s2 approved, s3 resumed)."
+    }
+  ],
+  "auditInvariants": [
+    "No Athanor canonization events appear in this trace.",
+    "HumanReviewDecisionRecorded explicitly states the non-canonization invariant.",
+    "PlanResumeCursorRecorded precedes MultiStepPlanResumed.",
+    "PlanResumeCursorCleared appears between ToolCallCompleted and MultiStepPlanResumed.",
+    "RunCompleted is the terminal event."
+  ]
+}

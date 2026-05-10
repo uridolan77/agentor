@@ -10,6 +10,12 @@ public sealed class AgentRun
     private readonly Dictionary<string, string> _sessionMemory = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<HumanReviewDecision> _humanReviewDecisions = new();
 
+    /// <summary>
+    /// Cursor recorded when a sequential plan suspends mid-execution for human review and there are remaining steps to execute.
+    /// Null when no plan is suspended or when the plan had no remaining steps after the blocked step.
+    /// </summary>
+    public PlanResumeCursor? ResumeCursor { get; private set; }
+
     private AgentRun(
         Guid id,
         Guid profileId,
@@ -401,6 +407,61 @@ public sealed class AgentRun
         });
     }
 
+    /// <summary>
+    /// Records a plan resume cursor when sequential plan execution suspends for human review with remaining steps outstanding.
+    /// May only be called while the run is in <see cref="AgentRunStatus.RequiresReview"/>.
+    /// </summary>
+    public void RecordPlanResumeCursor(PlanResumeCursor cursor, DateTimeOffset now)
+    {
+        if (cursor is null)
+        {
+            throw new ArgumentNullException(nameof(cursor));
+        }
+
+        if (Status != AgentRunStatus.RequiresReview)
+        {
+            throw new InvalidOperationException($"A plan resume cursor can only be recorded while the run requires review. Current status: {Status}");
+        }
+
+        if (!cursor.HasRemainingSteps)
+        {
+            throw new ArgumentException("Cursor must have at least one remaining step.", nameof(cursor));
+        }
+
+        ResumeCursor = cursor;
+        RecordTrace(
+            TraceEventKind.PlanResumeCursorRecorded,
+            $"Plan resume cursor recorded: {cursor.RemainingSteps.Count} remaining step(s) after '{cursor.BlockedAtSourceStepId}'.",
+            now,
+            new Dictionary<string, string>
+            {
+                ["planId"] = cursor.PlanId.ToString("D"),
+                ["blockedAtPlanStepId"] = cursor.BlockedAtPlanStepId.ToString("D"),
+                ["blockedAtSourceStepId"] = cursor.BlockedAtSourceStepId,
+                ["blockedAtToolKey"] = cursor.BlockedAtToolKey,
+                ["remainingSteps"] = cursor.RemainingSteps.Count.ToString()
+            });
+    }
+
+    /// <summary>
+    /// Clears the plan resume cursor immediately before multi-step resumed execution begins.
+    /// If a subsequent step also requires review, a new cursor will be recorded.
+    /// </summary>
+    public void ClearResumeCursor(DateTimeOffset now)
+    {
+        if (ResumeCursor is null)
+        {
+            return;
+        }
+        var planId = ResumeCursor.PlanId;
+        ResumeCursor = null;
+        RecordTrace(
+            TraceEventKind.PlanResumeCursorCleared,
+            "Plan resume cursor cleared; resuming execution of remaining steps.",
+            now,
+            new Dictionary<string, string> { ["planId"] = planId.ToString("D") });
+    }
+
     private (AgentStep? Step, ToolCall? Tool) FindPendingReviewStepAndTool()
     {
         var step = Steps
@@ -505,7 +566,8 @@ public sealed class AgentRun
         Guid? workspaceId = null,
         Guid? projectId = null,
         Guid? knowledgeScopeId = null,
-        IEnumerable<HumanReviewDecision>? humanReviewDecisions = null)
+        IEnumerable<HumanReviewDecision>? humanReviewDecisions = null,
+        PlanResumeCursor? resumeCursor = null)
     {
         var run = new AgentRun(id, profileId, agentName, objective, traceId, startedAt, tenantId, workspaceId, projectId, knowledgeScopeId);
         run.Status = status;
@@ -525,6 +587,8 @@ public sealed class AgentRun
         {
             run._humanReviewDecisions.AddRange(humanReviewDecisions);
         }
+
+        run.ResumeCursor = resumeCursor;
 
         return run;
     }

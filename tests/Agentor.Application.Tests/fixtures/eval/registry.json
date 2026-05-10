@@ -12,6 +12,16 @@
       "id": "external-agent-one-call",
       "fileName": "external-agent-one-call.json",
       "description": "Single external-agent.invoke step; schema 3."
+    },
+    {
+      "id": "review-gated-multistep-plan",
+      "fileName": "review-gated-multistep-plan.json",
+      "description": "Phase 18 PR90: 3-step plan suspends at s2 (RequiresReview), cursor records s3, Approve resumes and completes; schema 5."
+    },
+    {
+      "id": "review-resume-audit-export",
+      "fileName": "review-resume-audit-export.json",
+      "description": "Phase 18 PR90: Audit export showing trace event sequence for multi-step review suspension and resume; schema 5."
     }
   ]
 }

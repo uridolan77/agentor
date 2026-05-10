@@ -67,5 +67,14 @@ public enum TraceEventKind
     ExternalAgentInvocationCompleted,
     ExternalAgentInvocationDenied,
     ExternalAgentInvocationRequiresReview,
-    ExternalAgentInvocationFailed
+    ExternalAgentInvocationFailed,
+
+    /// <summary>A multi-step plan resume cursor was recorded when plan execution suspended for human review with remaining steps outstanding.</summary>
+    PlanResumeCursorRecorded,
+
+    /// <summary>The plan resume cursor was cleared immediately before resuming remaining plan step execution.</summary>
+    PlanResumeCursorCleared,
+
+    /// <summary>Multi-step plan execution resumed after human review approval; remaining steps will execute in order.</summary>
+    MultiStepPlanResumed
 }

@@ -1,5 +1,21 @@
 # Agentor harness progress
 
+## Phase 18 PR86–PR90 (2026-05-10)
+
+Completed **Phase 18 Multi-step Human Review Resume Semantics**:
+
+- **PR86**: Design doc `docs/design/multi-step-review-resume.md` — ReviewCheckpoint, ResumeCursor, PendingPlanStep, ReviewedToolContinuation; FailFast/ContinueOnFailure/SkipRemaining/EscalateToReview interactions; invariants (approval never overrides Deny; approval does not canonize knowledge; chaining semantics).
+- **PR87**: `PlanResumeCursor`, `PendingPlanStep`, `PlanStepResumeSnapshot`, `ReviewResumeState` in `Agentor.Domain.Governance.ReviewResumeCursor.cs`. `AgentRun.ResumeCursor` property + `RecordPlanResumeCursor` / `ClearResumeCursor` methods. `TraceEventKind.PlanResumeCursorRecorded/Cleared/MultiStepPlanResumed`. `Reconstitute` accepts `PlanResumeCursor?`. 13 domain tests in `PlanResumeCursorTests.cs`.
+- **PR88**: `SequentialAgentPlanExecutor.RecordResumeCursorIfNeeded` — records cursor with remaining-step list and completed-step history when `RequiresReview` occurs mid-plan. `ApplyHumanReviewDecisionHandler.ResumeRemainingPlanStepsAsync` + `ExecutePendingResumeStepAsync` — resumes remaining steps with full policy evaluation, failure-policy handling (ContinueOnFailure, SkipRemaining, MarkForCompensation, EscalateToReview, FailFast), and RequiresReview chaining (new cursor recorded on re-suspension). `RecordNewCursorForResumedStep` for multi-gate plans. 9 tests in `MultiStepReviewResumeTests.cs`.
+- **PR89**: `GovernanceResumeApiTests.cs` — 6 API integration tests covering Approve (multistep completion), Reject (failure), RequestChanges (unchanged), Escalate (unchanged), 409 on non-RequiresReview run, 404 on unknown run. `GovernanceResumeApiFixture` using `TestAgentRunRepository`.
+- **PR90**: `review-gated-multistep-plan.json` (schema 5, kind MultiStepReviewResumeEvaluation), `review-resume-audit-export.json` (schema 5, kind ReviewResumeAuditExport). `registry.json` updated to 4 entries. 3 tests in `Phase18FixtureTests.cs` including the named PR53-005 evidence test.
+
+**PR53-005 closed**: Multi-step plan executor resume semantics with named evidence.
+Active deferred items (`passes: false`): `SCOPE-001` (policy rule scope enforcement, v1.1).
+
+Test totals: **331 passing, 0 failing** across all 5 test projects.
+Evidence: `artifacts/verification/dotnet-{info,restore,build,test}.txt`.
+
 ## Phase 17 PR85.5 (2026-05-10)
 
 Policy deferred-item reconciliation after Phase 17.
