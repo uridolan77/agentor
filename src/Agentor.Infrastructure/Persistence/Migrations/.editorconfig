@@ -1,0 +1,5 @@
+# Auto-generated EF Core migration files use block-scoped namespaces.
+# Suppress IDE0161 in this directory so dotnet-ef output compiles without modification.
+[*.cs]
+dotnet_diagnostic.IDE0161.severity = none
+csharp_style_namespace_declarations = block_scoped:silent

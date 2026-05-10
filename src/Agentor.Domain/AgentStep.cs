@@ -79,6 +79,25 @@ public sealed class AgentStep
         CompletedAt = now;
     }
 
+    public static AgentStep Reconstitute(
+        Guid id,
+        Guid runId,
+        int index,
+        string name,
+        AgentStepStatus status,
+        DateTimeOffset startedAt,
+        DateTimeOffset? completedAt,
+        IEnumerable<PolicyDecision> policyDecisions,
+        IEnumerable<ToolCall> toolCalls)
+    {
+        var step = new AgentStep(id, runId, index, name, startedAt);
+        step.Status = status;
+        step.CompletedAt = completedAt;
+        step._policyDecisions.AddRange(policyDecisions);
+        step._toolCalls.AddRange(toolCalls);
+        return step;
+    }
+
     private void EnsureRunning()
     {
         if (Status != AgentStepStatus.Running)

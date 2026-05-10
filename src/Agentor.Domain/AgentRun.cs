@@ -121,6 +121,28 @@ public sealed class AgentRun
         });
     }
 
+    public static AgentRun Reconstitute(
+        Guid id,
+        Guid profileId,
+        string agentName,
+        string objective,
+        string traceId,
+        AgentRunStatus status,
+        DateTimeOffset startedAt,
+        DateTimeOffset? completedAt,
+        string? errorMessage,
+        IEnumerable<AgentStep> steps,
+        IEnumerable<ExecutionTraceEvent> trace)
+    {
+        var run = new AgentRun(id, profileId, agentName, objective, traceId, startedAt);
+        run.Status = status;
+        run.CompletedAt = completedAt;
+        run.ErrorMessage = errorMessage;
+        run._steps.AddRange(steps);
+        run._trace.AddRange(trace);
+        return run;
+    }
+
     private void EnsureRunning()
     {
         if (Status != AgentRunStatus.Running)

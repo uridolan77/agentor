@@ -78,6 +78,30 @@ public sealed class ToolCall
         CompletedAt = now;
     }
 
+    public static ToolCall Reconstitute(
+        Guid id,
+        Guid runId,
+        Guid stepId,
+        string toolKey,
+        ToolCallStatus status,
+        IReadOnlyDictionary<string, string> input,
+        IReadOnlyDictionary<string, string> output,
+        DateTimeOffset startedAt,
+        DateTimeOffset? completedAt,
+        string? errorMessage)
+    {
+        var call = new ToolCall(id, runId, stepId, toolKey, input, startedAt);
+        call.Status = status;
+        call.CompletedAt = completedAt;
+        call.ErrorMessage = errorMessage;
+        foreach (var kv in output)
+        {
+            call._output[kv.Key] = kv.Value;
+        }
+
+        return call;
+    }
+
     private void EnsureRunning()
     {
         if (Status != ToolCallStatus.Running)

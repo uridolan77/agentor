@@ -3,21 +3,50 @@ using Agentor.Api.Mapping;
 using Agentor.Api.Middleware;
 using Agentor.Application;
 using Agentor.Application.Commands;
+using Agentor.Application.Options;
 using Agentor.Application.Queries;
 using Agentor.Application.Validation;
 using Agentor.Contracts;
 using Agentor.Infrastructure;
+using Agentor.Infrastructure.Options;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAgentorApplication();
 builder.Services.AddAgentorInfrastructure();
+
+// Switch to EF Core + PostgreSQL when configured.
+var persistenceOpts = builder.Configuration
+    .GetSection(AgentorPersistenceOptions.SectionName)
+    .Get<AgentorPersistenceOptions>() ?? new AgentorPersistenceOptions();
+
+if (persistenceOpts.Mode == AgentorPersistenceOptions.ModePostgres
+    && !string.IsNullOrWhiteSpace(persistenceOpts.ConnectionString))
+{
+    builder.Services.AddAgentorEfCoreRepository(db =>
+        db.UseNpgsql(persistenceOpts.ConnectionString));
+}
+
 builder.Services.AddOpenApi();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
+
+builder.Services
+    .AddOptions<AgentorRuntimeOptions>()
+    .BindConfiguration(AgentorRuntimeOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<AgentorPersistenceOptions>()
+    .BindConfiguration(AgentorPersistenceOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 var app = builder.Build();
 
@@ -26,11 +55,11 @@ app.UseMiddleware<RequestTracingMiddleware>();
 
 app.MapOpenApi();
 
-app.MapGet("/health", () => Results.Ok(new
+app.MapGet("/health", (IOptions<AgentorRuntimeOptions> runtimeOpts) => Results.Ok(new
 {
     status = "ok",
-    service = "Agentor.Api",
-    version = "0.1.0"
+    service = runtimeOpts.Value.ServiceName,
+    version = runtimeOpts.Value.Version
 }))
 .WithName("GetHealth")
 .WithTags("System")
