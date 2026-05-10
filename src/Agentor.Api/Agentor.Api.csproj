@@ -9,4 +9,7 @@
     <ProjectReference Include="..\Agentor.Domain\Agentor.Domain.csproj" />
     <ProjectReference Include="..\Agentor.Infrastructure\Agentor.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0" />
+  </ItemGroup>
 </Project>
