@@ -9,6 +9,8 @@ namespace Agentor.Application.Tests;
 
 public sealed class SequentialAgentPlanExecutorTests
 {
+// Contract: AgentRunStatus.Completed and AgentPlanExecutionResult.Success do not imply every plan step
+// succeeded when FailureHandlingPolicy.ContinueOnFailure is used. Inspect StepResults and PlanStatus.
     private const string FakeTool = WellKnownToolKeys.Pr1FakeTool;
 
     private static AgentRecipe CreateTwoStepRecipe(FailureHandlingPolicy s1 = FailureHandlingPolicy.FailFast, FailureHandlingPolicy s2 = FailureHandlingPolicy.FailFast)

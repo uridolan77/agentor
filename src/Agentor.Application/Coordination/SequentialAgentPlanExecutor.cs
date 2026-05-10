@@ -13,6 +13,16 @@ public sealed record PlanStepResult(
     StepFailureSummary? Failure,
     EscalationDisposition Escalation);
 
+/// <summary>
+/// Outcome of coordinating a sequential <see cref="AgentPlan"/> against an <see cref="AgentRun"/>.
+/// </summary>
+/// <param name="Success">
+/// True when the run reached <see cref="AgentRunStatus.Completed"/> without plan-level escalation
+/// (<see cref="EscalationDisposition.None"/> in the coordinator). This does not imply every plan step
+/// succeeded: with <see cref="FailureHandlingPolicy.ContinueOnFailure"/>, steps may appear as failed in
+/// <see cref="StepResults"/> while the run still completes. Use <see cref="PlanStatus"/>, per-step results,
+/// and <see cref="PlanFailureSummary"/> for plan health.
+/// </param>
 public sealed record AgentPlanExecutionResult(
     bool Success,
     AgentPlanStatus PlanStatus,
@@ -25,6 +35,8 @@ public interface IAgentPlanExecutor
     Task<AgentPlanExecutionResult> ExecuteAsync(AgentRun run, AgentPlan plan, CancellationToken cancellationToken);
 }
 
+// TODO(PR20.5): SequentialAgentPlanExecutor mixes sequential flow, guards, policy, pipeline, failure
+// policies, tracing, and finalization. Split into focused private/static helpers when a no-behavior-change refactor is scheduled.
 public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 {
     private readonly IToolRegistry _registry;
@@ -416,6 +428,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         EscalationDisposition escalation)
     {
         plan.RefreshDerivedStatus();
+        // Run completed without escalation; not the same as "every plan step succeeded" (see AgentPlanExecutionResult.Success).
         var overall = run.Status == AgentRunStatus.Completed && escalation == EscalationDisposition.None;
         var summary = new PlanFailureSummary(
             run.Status is AgentRunStatus.Failed or AgentRunStatus.RequiresReview,
