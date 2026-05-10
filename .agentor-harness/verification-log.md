@@ -40,3 +40,4 @@ Results: all succeeded, 0 failed.
 
 Test counts: Domain 23, Application 42, Api 28, Infrastructure 12 (Total 105).
 
+**PR20.6 hygiene:** Rewrote session-handoff.md from UTF-16-LE to UTF-8; dotnet test Agentor.sln --no-build — all passed (105 tests).
