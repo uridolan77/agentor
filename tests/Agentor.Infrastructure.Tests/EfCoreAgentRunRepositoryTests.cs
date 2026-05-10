@@ -194,7 +194,7 @@ public sealed class EfCoreAgentRunRepositoryTests
             "hr-json-trace",
             AgentRunStatus.RequiresReview,
             now.AddMinutes(-1),
-            now,
+            null,
             "pending",
             [],
             [],
@@ -203,7 +203,12 @@ public sealed class EfCoreAgentRunRepositoryTests
             null,
             null,
             null,
-            [decision]);
+            [decision],
+            resumeCursor: null,
+            reviewRequestedAt: now.AddMinutes(-1),
+            pausedAt: now,
+            terminalAt: null,
+            reviewWorkflowStatus: HumanReviewWorkflowStatus.Pending);
 
         await repo.SaveAsync(run, CancellationToken.None);
         var loaded = await repo.GetAsync(run.Id, CancellationToken.None);

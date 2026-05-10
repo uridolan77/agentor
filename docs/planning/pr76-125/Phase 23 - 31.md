@@ -388,6 +388,8 @@ Add EF migration for:
 
 ## Phase 28 — Review workflow semantics
 
+**Harness**: Completed as **PR119** (see `.agentor-harness/current-pr.md`).
+
 **Goal:** Turn review decisions into a real operator workflow.
 
 ### PR28.1 — Separate run execution state from review workflow state

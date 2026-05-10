@@ -40,9 +40,9 @@ public sealed class MultiStepReviewResumeTests
         }
     }
 
-    private sealed class FixedActorAccessor : ICurrentActorAccessor
+    private sealed class FixedActorAccessor(ActorRole role = ActorRole.HumanOperator) : ICurrentActorAccessor
     {
-        public ActorContext Current { get; } = new(ActorId, "operator", ActorRole.HumanOperator);
+        public ActorContext Current { get; } = new(ActorId, "operator", role);
     }
 
     private sealed class StubPolicyEvaluator : IPolicyEvaluator
@@ -134,12 +134,13 @@ public sealed class MultiStepReviewResumeTests
     private ApplyHumanReviewDecisionHandler MakeHandler(
         IAgentRunRepository repo,
         IPolicyEvaluator policy,
-        IToolExecutor? toolExecutor = null)
+        IToolExecutor? toolExecutor = null,
+        ActorRole actorRole = ActorRole.HumanOperator)
     {
         var registry = MakeRegistry(toolExecutor);
         var clock = new SystemClock();
         var pipeline = new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions()));
-        return new ApplyHumanReviewDecisionHandler(repo, policy, registry, pipeline, new FixedActorAccessor(), clock);
+        return new ApplyHumanReviewDecisionHandler(repo, policy, registry, pipeline, new FixedActorAccessor(actorRole), clock);
     }
 
     // ───────────────────────────────────────────────────────────────────────
@@ -627,6 +628,7 @@ public sealed class MultiStepReviewResumeTests
             CancellationToken.None);
 
         Assert.NotNull(result);
+        Assert.Equal(HumanReviewWorkflowStatus.ChangesRequested, result!.ReviewWorkflowStatus);
         // RequestChanges leaves run in RequiresReview
         Assert.Equal(AgentRunStatus.RequiresReview, result!.Status);
         // No additional tool executions
@@ -659,6 +661,7 @@ public sealed class MultiStepReviewResumeTests
 
         Assert.NotNull(result);
         Assert.Equal(AgentRunStatus.RequiresReview, result!.Status);
+        Assert.Equal(HumanReviewWorkflowStatus.Escalated, result.ReviewWorkflowStatus);
         Assert.Equal(invocationsBeforeDecision, counting.Invocations);
         Assert.Contains(result.HumanReviewDecisions, d => d.Kind == ReviewDecisionKind.Escalate);
     }

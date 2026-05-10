@@ -14,6 +14,10 @@ public sealed class AgentRunRecord
     public string Status { get; set; } = string.Empty;
     public DateTimeOffset StartedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
+    public DateTimeOffset? TerminalAt { get; set; }
+    public DateTimeOffset? ReviewRequestedAt { get; set; }
+    public DateTimeOffset? PausedAt { get; set; }
+    public string ReviewWorkflowStatus { get; set; } = "None";
     public string? ErrorMessage { get; set; }
 
     public string SessionMemoryJson { get; set; } = "{}";

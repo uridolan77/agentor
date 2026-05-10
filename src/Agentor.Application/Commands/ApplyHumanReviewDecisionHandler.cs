@@ -9,7 +9,8 @@ namespace Agentor.Application.Commands;
 public sealed record ApplyHumanReviewDecisionCommand(
     Guid RunId,
     ReviewDecisionKind Kind,
-    string? Note);
+    string? Note,
+    Guid? RelatedPriorActorId = null);
 
 public sealed class ApplyHumanReviewDecisionHandler
 {
@@ -50,6 +51,27 @@ public sealed class ApplyHumanReviewDecisionHandler
                 $"Human review decisions apply only while the run requires review. Current status: {run.Status}.");
         }
 
+        if (command.Kind == ReviewDecisionKind.RequestChanges && string.IsNullOrWhiteSpace(command.Note))
+        {
+            throw new InvalidOperationException("RequestChanges requires a note describing the requested changes.");
+        }
+
+        if (command.Kind == ReviewDecisionKind.Escalate && string.IsNullOrWhiteSpace(command.Note))
+        {
+            throw new InvalidOperationException("Escalate requires a note with the escalation reason.");
+        }
+
+        if (command.Kind == ReviewDecisionKind.Approve
+            && run.ReviewWorkflowStatus == HumanReviewWorkflowStatus.Escalated)
+        {
+            var role = _actorAccessor.Current.Role;
+            if (role is not ActorRole.HumanGovernanceApprover and not ActorRole.System)
+            {
+                throw new InvalidOperationException(
+                    "Escalated human reviews require a governance approver role to approve.");
+            }
+        }
+
         var actorId = _actorAccessor.Current.ActorId;
         if (actorId == Guid.Empty)
         {
@@ -71,7 +93,8 @@ public sealed class ApplyHumanReviewDecisionHandler
             actorId,
             _clock.UtcNow,
             command.Note,
-            resolution);
+            resolution,
+            command.RelatedPriorActorId);
 
         run.ApplyHumanReviewDecision(decision, _clock.UtcNow);
 

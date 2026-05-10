@@ -7,6 +7,7 @@ using Agentor.Contracts;
 using Agentor.Infrastructure;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Domain.Governance;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -84,6 +85,53 @@ public sealed class GetRunAuditExportQueryHandlerTests
         Assert.DoesNotContain("super-secret", result.CanonicalJson, StringComparison.Ordinal);
         Assert.DoesNotContain("hunter2", result.CanonicalJson, StringComparison.Ordinal);
         Assert.Contains("visible", result.CanonicalJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HandleAsync_IncludesHumanReviewWorkflowChain_InCanonicalJson()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var now = clock.UtcNow;
+        var priorActor = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Objective", "audit-chain", now);
+        var step = run.StartStep("Step", now);
+        var tool = ToolCall.Start(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, new Dictionary<string, string>(), now);
+        step.AddToolCall(tool);
+        tool.MarkRequiresReview("policy", now);
+        step.MarkRequiresReview(now);
+        run.EnterRequiresReview("policy", now);
+
+        run.ApplyHumanReviewDecision(
+            new HumanReviewDecision(
+                Guid.NewGuid(),
+                ReviewDecisionKind.RequestChanges,
+                priorActor,
+                now,
+                "Revise wording.",
+                ReviewResolutionStatus.ChangesRequested),
+            now);
+
+        run.ApplyHumanReviewDecision(
+            new HumanReviewDecision(
+                Guid.NewGuid(),
+                ReviewDecisionKind.Escalate,
+                Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                now.AddSeconds(1),
+                "Senior review.",
+                ReviewResolutionStatus.Escalated,
+                priorActor),
+            now.AddSeconds(1));
+
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = new GetRunAuditExportQueryHandler(repo, Microsoft.Extensions.Options.Options.Create(new AuditExportOptions()));
+        var result = await handler.HandleAsync(run.Id, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Contains("reviewWorkflowStatus", result!.CanonicalJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("relatedPriorActorId", result.CanonicalJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Escalated", result.CanonicalJson, StringComparison.Ordinal);
     }
 
     [Fact]

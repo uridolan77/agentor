@@ -42,6 +42,13 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(r => r.Status).HasColumnName("status").IsRequired().HasMaxLength(50);
             entity.Property(r => r.StartedAt).HasColumnName("started_at");
             entity.Property(r => r.CompletedAt).HasColumnName("completed_at");
+            entity.Property(r => r.TerminalAt).HasColumnName("terminal_at");
+            entity.Property(r => r.ReviewRequestedAt).HasColumnName("review_requested_at");
+            entity.Property(r => r.PausedAt).HasColumnName("paused_at");
+            entity.Property(r => r.ReviewWorkflowStatus)
+                .HasColumnName("review_workflow_status")
+                .IsRequired()
+                .HasMaxLength(50);
             entity.Property(r => r.ErrorMessage).HasColumnName("error_message").HasMaxLength(2000);
             entity.Property(r => r.SessionMemoryJson).HasColumnName("session_memory_json").IsRequired();
             entity.Property(r => r.HumanReviewDecisionsJson).HasColumnName("human_review_decisions_json").IsRequired();

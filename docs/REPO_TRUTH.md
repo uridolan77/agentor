@@ -21,6 +21,7 @@ This document states **what the code and HTTP surface actually do today**, so op
 
 - **`EfCoreAgentRunRepository.SaveAsync`** merges into the existing **`agent_runs`** row: upserts root scalars (including **`session_memory_json`**, **`human_review_decisions_json`**, and **`resume_cursor_json`** for **`PlanResumeCursor`**), upserts **`agent_steps`** and nested **`tool_calls`** / **`policy_decisions`** by id, and **appends** new **`trace_events`** by id. Existing trace rows are **immutable**; a save that would rewrite payload raises **`AgentRunTraceImmutabilityException`**.
 - **`agent_runs.aggregate_version`** is an optimistic-concurrency token (incremented on each successful save). **`AgentRun.PersistenceConcurrencyVersion`** is populated on **`GetAsync`** and refreshed after **`SaveAsync`**; a stale version yields **`AgentRunPersistenceConcurrencyException`** (mapped to **409 Conflict** on the HTTP surface). **`POST /agent-runs`** and other handlers that only create runs do not require a prior load.
+- **Human review workflow (Phase 28)**: **`completed_at`** stores **successful completion only**. Review suspension uses **`review_requested_at`** / **`paused_at`**; failures and human rejection terminal timestamps use **`terminal_at`**. **`review_workflow_status`** persists **`HumanReviewWorkflowStatus`** (Pending / ChangesRequested / Escalated / …). **`ApplyHumanReviewDecision`** APIs accept optional **`relatedPriorActorId`** for escalation chains.
 
 ## Authentication (Jwt mode)
 

@@ -1,10 +1,11 @@
 {
-    "phase":  27,
-    "title":  "Phase 27 — PR118 EF aggregate merge save + concurrency + trace immutability",
-    "harnessPass":  "PR118",
+    "phase":  28,
+    "title":  "Phase 28 — PR119 review workflow semantics (pause vs completion vs terminal)",
+    "harnessPass":  "PR119",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
+                  "PR119 (2026-05-11): Phase 28 — AgentRun separates ReviewRequestedAt/PausedAt/TerminalAt vs CompletedAt (success-only); HumanReviewWorkflowStatus on aggregate + audit/export/API; EnterRequiresReview no longer sets CompletedAt; Fail/human-reject set TerminalAt not CompletedAt; RequestChanges/Escalate enforce notes + update workflow; Escalated approve requires ActorRole.HumanGovernanceApprover or System (ApplyHumanReviewDecisionHandler); HumanReviewDecision.RelatedPriorActorId + ApplyHumanReviewRequestDto; PendingHumanReviewItemDto exposes pausedAt/reviewRequestedAt/reviewWorkflowStatus; migration 20260511203000_Phase28ReviewWorkflowSemantics + snapshot columns + SQL repair for legacy completed_at misuse; RoleBasedAuthorizationDecisionService governance approver; CoordinationEvaluationMetrics uses CompletedAt??TerminalAt; tests AgentRunTests + ApplyHumanReviewDecisionHandlerTests + MultiStepReviewResumeTests + GetRunAuditExportQueryHandlerTests + ContractDtoCompatibilityTests + EfCoreAgentRunRepositoryTests hr-json reconstitute. Verification: dotnet test Agentor.sln — 449 passed; verify-harness ExpectedPhase 28 PR119; verify-repo-clean.",
                   "PR118 (2026-05-11): Phase 27 — EfCoreAgentRunRepository.SaveAsync merges tracked aggregate (no delete/reinsert): upsert root + steps + tool_calls + policy_decisions; append-only trace_events by id with AgentRunTraceImmutabilityException on rewrite; agent_runs.resume_cursor_json + PlanResumeCursor JSON round-trip; aggregate_version optimistic concurrency + AgentRun.PersistenceConcurrencyVersion; AgentRunPersistenceConcurrencyException + ExceptionHandlingMiddleware 409/400; migration 20260511200000_Phase27AgentRunPersistence + snapshot; EfCoreAgentRunRepositoryTests (re-save dedup trace, tampered trace, resume cursor, HR order, stale concurrency SQLite). Verification: dotnet test Agentor.sln — 443 passed; verify-harness ExpectedPhase 27 PR118; verify-repo-clean.",
                   "PR117.5 (2026-05-11): Phase 26 second pass — EF run_queue_items persists execution_mode/recipe_id/plan_id/tool_key/skill_key/tool_input_json; EfRunQueueStore enqueue/ToRecord; PostgreSQL migration 20260511183000_RunQueueOrchestrationPayload + snapshot RunQueueItemRecord; RunQueueHostedServiceEfSqliteScopeTests (Conexus model, MCP echo, explicit LegacyFakeTool, recipe); EfRunQueueStoreTests orchestration round-trip; StartAgentRunFingerprint includes Tenant/Workspace/Project/KnowledgeScope; ApiContractTests idempotency conflicts on differing ProjectId/KnowledgeScopeId; RunOrchestrationNotFoundException + ExceptionHandlingMiddleware (404 + sanitized 500); AgentRunOrchestrator maps missing plan/recipe/skill to typed errors; AgentRunOrchestrationApiTests unknown plan/recipe/skill; docs REPO_TRUTH queue payload + policy-bundles scoped merge security note. Verification: dotnet test Agentor.sln — 438 passed; verify-harness ExpectedPhase 26 PR117.5; verify-repo-clean.",
                   "PR117 (2026-05-11): Phase 26 — PolicyRule scope identifiers + PolicyRuleScope.KnowledgeScope; PolicyBundleRulesAdapter.ToProfileRules(bundle, AgentRunScope) filters + merges (specificity + Deny>RequiresReview>Allow); PolicyEvaluationRequest.Scope; RuntimePolicyEvaluator resolves bundle per run scope; SequentialAgentPlanExecutor/GovernedSingleToolRunDriver/ApplyHumanReviewDecisionHandler propagate AgentRun.ToPolicyScope(); audit export root effectivePolicyScope; CreatePolicyRuleDto/PolicyRuleDto scope id fields; PolicyScopeEvaluationTests + domain validation tests; docs REPO_TRUTH + policy-bundles.md; v1.0-RC-DEFERRED-ITEMS SCOPE-001 closed. Verification: dotnet test Agentor.sln — 428 passed; verify-harness ExpectedPhase 26 PR117; verify-repo-clean.",
@@ -48,6 +49,55 @@
                   "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model — PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle→PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
               ],
     "acceptanceItems":  [
+                            {
+                                "id":  "PR119-001",
+                                "pr":  119,
+                                "description":  "Review suspension uses pause/review timestamps; CompletedAt is success-only; TerminalAt covers failure/rejection",
+                                "passes":  true,
+                                "evidence":  "AgentRunTests.EnterRequiresReview_DoesNotSetCompletedAt_SetsPauseWorkflow; AgentRunTests.Fail_SetsTerminalAt_NotCompletedAt; AgentRun.EnterRequiresReview/Complete/Fail/ApplyRejectHumanReview"
+                            },
+                            {
+                                "id":  "PR119-002",
+                                "pr":  119,
+                                "description":  "HumanReviewWorkflowStatus tracks operator workflow distinct from AgentRunStatus execution state",
+                                "passes":  true,
+                                "evidence":  "HumanReviewWorkflowStatus enum; AgentRun.ReviewWorkflowStatus; ApplyHumanReviewDecision trace reviewWorkflowStatus"
+                            },
+                            {
+                                "id":  "PR119-003",
+                                "pr":  119,
+                                "description":  "RequestChanges/Escalate require notes and transition workflow (ChangesRequested/Escalated)",
+                                "passes":  true,
+                                "evidence":  "ApplyHumanReviewDecisionHandlerTests.RequestChanges_SetsWorkflow_ToChangesRequested; MultiStepReviewResumeTests RequestChanges/Escalate assertions; ApplyHumanReviewDecisionHandler validation"
+                            },
+                            {
+                                "id":  "PR119-004",
+                                "pr":  119,
+                                "description":  "Escalated approve denied for HumanOperator; allowed for HumanGovernanceApprover",
+                                "passes":  true,
+                                "evidence":  "ApplyHumanReviewDecisionHandlerTests.Escalate_ThenApprove_AsOperator_Throws; Escalate_ThenApprove_AsGovernanceApprover_ResumesRun; ActorRole.HumanGovernanceApprover"
+                            },
+                            {
+                                "id":  "PR119-005",
+                                "pr":  119,
+                                "description":  "PostgreSQL migration repairs legacy completed_at semantics + adds workflow columns",
+                                "passes":  true,
+                                "evidence":  "Migrations/20260511203000_Phase28ReviewWorkflowSemantics.cs; AgentorDbContextModelSnapshot agent_runs columns"
+                            },
+                            {
+                                "id":  "PR119-006",
+                                "pr":  119,
+                                "description":  "Audit export includes review workflow fields + humanReviewDecisions.relatedPriorActorId",
+                                "passes":  true,
+                                "evidence":  "GetRunAuditExportQueryHandlerTests.HandleAsync_IncludesHumanReviewWorkflowChain_InCanonicalJson; GetRunAuditExportQueryHandler BuildAuditRoot"
+                            },
+                            {
+                                "id":  "PR119-007",
+                                "pr":  119,
+                                "description":  "Product inbox DTO surfaces paused/review-requested/workflow status for escalations dashboard filtering",
+                                "passes":  true,
+                                "evidence":  "PendingHumanReviewItemDto; ListPendingHumanReviewsQueryHandler mapping"
+                            },
                             {
                                 "id":  "PR118-001",
                                 "pr":  118,

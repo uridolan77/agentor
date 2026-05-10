@@ -21,6 +21,10 @@ public static class DtoMappings
             summary.Status,
             summary.StartedAt,
             summary.CompletedAt,
+            summary.TerminalAt,
+            summary.ReviewRequestedAt,
+            summary.PausedAt,
+            summary.ReviewWorkflowStatus,
             summary.ErrorMessage);
     }
 
@@ -49,6 +53,10 @@ public static class DtoMappings
             run.Status,
             run.StartedAt,
             run.CompletedAt,
+            run.TerminalAt,
+            run.ReviewRequestedAt,
+            run.PausedAt,
+            run.ReviewWorkflowStatus,
             run.ErrorMessage,
             run.Steps.Select(ToDto).ToList(),
             run.Trace.Select(ToDto).ToList(),
@@ -86,7 +94,8 @@ public static class DtoMappings
             decision.ActorId,
             decision.DecidedAt,
             decision.Note,
-            decision.Resolution);
+            decision.Resolution,
+            decision.RelatedPriorActorId);
     }
 
     public static ToolCallDto ToDto(this ToolCall toolCall)

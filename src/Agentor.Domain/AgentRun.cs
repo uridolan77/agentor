@@ -39,6 +39,7 @@ public sealed class AgentRun
         ProjectId = projectId;
         KnowledgeScopeId = knowledgeScopeId;
         Status = AgentRunStatus.Running;
+        ReviewWorkflowStatus = HumanReviewWorkflowStatus.None;
     }
 
     public Guid Id { get; }
@@ -68,7 +69,20 @@ public sealed class AgentRun
 
     public DateTimeOffset StartedAt { get; }
 
+    /// <summary>Successful completion timestamp only (Phase 28 — not failure, rejection, or review pause).</summary>
     public DateTimeOffset? CompletedAt { get; private set; }
+
+    /// <summary>Terminal failure or rejection (successful completion uses <see cref="CompletedAt"/>).</summary>
+    public DateTimeOffset? TerminalAt { get; private set; }
+
+    /// <summary>First time execution paused for human review.</summary>
+    public DateTimeOffset? ReviewRequestedAt { get; private set; }
+
+    /// <summary>Last time execution paused for human review.</summary>
+    public DateTimeOffset? PausedAt { get; private set; }
+
+    /// <summary>Operator workflow state while execution may be suspended under <see cref="AgentRunStatus.RequiresReview"/>.</summary>
+    public HumanReviewWorkflowStatus ReviewWorkflowStatus { get; private set; }
 
     public string? ErrorMessage { get; private set; }
 
@@ -279,6 +293,8 @@ public sealed class AgentRun
 
         Status = AgentRunStatus.Completed;
         CompletedAt = now;
+        TerminalAt = now;
+        ReviewWorkflowStatus = HumanReviewWorkflowStatus.None;
         RecordTrace(TraceEventKind.RunCompleted, "Agent run completed.", now);
     }
 
@@ -287,7 +303,8 @@ public sealed class AgentRun
         AgentStateMachine.EnsureRunCanFail(this);
         Status = AgentRunStatus.Failed;
         ErrorMessage = errorMessage;
-        CompletedAt = now;
+        TerminalAt = now;
+        ReviewWorkflowStatus = HumanReviewWorkflowStatus.None;
         RecordTrace(TraceEventKind.RunFailed, "Agent run failed.", now, new Dictionary<string, string>
         {
             ["error"] = errorMessage
@@ -299,7 +316,9 @@ public sealed class AgentRun
         AgentStateMachine.EnsureRunCanEnterReview(this);
         Status = AgentRunStatus.RequiresReview;
         ErrorMessage = reason;
-        CompletedAt = now;
+        ReviewRequestedAt ??= now;
+        PausedAt = now;
+        ReviewWorkflowStatus = HumanReviewWorkflowStatus.Pending;
         RecordTrace(TraceEventKind.RunRequiresReview, "Agent run requires review before continuing.", now, new Dictionary<string, string>
         {
             ["reason"] = reason
@@ -340,18 +359,6 @@ public sealed class AgentRun
 
         _humanReviewDecisions.Add(decision);
 
-        RecordTrace(
-            TraceEventKind.HumanReviewDecisionRecorded,
-            "Human review decision recorded (governance; does not canonize knowledge).",
-            now,
-            new Dictionary<string, string>
-            {
-                ["decisionId"] = decision.Id.ToString("D"),
-                ["kind"] = decision.Kind.ToString(),
-                ["actorId"] = decision.ActorId.ToString("D"),
-                ["resolution"] = decision.Resolution.ToString()
-            });
-
         switch (decision.Kind)
         {
             case ReviewDecisionKind.Approve:
@@ -361,9 +368,44 @@ public sealed class AgentRun
                 ApplyRejectHumanReview(decision, now);
                 break;
             case ReviewDecisionKind.RequestChanges:
+                ApplyRequestChangesHumanReview(now);
+                break;
             case ReviewDecisionKind.Escalate:
+                ApplyEscalateHumanReview(now);
                 break;
         }
+
+        var traceData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["decisionId"] = decision.Id.ToString("D"),
+            ["kind"] = decision.Kind.ToString(),
+            ["actorId"] = decision.ActorId.ToString("D"),
+            ["resolution"] = decision.Resolution.ToString(),
+            ["reviewWorkflowStatus"] = ReviewWorkflowStatus.ToString()
+        };
+
+        if (decision.RelatedPriorActorId is { } prior)
+        {
+            traceData["relatedPriorActorId"] = prior.ToString("D");
+        }
+
+        RecordTrace(
+            TraceEventKind.HumanReviewDecisionRecorded,
+            "Human review decision recorded (governance; does not canonize knowledge).",
+            now,
+            traceData);
+    }
+
+    private void ApplyRequestChangesHumanReview(DateTimeOffset now)
+    {
+        ReviewWorkflowStatus = HumanReviewWorkflowStatus.ChangesRequested;
+        PausedAt = now;
+    }
+
+    private void ApplyEscalateHumanReview(DateTimeOffset now)
+    {
+        ReviewWorkflowStatus = HumanReviewWorkflowStatus.Escalated;
+        PausedAt = now;
     }
 
     private void ApplyApproveHumanReview(HumanReviewDecision decision, DateTimeOffset now)
@@ -376,7 +418,9 @@ public sealed class AgentRun
 
         Status = AgentRunStatus.Running;
         CompletedAt = null;
+        TerminalAt = null;
         ErrorMessage = null;
+        ReviewWorkflowStatus = HumanReviewWorkflowStatus.None;
         step.ResumeAfterHumanReviewApproval(now);
         tool.ResumeAfterHumanReviewApproval(now);
 
@@ -408,7 +452,9 @@ public sealed class AgentRun
         step.FailAfterHumanReviewRejection(now);
         Status = AgentRunStatus.Failed;
         ErrorMessage = reason;
-        CompletedAt = now;
+        TerminalAt = now;
+        CompletedAt = null;
+        ReviewWorkflowStatus = HumanReviewWorkflowStatus.Rejected;
         RecordTrace(TraceEventKind.RunFailed, "Agent run failed after human review rejection.", now, new Dictionary<string, string>
         {
             ["error"] = reason,
@@ -576,11 +622,19 @@ public sealed class AgentRun
         Guid? projectId = null,
         Guid? knowledgeScopeId = null,
         IEnumerable<HumanReviewDecision>? humanReviewDecisions = null,
-        PlanResumeCursor? resumeCursor = null)
+        PlanResumeCursor? resumeCursor = null,
+        DateTimeOffset? reviewRequestedAt = null,
+        DateTimeOffset? pausedAt = null,
+        DateTimeOffset? terminalAt = null,
+        HumanReviewWorkflowStatus reviewWorkflowStatus = HumanReviewWorkflowStatus.None)
     {
         var run = new AgentRun(id, profileId, agentName, objective, traceId, startedAt, tenantId, workspaceId, projectId, knowledgeScopeId);
         run.Status = status;
         run.CompletedAt = completedAt;
+        run.TerminalAt = terminalAt;
+        run.ReviewRequestedAt = reviewRequestedAt;
+        run.PausedAt = pausedAt;
+        run.ReviewWorkflowStatus = reviewWorkflowStatus;
         run.ErrorMessage = errorMessage;
         run._steps.AddRange(steps);
         run._trace.AddRange(trace);
@@ -622,7 +676,11 @@ public sealed record AgentRunSummary(
     Guid? WorkspaceId = null,
     Guid? ProjectId = null,
     Guid? KnowledgeScopeId = null,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    DateTimeOffset? TerminalAt = null,
+    DateTimeOffset? ReviewRequestedAt = null,
+    DateTimeOffset? PausedAt = null,
+    HumanReviewWorkflowStatus ReviewWorkflowStatus = HumanReviewWorkflowStatus.None);
 
 public sealed record AgentRunListPage(
     IReadOnlyList<AgentRunSummary> Items,

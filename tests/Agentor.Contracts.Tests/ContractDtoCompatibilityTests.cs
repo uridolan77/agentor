@@ -64,6 +64,10 @@ public sealed class ContractDtoCompatibilityTests
             AgentRunStatus.Completed,
             DateTimeOffset.Parse("2026-01-02T03:04:05Z"),
             DateTimeOffset.Parse("2026-01-02T03:05:06Z"),
+            null,
+            null,
+            null,
+            HumanReviewWorkflowStatus.None,
             null);
         var json = JsonSerializer.Serialize(original, JsonOptions);
         var back = JsonSerializer.Deserialize<AgentRunSummaryDto>(json, JsonOptions);
@@ -134,6 +138,10 @@ public sealed class ContractDtoCompatibilityTests
             AgentRunStatus.Completed,
             DateTimeOffset.Parse("2026-01-02T03:04:05Z"),
             DateTimeOffset.Parse("2026-01-02T03:05:06Z"),
+            null,
+            null,
+            null,
+            HumanReviewWorkflowStatus.None,
             null,
             new List<AgentStepDto> { step },
             trace,

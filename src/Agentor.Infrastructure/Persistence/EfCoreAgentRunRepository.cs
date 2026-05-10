@@ -66,6 +66,10 @@ public sealed class EfCoreAgentRunRepository : IAgentRunRepository
         existing.Status = run.Status.ToString();
         existing.StartedAt = run.StartedAt;
         existing.CompletedAt = run.CompletedAt;
+        existing.TerminalAt = run.TerminalAt;
+        existing.ReviewRequestedAt = run.ReviewRequestedAt;
+        existing.PausedAt = run.PausedAt;
+        existing.ReviewWorkflowStatus = run.ReviewWorkflowStatus.ToString();
         existing.ErrorMessage = run.ErrorMessage;
         existing.SessionMemoryJson = JsonSerializer.Serialize(run.SessionMemory, RecordMapper.RecordJsonOptions);
         existing.HumanReviewDecisionsJson = JsonSerializer.Serialize(run.HumanReviewDecisions.ToList(), RecordMapper.RecordJsonOptions);

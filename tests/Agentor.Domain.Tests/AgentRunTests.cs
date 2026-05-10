@@ -137,8 +137,41 @@ public sealed class AgentRunTests
         run.ApplyHumanReviewDecision(decision, now);
 
         Assert.Equal(AgentRunStatus.RequiresReview, run.Status);
+        Assert.Equal(HumanReviewWorkflowStatus.ChangesRequested, run.ReviewWorkflowStatus);
         Assert.Equal(AgentStepStatus.RequiresReview, step.Status);
         Assert.Equal(ToolCallStatus.RequiresReview, tool.Status);
         Assert.Single(run.HumanReviewDecisions);
+    }
+
+    [Fact]
+    public void EnterRequiresReview_DoesNotSetCompletedAt_SetsPauseWorkflow()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Objective", "trace-enter-review", now);
+        var step = run.StartStep("Step", now);
+        var tool = ToolCall.Start(run.Id, step.Id, "demo.tool", new Dictionary<string, string>(), now);
+        step.AddToolCall(tool);
+        tool.MarkRequiresReview("review", now);
+        step.MarkRequiresReview(now);
+        run.EnterRequiresReview("review", now);
+
+        Assert.Null(run.CompletedAt);
+        Assert.Equal(now, run.PausedAt);
+        Assert.Equal(now, run.ReviewRequestedAt);
+        Assert.Equal(HumanReviewWorkflowStatus.Pending, run.ReviewWorkflowStatus);
+    }
+
+    [Fact]
+    public void Fail_SetsTerminalAt_NotCompletedAt()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Objective", "trace-fail-term", now);
+        var step = run.StartStep("Step", now);
+        step.Complete(now);
+        run.Fail("boom", now);
+
+        Assert.Null(run.CompletedAt);
+        Assert.Equal(now, run.TerminalAt);
+        Assert.Equal(AgentRunStatus.Failed, run.Status);
     }
 }

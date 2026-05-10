@@ -33,9 +33,9 @@ public sealed class ApplyHumanReviewDecisionHandlerTests
         }
     }
 
-    private sealed class FixedActorAccessor(Guid actorId) : ICurrentActorAccessor
+    private sealed class FixedActorAccessor(Guid actorId, ActorRole role = ActorRole.HumanOperator) : ICurrentActorAccessor
     {
-        public ActorContext Current { get; } = new(actorId, "test-actor", ActorRole.HumanOperator);
+        public ActorContext Current { get; } = new(actorId, "test-actor", role);
     }
 
     private static AgentRun CreateRunPendingHumanReview(DateTimeOffset now)
@@ -84,5 +84,120 @@ public sealed class ApplyHumanReviewDecisionHandlerTests
         var tool = step.ToolCalls.Single();
         Assert.Equal(ToolCallStatus.Denied, tool.Status);
         Assert.Contains(step.PolicyDecisions, d => d.Outcome == PolicyDecisionOutcome.Deny);
+    }
+
+    [Fact]
+    public async Task RequestChanges_SetsWorkflow_ToChangesRequested()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var now = clock.UtcNow;
+        var run = CreateRunPendingHumanReview(now);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
+        var stubPolicy = new StubPolicyEvaluator();
+        var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
+        var handler = new ApplyHumanReviewDecisionHandler(
+            repo,
+            stubPolicy,
+            registry,
+            pipeline,
+            new FixedActorAccessor(Guid.Parse("22222222-2222-4222-8222-222222222222")),
+            clock);
+
+        var result = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.RequestChanges, "Revise section A."),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(AgentRunStatus.RequiresReview, result!.Status);
+        Assert.Equal(HumanReviewWorkflowStatus.ChangesRequested, result.ReviewWorkflowStatus);
+    }
+
+    [Fact]
+    public async Task Escalate_ThenApprove_AsOperator_Throws()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var now = clock.UtcNow;
+        var run = CreateRunPendingHumanReview(now);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
+        var stubPolicy = new StubPolicyEvaluator();
+        var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
+        var actorId = Guid.Parse("22222222-2222-4222-8222-222222222222");
+
+        var escalateHandler = new ApplyHumanReviewDecisionHandler(
+            repo,
+            stubPolicy,
+            registry,
+            pipeline,
+            new FixedActorAccessor(actorId),
+            clock);
+
+        await escalateHandler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Escalate, "Needs governance."),
+            CancellationToken.None);
+
+        var approveHandler = new ApplyHumanReviewDecisionHandler(
+            repo,
+            stubPolicy,
+            registry,
+            pipeline,
+            new FixedActorAccessor(actorId),
+            clock);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            approveHandler.HandleAsync(
+                new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+                CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Escalate_ThenApprove_AsGovernanceApprover_ResumesRun()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var now = clock.UtcNow;
+        var run = CreateRunPendingHumanReview(now);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
+        var stubPolicy = new StubPolicyEvaluator();
+        var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
+        var actorId = Guid.Parse("22222222-2222-4222-8222-222222222222");
+
+        var escalateHandler = new ApplyHumanReviewDecisionHandler(
+            repo,
+            stubPolicy,
+            registry,
+            pipeline,
+            new FixedActorAccessor(actorId),
+            clock);
+
+        await escalateHandler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Escalate, "Needs governance."),
+            CancellationToken.None);
+
+        var approveHandler = new ApplyHumanReviewDecisionHandler(
+            repo,
+            stubPolicy,
+            registry,
+            pipeline,
+            new FixedActorAccessor(actorId, ActorRole.HumanGovernanceApprover),
+            clock);
+
+        var result = await approveHandler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(AgentRunStatus.Completed, result!.Status);
+        Assert.Equal(HumanReviewWorkflowStatus.None, result.ReviewWorkflowStatus);
     }
 }

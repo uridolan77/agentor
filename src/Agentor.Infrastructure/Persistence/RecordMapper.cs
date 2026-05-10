@@ -39,6 +39,10 @@ internal static class RecordMapper
             ResumeCursorJson = run.ResumeCursor is null
                 ? null
                 : JsonSerializer.Serialize(run.ResumeCursor, RecordJsonOptions),
+            ReviewRequestedAt = run.ReviewRequestedAt,
+            PausedAt = run.PausedAt,
+            TerminalAt = run.TerminalAt,
+            ReviewWorkflowStatus = run.ReviewWorkflowStatus.ToString(),
             Steps = run.Steps.Select(ToRecord).ToList(),
             TraceEvents = run.Trace.Select(ToRecord).ToList()
         };
@@ -122,7 +126,11 @@ internal static class RecordMapper
             record.WorkspaceId,
             record.ProjectId,
             record.KnowledgeScopeId,
-            record.ErrorMessage);
+            record.ErrorMessage,
+            record.TerminalAt,
+            record.ReviewRequestedAt,
+            record.PausedAt,
+            ParseReviewWorkflowStatus(record.ReviewWorkflowStatus));
     }
 
     internal static AgentRun ToDomain(AgentRunRecord record)
@@ -163,7 +171,11 @@ internal static class RecordMapper
             record.ProjectId,
             record.KnowledgeScopeId,
             humanReviews.Select(r => r.ToDomain()),
-            resumeCursor);
+            resumeCursor,
+            record.ReviewRequestedAt,
+            record.PausedAt,
+            record.TerminalAt,
+            ParseReviewWorkflowStatus(record.ReviewWorkflowStatus));
     }
 
     private static PlanResumeCursor? TryDeserializeResumeCursor(string? json)
@@ -245,6 +257,18 @@ internal static class RecordMapper
             data);
     }
 
+    private static HumanReviewWorkflowStatus ParseReviewWorkflowStatus(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return HumanReviewWorkflowStatus.None;
+        }
+
+        return Enum.TryParse<HumanReviewWorkflowStatus>(value, ignoreCase: true, out var parsed)
+            ? parsed
+            : HumanReviewWorkflowStatus.None;
+    }
+
     private sealed class HumanReviewDecisionJsonDto
     {
         public Guid Id { get; set; }
@@ -259,7 +283,9 @@ internal static class RecordMapper
 
         public ReviewResolutionStatus Resolution { get; set; }
 
+        public Guid? RelatedPriorActorId { get; set; }
+
         public HumanReviewDecision ToDomain() =>
-            new(Id, Kind, ActorId, DecidedAt, Note, Resolution);
+            new(Id, Kind, ActorId, DecidedAt, Note, Resolution, RelatedPriorActorId);
     }
 }

@@ -313,7 +313,9 @@ public sealed class ListPendingHumanReviewsQueryHandler
                 s.AgentName,
                 s.TraceId,
                 s.StartedAt,
-                s.CompletedAt,
+                s.PausedAt,
+                s.ReviewRequestedAt,
+                s.ReviewWorkflowStatus,
                 s.ErrorMessage))
             .ToList();
 

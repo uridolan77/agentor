@@ -35,7 +35,7 @@ public static class GovernanceEndpoints
             try
             {
                 var run = await handler.HandleAsync(
-                    new ApplyHumanReviewDecisionCommand(runId, request.Kind, request.Note),
+                    new ApplyHumanReviewDecisionCommand(runId, request.Kind, request.Note, request.RelatedPriorActorId),
                     cancellationToken);
 
                 if (run is null)

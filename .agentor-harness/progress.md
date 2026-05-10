@@ -1,5 +1,25 @@
 # Agentor harness progress
 
+## Phase 28 PR119 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **Review semantics**: **`AgentRun`** **`CompletedAt`** vs **`TerminalAt`** vs **`ReviewRequestedAt`**/**`PausedAt`**; **`HumanReviewWorkflowStatus`** + **`ApplyHumanReviewDecision`** trace **`reviewWorkflowStatus`** + optional **`RelatedPriorActorId`**.
+- **Handler**: **`ApplyHumanReviewDecisionHandler`** note validation; **`Escalated`** **`Approve`** gate; **`ActorRole.HumanGovernanceApprover`**.
+- **Contracts/API**: **`AgentRunDto`**/**`AgentRunSummaryDto`**/**`PendingHumanReviewItemDto`**/**`ApplyHumanReviewRequestDto`**/**`HumanReviewDecisionDto`** extended.
+- **Persistence**: migration **`20260511203000_Phase28ReviewWorkflowSemantics`** + snapshot + **`RecordMapper`**/**`EfCoreAgentRunRepository`** merge fields + legacy **`completed_at`** SQL repair.
+- **Docs/tests**: **`docs/REPO_TRUTH.md`**; domain/application/API/infrastructure tests + **`ContractDtoCompatibilityTests`**.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **449 passed, 0 failed**
+- `pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 28 -ExpectedHarnessPass PR119`
+- `pwsh ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 29 not started.
+
 ## Phase 27 PR118 (2026-05-11)
 
 **Status**: Complete.
@@ -18,7 +38,7 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 27 -ExpectedHarnessPass PR118`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 28 not started.
+**Scope guard**: Phase 28 completed later (see Phase 28 PR119).
 
 ## Phase 26 PR117 + PR117.5 (2026-05-11)
 

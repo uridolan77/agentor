@@ -164,6 +164,10 @@ public sealed class GetRunAuditExportQueryHandler
                 ["status"] = run.Status.ToString(),
                 ["startedAt"] = run.StartedAt.ToString("O"),
                 ["completedAt"] = run.CompletedAt?.ToString("O"),
+                ["terminalAt"] = run.TerminalAt?.ToString("O"),
+                ["reviewRequestedAt"] = run.ReviewRequestedAt?.ToString("O"),
+                ["pausedAt"] = run.PausedAt?.ToString("O"),
+                ["reviewWorkflowStatus"] = run.ReviewWorkflowStatus.ToString(),
                 ["errorMessage"] = run.ErrorMessage
             },
             ["plan"] = null,
@@ -217,7 +221,8 @@ public sealed class GetRunAuditExportQueryHandler
                     actorId = d.ActorId.ToString("D"),
                     decidedAt = d.DecidedAt.ToString("O"),
                     d.Note,
-                    resolution = d.Resolution.ToString()
+                    resolution = d.Resolution.ToString(),
+                    relatedPriorActorId = d.RelatedPriorActorId?.ToString("D")
                 }),
                 SerializerOptions),
             ["athanorProvenance"] = JsonSerializer.SerializeToNode(

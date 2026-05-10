@@ -1,4 +1,5 @@
 using Agentor.Domain.Enums;
+using Agentor.Domain.Governance;
 
 namespace Agentor.Contracts;
 
@@ -16,6 +17,10 @@ public sealed record AgentRunDto(
     AgentRunStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset? CompletedAt,
+    DateTimeOffset? TerminalAt,
+    DateTimeOffset? ReviewRequestedAt,
+    DateTimeOffset? PausedAt,
+    HumanReviewWorkflowStatus ReviewWorkflowStatus,
     string? ErrorMessage,
     IReadOnlyList<AgentStepDto> Steps,
     IReadOnlyList<TraceEventDto> Trace,
@@ -33,6 +38,10 @@ public sealed record AgentRunSummaryDto(
     AgentRunStatus Status,
     DateTimeOffset StartedAt,
     DateTimeOffset? CompletedAt,
+    DateTimeOffset? TerminalAt,
+    DateTimeOffset? ReviewRequestedAt,
+    DateTimeOffset? PausedAt,
+    HumanReviewWorkflowStatus ReviewWorkflowStatus,
     string? ErrorMessage = null);
 
 public sealed record AgentRunListResponseDto(

@@ -1,5 +1,6 @@
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Domain.Governance;
 
 namespace Agentor.Contracts;
 
@@ -175,7 +176,9 @@ public sealed record PendingHumanReviewItemDto(
     string AgentName,
     string TraceId,
     DateTimeOffset StartedAt,
-    DateTimeOffset? CompletedAt,
+    DateTimeOffset? PausedAt,
+    DateTimeOffset? ReviewRequestedAt,
+    HumanReviewWorkflowStatus ReviewWorkflowStatus,
     string? ReviewReason);
 
 public sealed record PendingHumanReviewListResponseDto(

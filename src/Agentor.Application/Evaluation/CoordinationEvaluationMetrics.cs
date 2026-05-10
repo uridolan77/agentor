@@ -68,7 +68,8 @@ public sealed record CoordinationEvaluationMetrics(
         };
 
         long latencyMs = 0;
-        if (run.CompletedAt is { } end)
+        var endTime = run.CompletedAt ?? run.TerminalAt;
+        if (endTime is { } end)
         {
             latencyMs = (long)Math.Max(0, (end - run.StartedAt).TotalMilliseconds);
         }

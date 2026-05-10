@@ -4,6 +4,8 @@ public enum ActorRole
 {
     System,
     HumanOperator,
+    /// <summary>May approve human reviews that were escalated (Phase 28).</summary>
+    HumanGovernanceApprover,
     Service
 }
 

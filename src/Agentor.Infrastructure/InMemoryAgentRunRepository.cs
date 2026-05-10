@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Agentor.Application.Abstractions;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Domain.Governance;
 
 namespace Agentor.Infrastructure;
 
@@ -54,7 +55,11 @@ public sealed class InMemoryAgentRunRepository : IAgentRunRepository
                 r.WorkspaceId,
                 r.ProjectId,
                 r.KnowledgeScopeId,
-                r.ErrorMessage))
+                r.ErrorMessage,
+                r.TerminalAt,
+                r.ReviewRequestedAt,
+                r.PausedAt,
+                r.ReviewWorkflowStatus))
             .ToList();
 
         return Task.FromResult(new AgentRunListPage(items, total, skip, take));
