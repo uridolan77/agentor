@@ -2,11 +2,14 @@
 
 This document records non-goals and safety posture for the Phase 11 governance slice (PR51 through PR55) and PR55.5 harness hardening. It does not replace product security review.
 
-## Actor boundary (PR54)
+## Actor boundary (PR54 + Phase 19)
 
-- ICurrentActorAccessor is wired to HeaderOrFakeActorAccessor in the API: a caller may supply X-Agentor-Actor-Id (GUID) for the acting principal.
-- When that header is missing, the API uses a fixed local-dev fallback actor id. This is not authentication, not authorization, and not an identity provider integration.
-- Before any production-style deployment, actor resolution must be replaced with a real trust model; the fallback must be mode-gated or removed.
+- `ICurrentActorAccessor` remains the actor boundary used by governance mutations.
+- API auth mode is now explicit (`Agentor:Auth:Mode = Fake | Header | Jwt`).
+- Fake mode is local/test oriented and blocked outside Development/Test by default unless explicitly overridden.
+- Header mode requires a valid GUID in the configured actor header.
+- Jwt mode resolves actor id/display name/role from configurable claims and does not require provider-specific SDK coupling.
+- Actor resolution failures produce unauthorized API responses where endpoint authorization is enforced.
 
 ## Human review (PR53)
 
@@ -19,6 +22,16 @@ This document records non-goals and safety posture for the Phase 11 governance s
 
 - RuntimePolicyOptions.ActiveProfile (PolicyProfileRules) is a first runtime profile hook: deny/allow lists, risk ceiling, model-call budget caps, MCP denied tool keys, and external-agent denied tool keys.
 - It is not a versioned enterprise PolicyBundle, not a centralized policy distribution service, and not a full authorization engine.
+
+## Endpoint authorization (Phase 19)
+
+- Governance and policy endpoints now enforce permissions through `IAuthorizationDecisionService`.
+- `RequiresReview` workflow decisions require governance write permission.
+- Policy bundle creation/activation requires policy bundle write permission.
+- Audit export requires audit read permission.
+- Default role posture: `Service` is read-only; mutating governance actions require `HumanOperator` or `System`.
+
+See `docs/security/auth-boundary.md` for the current auth mode and permission model.
 
 ## Audit export (PR55)
 

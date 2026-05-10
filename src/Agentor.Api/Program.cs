@@ -32,6 +32,8 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentActorAccessor, HeaderOrFakeActorAccessor>();
+builder.Services.AddScoped<IAuthorizationDecisionService, RoleBasedAuthorizationDecisionService>();
+builder.Services.AddSingleton<IValidateOptions<AgentorAuthOptions>, AgentorAuthOptionsValidator>();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -47,6 +49,12 @@ builder.Services
 builder.Services
     .AddOptions<AgentorPersistenceOptions>()
     .BindConfiguration(AgentorPersistenceOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<AgentorAuthOptions>()
+    .BindConfiguration(AgentorAuthOptions.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
 

@@ -1,0 +1,21 @@
+namespace Agentor.Application.Abstractions;
+
+public enum AgentorPermission
+{
+    GovernanceReviewWrite,
+    PolicyBundleWrite,
+    PolicyBundleRead,
+    AuditRead
+}
+
+public sealed record AuthorizationDecision(bool Allowed, string? Reason = null)
+{
+    public static AuthorizationDecision Allow() => new(true);
+
+    public static AuthorizationDecision Deny(string reason) => new(false, reason);
+}
+
+public interface IAuthorizationDecisionService
+{
+    AuthorizationDecision Authorize(ActorContext actor, AgentorPermission permission);
+}

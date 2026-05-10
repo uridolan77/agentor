@@ -1,4 +1,5 @@
 using Agentor.Api.Mapping;
+using Agentor.Api.Security;
 using Agentor.Application.Abstractions;
 using Agentor.Contracts;
 using Agentor.Domain.Policy;
@@ -18,8 +19,21 @@ public static class PolicyBundleEndpoints
     {
         v1.MapGet("/policy-bundles", async (
                 IPolicyBundleRepository repo,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext,
                 CancellationToken cancellationToken) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.PolicyBundleRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var bundles = await repo.ListAsync(cancellationToken);
                 return Results.Ok(new PolicyBundleListDto(
                     bundles.Select(b => b.ToSummaryDto()).ToList()));
@@ -32,9 +46,21 @@ public static class PolicyBundleEndpoints
                 CreatePolicyBundleRequestDto body,
                 IPolicyBundleRepository repo,
                 IClock clock,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext,
                 CancellationToken cancellationToken) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.PolicyBundleWrite);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
 
                 if (string.IsNullOrWhiteSpace(body.Name))
@@ -91,9 +117,21 @@ public static class PolicyBundleEndpoints
         v1.MapGet("/policy-bundles/{id:guid}", async (
                 Guid id,
                 IPolicyBundleRepository repo,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext,
                 CancellationToken cancellationToken) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.PolicyBundleRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var bundle = await repo.GetAsync(id, cancellationToken);
                 if (bundle is null)
                 {
@@ -118,10 +156,21 @@ public static class PolicyBundleEndpoints
                 IPolicyBundleRepository bundleRepo,
                 IPolicyProfileRepository profileRepo,
                 ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 IClock clock,
                 HttpContext httpContext,
                 CancellationToken cancellationToken) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.PolicyBundleWrite);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
 
                 // Look up the management profile by ID (existing flat store, backward-compatible).

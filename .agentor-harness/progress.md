@@ -1,5 +1,28 @@
 # Agentor harness progress
 
+## Phase 19 PR91-PR95 (2026-05-10)
+
+Completed **Phase 19 production identity and authorization boundary**:
+
+- Added `Agentor:Auth` options (`Fake|Header|Jwt`) with startup validation via `AgentorAuthOptionsValidator`.
+- Enforced safe default posture: Fake mode blocked outside Development/Test unless explicitly overridden.
+- Extended JWT actor accessor behavior with configurable claim mappings for actor id, display name, and role.
+- Added authorization primitives (`AgentorPermission`, `AuthorizationDecision`, `IAuthorizationDecisionService`).
+- Added `RoleBasedAuthorizationDecisionService` default mapping (`Service` read-only; governance/policy writes require `HumanOperator`/`System`).
+- Added `EndpointAuthorization.Require(...)` and applied permission checks to governance + policy endpoints:
+	- `POST /agent-runs/{runId}/human-review` -> `GovernanceReviewWrite`
+	- `GET /agent-runs/{runId}/audit-export` -> `AuditRead`
+	- `GET /policy-bundles` and `GET /policy-bundles/{id}` -> `PolicyBundleRead`
+	- `POST /policy-bundles` and `POST /policy-profiles/{id}/activate` -> `PolicyBundleWrite`
+- Added API and unit tests for auth mode behavior, configurable JWT claims, role-based allow/deny, and endpoint authorization integration.
+- Added docs: `docs/security/auth-boundary.md`, `docs/security/deployment-threat-notes.md`.
+- Updated `docs/GOVERNANCE_BOUNDARY.md` and `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` (SCOPE-001 seam note retained, still deferred).
+
+Active deferred items (`passes: false`): `SCOPE-001` only.
+
+Test totals after Phase 19 verification: **346 passing, 0 failing** across all 5 test projects.
+Verification scripts: `verify-harness` passed, `verify-repo-clean` passed.
+
 ## Phase 18 PR90.5 (2026-05-10)
 
 Completed **Phase 18 hardening and closeout correction**:

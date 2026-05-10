@@ -1,5 +1,7 @@
 using Agentor.Api.Mapping;
+using Agentor.Api.Security;
 using Agentor.Application.Commands;
+using Agentor.Application.Abstractions;
 using Agentor.Application.Queries;
 using Agentor.Contracts;
 using Microsoft.AspNetCore.Http;
@@ -14,9 +16,21 @@ public static class GovernanceEndpoints
             Guid runId,
             ApplyHumanReviewRequestDto request,
             ApplyHumanReviewDecisionHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.GovernanceReviewWrite);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
             try
             {
@@ -43,9 +57,21 @@ public static class GovernanceEndpoints
         v1.MapGet("/agent-runs/{runId:guid}/audit-export", async (
             Guid runId,
             GetRunAuditExportQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.AuditRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var result = await handler.HandleAsync(runId, cancellationToken);
             if (result is null)
             {
