@@ -1,5 +1,28 @@
 # Verification log
 
+## Phase 18 PR90.5 (2026-05-10)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 18 -ExpectedHarnessPass PR90.5
+pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **333 passed, 0 failed**
+- verify-harness: passed (ExpectedPhase=18, ExpectedHarnessPass=PR90.5)
+- verify-repo-clean: passed
+
+Notes:
+
+- PR90.5 changed only Phase 18 hardening/harness hygiene scope.
+- Focused validation before the full run: `MultiStepReviewResumeTests` **12 passed, 0 failed**.
+
 ## Phase 18 PR90 (2026-05-10)
 
 ```bash

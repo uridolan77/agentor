@@ -1,11 +1,12 @@
 {
     "phase":  18,
-    "title":  "Phase 18 Multi-step human review resume semantics (PR86-PR90) — PlanResumeCursor, executor suspension, approval resume, API integration, eval fixtures",
-    "harnessPass":  "PR90",
+    "title":  "Phase 18 Multi-step human review resume semantics (PR86-PR90) + PR90.5 hardening and harness hygiene",
+    "harnessPass":  "PR90.5",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
                   "Phase 18 PR86-PR90 (2026-05-10): Multi-step human review resume semantics — PlanResumeCursor domain record (PlanId, BlockedAtPlanStepId, BlockedAtSourceStepId, BlockedAtToolKey, RemainingSteps, CompletedStepHistory, SuspendedAt); PendingPlanStep + PlanStepResumeSnapshot; ReviewResumeState; AgentRun.RecordPlanResumeCursor + ClearResumeCursor; TraceEventKind.PlanResumeCursorRecorded/Cleared/MultiStepPlanResumed; SequentialAgentPlanExecutor records cursor when RequiresReview occurs with remaining plan steps; ApplyHumanReviewDecisionHandler resumes remaining steps after approval (ResumeRemainingPlanStepsAsync + ExecutePendingResumeStepAsync with full failure-policy handling + RequiresReview chaining); GovernanceResumeApiTests (6 API tests covering all 4 decision kinds); Phase18FixtureTests (3 tests including PR53-005 named evidence); 2 eval fixtures (schema 5); registry.json updated to 4 entries. Grand total: 331 tests passing. PR53-005 closed.",
+                  "PR90.5 (2026-05-10): Phase 18 hardening and harness hygiene — deleted stale .agentor-harness/feature-list.json.head.txt; verify-repo-clean.ps1 now scans harness .txt files and fails on stale snapshot artifacts; docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md corrected so SCOPE-001 is the only active deferred item; resumed-step EscalateToReview now leaves a pending reviewable tool call after deny/tool failure so ApplyHumanReviewDecision can act safely; MultiStepReviewResumeTests adds resumed deny-escalation and failure-escalation coverage. Full verification: 333 tests passing; verify-harness and verify-repo-clean passed.",
                   "PR75.8: Athanor POST evidence-provenance (204) and candidates (202) covered with WebApplicationFactory + TestAgentRunRepository seeding AgentRun.Start (Running); PR23-API-003 / PR24-API-003 flipped true.",
                   "PR75.7: repository tightening — broadened verify-repo-clean.ps1 (harness, .cursor, scripts, workflows, docs, src, tests, benchmarks, optional fixtures, root policy files); CI runs verify-harness (ExpectedPhase 15, PR75.7) + verify-repo-clean; AGENTS.md current boundaries; Program.cs endpoint extension methods; feature-list note fix (ProfileId vs Phase 11 identity); v1.0-RC-DEFERRED-ITEMS + v1.0-RC-REPO-STATUS; UTF-8 no BOM on touched files; no Phase 16 product work.",
                   "PR75.6: repository hygiene - removed root scratch Python; verify-repo-clean.ps1 + run-benchmarks.ps1; compact current-pr; v1.0-RC-DEFERRED-ITEMS.md; contract/redaction tests; no Phase 16 work.",
@@ -1467,6 +1468,27 @@
                                 "description":  "PR53-005 becomes true with named evidence.",
                                 "passes":  true,
                                 "evidence":  "PR53-005 row flipped passes:true; Phase18FixtureTests.PR53_005_Evidence_ThreeStepPlan_ReviewAtS2_ResumedAndCompletedByApproval is the named evidence test"
+                            },
+                            {
+                                "id":  "PR90.5-001",
+                                "pr":  90.5,
+                                "description":  "Stale harness construction debris is removed and repo-clean flags it if it returns.",
+                                "passes":  true,
+                                "evidence":  ".agentor-harness/feature-list.json.head.txt deleted; scripts/verify-repo-clean.ps1 blockedHarnessSnapshotFiles check"
+                            },
+                            {
+                                "id":  "PR90.5-002",
+                                "pr":  90.5,
+                                "description":  "Resumed-step EscalateToReview leaves a pending reviewable tool call after deny/tool failure so human review can act safely.",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Commands/ApplyHumanReviewDecisionHandler.cs; MultiStepReviewResumeTests.Approve_DeniedResumedStep_WithEscalateToReview_LeavesPendingReviewTool_AndSecondApproveFailsSafely; MultiStepReviewResumeTests.Approve_FailedResumedStep_WithEscalateToReview_LeavesPendingReviewTool_AndSecondApproveRetriesAndCompletes"
+                            },
+                            {
+                                "id":  "PR90.5-003",
+                                "pr":  90.5,
+                                "description":  "Deferred-items manifest now lists only SCOPE-001 as active and records PR53-005 closure evidence.",
+                                "passes":  true,
+                                "evidence":  "docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md; .agentor-harness/session-handoff.md; .agentor-harness/current-pr.md"
                             }
                         ]
 }

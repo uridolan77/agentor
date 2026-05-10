@@ -408,6 +408,129 @@ public sealed class MultiStepReviewResumeTests
         Assert.DoesNotContain(result.Trace, e => e.Kind == TraceEventKind.PlanExecutionCompleted);
     }
 
+    [Fact]
+    public async Task Approve_DeniedResumedStep_WithEscalateToReview_LeavesPendingReviewTool_AndSecondApproveFailsSafely()
+    {
+        var clock = new SystemClock();
+        var counting = new CountingExecutor();
+        var deniedResumedTool = "tool.denied-after-resume";
+        var policy = new StubPolicyEvaluator(
+            reviewKeys: [ReviewTool],
+            denyKeys: [deniedResumedTool]);
+        var repo = new InMemoryAgentRunRepository();
+
+        var registry = MakeRegistry(counting);
+        registry.Register(new ToolDefinition(deniedResumedTool, "Denied", "desc", ToolRiskLevel.Low), counting);
+
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock);
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Obj", "trace-ms-7b", clock.UtcNow);
+
+        var ok = AgentRecipe.TryCreate(
+            Guid.NewGuid(), "three-step-escalate-deny", AgentRecipeVersion.Parse("1.0"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition("s1", 1, RecipeStepKind.Tool, FakeTool),
+                new RecipeStepDefinition("s2", 2, RecipeStepKind.Tool, ReviewTool),
+                new RecipeStepDefinition("s3", 3, RecipeStepKind.Tool, deniedResumedTool,
+                    OnFailure: FailureHandlingPolicy.EscalateToReview),
+                new RecipeStepDefinition("s4", 4, RecipeStepKind.Tool, FakeTool)
+            ],
+            null, out var recipe, out _);
+        Assert.True(ok);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+        await executor.ExecuteAsync(run, plan, CancellationToken.None);
+
+        await repo.SaveAsync(run, CancellationToken.None);
+        var handler = new ApplyHumanReviewDecisionHandler(
+            repo, policy, registry,
+            new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions { MaxAttempts = 1 })),
+            new FixedActorAccessor(), clock);
+
+        var firstApproval = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(firstApproval);
+        Assert.Equal(AgentRunStatus.RequiresReview, firstApproval!.Status);
+        Assert.NotNull(firstApproval.ResumeCursor);
+        Assert.Equal("s3", firstApproval.ResumeCursor!.BlockedAtSourceStepId);
+        Assert.Single(firstApproval.ResumeCursor.RemainingSteps);
+        Assert.Equal("s4", firstApproval.ResumeCursor.RemainingSteps[0].SourceStepId);
+
+        var resumedReviewStep = firstApproval.Steps.Last();
+        Assert.Equal(AgentStepStatus.RequiresReview, resumedReviewStep.Status);
+        Assert.Equal(ToolCallStatus.RequiresReview, resumedReviewStep.ToolCalls.Last().Status);
+
+        var secondApproval = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(secondApproval);
+        Assert.Equal(AgentRunStatus.Failed, secondApproval!.Status);
+        Assert.DoesNotContain(secondApproval.Trace, e => e.Kind == TraceEventKind.PlanExecutionCompleted);
+        Assert.Equal(2, counting.Invocations);
+    }
+
+    [Fact]
+    public async Task Approve_FailedResumedStep_WithEscalateToReview_LeavesPendingReviewTool_AndSecondApproveRetriesAndCompletes()
+    {
+        var clock = new SystemClock();
+        var failOnceExecutor = new FailOnceExecutor();
+        var policy = new StubPolicyEvaluator(reviewKeys: [ReviewTool]);
+        var repo = new InMemoryAgentRunRepository();
+
+        var registry = MakeRegistry();
+        registry.Register(new ToolDefinition("tool.fail-once", "FailOnce", "desc", ToolRiskLevel.Low), failOnceExecutor);
+
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock);
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Obj", "trace-ms-7c", clock.UtcNow);
+
+        var ok = AgentRecipe.TryCreate(
+            Guid.NewGuid(), "three-step-escalate-failure", AgentRecipeVersion.Parse("1.0"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition("s1", 1, RecipeStepKind.Tool, FakeTool),
+                new RecipeStepDefinition("s2", 2, RecipeStepKind.Tool, ReviewTool),
+                new RecipeStepDefinition("s3", 3, RecipeStepKind.Tool, "tool.fail-once",
+                    OnFailure: FailureHandlingPolicy.EscalateToReview),
+                new RecipeStepDefinition("s4", 4, RecipeStepKind.Tool, FakeTool)
+            ],
+            null, out var recipe, out _);
+        Assert.True(ok);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+        await executor.ExecuteAsync(run, plan, CancellationToken.None);
+
+        await repo.SaveAsync(run, CancellationToken.None);
+        var handler = new ApplyHumanReviewDecisionHandler(
+            repo, policy, registry,
+            new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions { MaxAttempts = 1 })),
+            new FixedActorAccessor(), clock);
+
+        var firstApproval = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(firstApproval);
+        Assert.Equal(AgentRunStatus.RequiresReview, firstApproval!.Status);
+        Assert.NotNull(firstApproval.ResumeCursor);
+        Assert.Equal("s3", firstApproval.ResumeCursor!.BlockedAtSourceStepId);
+        Assert.Single(firstApproval.ResumeCursor.RemainingSteps);
+
+        var resumedReviewStep = firstApproval.Steps.Last();
+        Assert.Equal(AgentStepStatus.RequiresReview, resumedReviewStep.Status);
+        Assert.Equal(ToolCallStatus.RequiresReview, resumedReviewStep.ToolCalls.Last().Status);
+
+        var secondApproval = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(secondApproval);
+        Assert.Equal(AgentRunStatus.Completed, secondApproval!.Status);
+        Assert.Null(secondApproval.ResumeCursor);
+        Assert.Contains(secondApproval.Trace, e => e.Kind == TraceEventKind.PlanExecutionCompleted);
+        Assert.Equal(4, secondApproval.Steps.Count);
+    }
+
     // ───────────────────────────────────────────────────────────────────────
     // PR88-e: RequiresReview chaining (second review gate in the plan)
     // ───────────────────────────────────────────────────────────────────────
@@ -548,5 +671,21 @@ public sealed class MultiStepReviewResumeTests
     {
         public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest req, CancellationToken ct) =>
             Task.FromResult(new ToolExecutionResult(false, new Dictionary<string, string>(), "Simulated tool failure."));
+    }
+
+    private sealed class FailOnceExecutor : IToolExecutor
+    {
+        private int _attempts;
+
+        public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest req, CancellationToken ct)
+        {
+            _attempts++;
+            if (_attempts == 1)
+            {
+                return Task.FromResult(new ToolExecutionResult(false, new Dictionary<string, string>(), "Fail once during resume."));
+            }
+
+            return Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string> { ["result"] = "recovered" }));
+        }
     }
 }

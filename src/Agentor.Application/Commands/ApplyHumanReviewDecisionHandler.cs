@@ -324,6 +324,17 @@ public sealed class ApplyHumanReviewDecisionHandler
 
         if (policyDecision.Outcome == PolicyDecisionOutcome.Deny)
         {
+            if (pending.OnFailure == FailureHandlingPolicy.EscalateToReview)
+            {
+                toolCall.MarkRequiresReview(policyDecision.Reason, _clock.UtcNow);
+                runStep.AddToolCall(toolCall);
+                runStep.MarkRequiresReview(_clock.UtcNow);
+                run.EnterRequiresReview(policyDecision.Reason, _clock.UtcNow);
+                ctx.History.Add(new PlanStepExecutionSnapshot(pending.PlanStepId, pending.SourceStepId, AgentPlanStepStatus.RequiresReview, false, null));
+                RecordNewCursorForResumedStep(run, cursor, pending, ctx);
+                return false;
+            }
+
             toolCall.Deny(policyDecision.Reason, _clock.UtcNow);
             runStep.AddToolCall(toolCall);
             ctx.History.Add(new PlanStepExecutionSnapshot(pending.PlanStepId, pending.SourceStepId, AgentPlanStepStatus.Failed, false, null));
@@ -337,14 +348,6 @@ public sealed class ApplyHumanReviewDecisionHandler
             if (pending.OnFailure == FailureHandlingPolicy.SkipRemaining)
             {
                 runStep.Complete(_clock.UtcNow);
-                return false;
-            }
-
-            if (pending.OnFailure == FailureHandlingPolicy.EscalateToReview)
-            {
-                runStep.MarkRequiresReview(_clock.UtcNow);
-                run.EnterRequiresReview(policyDecision.Reason, _clock.UtcNow);
-                RecordNewCursorForResumedStep(run, cursor, pending, ctx);
                 return false;
             }
 
@@ -410,8 +413,17 @@ public sealed class ApplyHumanReviewDecisionHandler
             return true;
         }
 
+        if (pending.OnFailure == FailureHandlingPolicy.EscalateToReview)
+        {
+            toolCall.MarkRequiresReview(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
+            runStep.MarkRequiresReview(_clock.UtcNow);
+            run.EnterRequiresReview(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
+            ctx.History.Add(new PlanStepExecutionSnapshot(pending.PlanStepId, pending.SourceStepId, AgentPlanStepStatus.RequiresReview, false, null));
+            RecordNewCursorForResumedStep(run, cursor, pending, ctx);
+            return false;
+        }
+
         toolCall.Fail(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
-        runStep.AddToolCall(toolCall);
         ctx.History.Add(new PlanStepExecutionSnapshot(pending.PlanStepId, pending.SourceStepId, AgentPlanStepStatus.Failed, false, null));
 
         if (pending.OnFailure is FailureHandlingPolicy.ContinueOnFailure or FailureHandlingPolicy.MarkForCompensation)
@@ -423,14 +435,6 @@ public sealed class ApplyHumanReviewDecisionHandler
         if (pending.OnFailure == FailureHandlingPolicy.SkipRemaining)
         {
             runStep.Complete(_clock.UtcNow);
-            return false;
-        }
-
-        if (pending.OnFailure == FailureHandlingPolicy.EscalateToReview)
-        {
-            runStep.MarkRequiresReview(_clock.UtcNow);
-            run.EnterRequiresReview(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
-            RecordNewCursorForResumedStep(run, cursor, pending, ctx);
             return false;
         }
 

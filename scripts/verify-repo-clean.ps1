@@ -7,6 +7,9 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $failures = New-Object System.Collections.Generic.List[string]
+$blockedHarnessSnapshotFiles = @(
+    "feature-list.json.head.txt"
+)
 
 function Add-Failure([string]$Message) {
     [void]$failures.Add($Message)
@@ -127,6 +130,16 @@ if (-not (Test-Path -LiteralPath $handoffPath)) {
     }
 }
 
+$harnessRoot = Join-Path $repoRoot ".agentor-harness"
+if (Test-Path -LiteralPath $harnessRoot) {
+    foreach ($name in $blockedHarnessSnapshotFiles) {
+        $blockedPath = Join-Path $harnessRoot $name
+        if (Test-Path -LiteralPath $blockedPath) {
+            Add-Failure "Stale harness snapshot file detected (delete it): $blockedPath"
+        }
+    }
+}
+
 # --- Broad UTF-8 / BOM / encoding scan (PR75.7) ---
 $textExtensions = @(
     ".cs", ".md", ".json", ".yml", ".yaml", ".ps1", ".sln", ".csproj",
@@ -155,7 +168,8 @@ foreach ($root in $scanRoots) {
         $full = $_.FullName
         if ($full -match "\\(bin|obj|\.git|node_modules)\\") { return }
         $ext = $_.Extension.ToLowerInvariant()
-        $allowed = ($textExtensions -contains $ext) -or ($_.Name -eq ".gitignore")
+        $isHarnessTextFile = $full.StartsWith($harnessRoot, [System.StringComparison]::OrdinalIgnoreCase) -and $ext -eq ".txt"
+        $allowed = ($textExtensions -contains $ext) -or ($_.Name -eq ".gitignore") -or $isHarnessTextFile
         if (-not $allowed) { return }
         Test-TextFileEncoding $full
     }

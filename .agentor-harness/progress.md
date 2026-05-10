@@ -1,12 +1,27 @@
 # Agentor harness progress
 
+## Phase 18 PR90.5 (2026-05-10)
+
+Completed **Phase 18 hardening and closeout correction**:
+
+- Deleted stale harness debris: `.agentor-harness/feature-list.json.head.txt`.
+- Tightened `scripts/verify-repo-clean.ps1` to scan `.txt` files under `.agentor-harness` for encoding issues and to fail explicitly on stale harness snapshot files such as `feature-list.json.head.txt`.
+- Corrected `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`: `PR53-005` removed from deferred items; `SCOPE-001` is now the only active deferred item.
+- Hardened resumed execution `EscalateToReview` semantics in `ApplyHumanReviewDecisionHandler.ExecutePendingResumeStepAsync`: denied/failed resumed tools now remain reviewable as `ToolCallStatus.RequiresReview`, so `ApplyHumanReviewDecision()` can act on the state safely.
+- Added focused tests for resumed-step escalation after policy deny and after tool failure in `MultiStepReviewResumeTests.cs`.
+- Updated `docs/design/multi-step-review-resume.md` to define the reviewable-tool contract for resumed-step `EscalateToReview` and to note non-resume parity as remaining technical debt.
+
+Active deferred items (`passes: false`): `SCOPE-001` only.
+
+Test totals after PR90.5 verification: **333 passing, 0 failing** across all 5 test projects. Focused hardening slice: `MultiStepReviewResumeTests` 12 passed, 0 failed.
+
 ## Phase 18 PR86–PR90 (2026-05-10)
 
 Completed **Phase 18 Multi-step Human Review Resume Semantics**:
 
 - **PR86**: Design doc `docs/design/multi-step-review-resume.md` — ReviewCheckpoint, ResumeCursor, PendingPlanStep, ReviewedToolContinuation; FailFast/ContinueOnFailure/SkipRemaining/EscalateToReview interactions; invariants (approval never overrides Deny; approval does not canonize knowledge; chaining semantics).
 - **PR87**: `PlanResumeCursor`, `PendingPlanStep`, `PlanStepResumeSnapshot`, `ReviewResumeState` in `Agentor.Domain.Governance.ReviewResumeCursor.cs`. `AgentRun.ResumeCursor` property + `RecordPlanResumeCursor` / `ClearResumeCursor` methods. `TraceEventKind.PlanResumeCursorRecorded/Cleared/MultiStepPlanResumed`. `Reconstitute` accepts `PlanResumeCursor?`. 13 domain tests in `PlanResumeCursorTests.cs`.
-- **PR88**: `SequentialAgentPlanExecutor.RecordResumeCursorIfNeeded` — records cursor with remaining-step list and completed-step history when `RequiresReview` occurs mid-plan. `ApplyHumanReviewDecisionHandler.ResumeRemainingPlanStepsAsync` + `ExecutePendingResumeStepAsync` — resumes remaining steps with full policy evaluation, failure-policy handling (ContinueOnFailure, SkipRemaining, MarkForCompensation, EscalateToReview, FailFast), and RequiresReview chaining (new cursor recorded on re-suspension). `RecordNewCursorForResumedStep` for multi-gate plans. 9 tests in `MultiStepReviewResumeTests.cs`.
+- **PR88**: `SequentialAgentPlanExecutor.RecordResumeCursorIfNeeded` — records cursor with remaining-step list and completed-step history when `RequiresReview` occurs mid-plan. `ApplyHumanReviewDecisionHandler.ResumeRemainingPlanStepsAsync` + `ExecutePendingResumeStepAsync` — resumes remaining steps with full policy evaluation, failure-policy handling (ContinueOnFailure, SkipRemaining, MarkForCompensation, EscalateToReview, FailFast), and RequiresReview chaining (new cursor recorded on re-suspension). `RecordNewCursorForResumedStep` for multi-gate plans. PR90.5 adds 2 focused escalation-hardening tests, bringing `MultiStepReviewResumeTests.cs` to 12 tests.
 - **PR89**: `GovernanceResumeApiTests.cs` — 6 API integration tests covering Approve (multistep completion), Reject (failure), RequestChanges (unchanged), Escalate (unchanged), 409 on non-RequiresReview run, 404 on unknown run. `GovernanceResumeApiFixture` using `TestAgentRunRepository`.
 - **PR90**: `review-gated-multistep-plan.json` (schema 5, kind MultiStepReviewResumeEvaluation), `review-resume-audit-export.json` (schema 5, kind ReviewResumeAuditExport). `registry.json` updated to 4 entries. 3 tests in `Phase18FixtureTests.cs` including the named PR53-005 evidence test.
 
