@@ -1,5 +1,2 @@
-# Current PR — harness marker
-
-Completed: Phase 6 PR26–PR30 (Conexus integration).
-
-Next: PR31 (Skills / Phase 7).
+Completed: Phase 7 PR31–PR35 + PR35.5.
+Next: Phase 8 — MCP, observability, and release
