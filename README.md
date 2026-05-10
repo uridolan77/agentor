@@ -1,79 +1,54 @@
-# Agentor
+# Agentor PR1–PR40 Claude Code Package v2
 
-Agentor is a deterministic, observable, policy-governed .NET runtime for agent execution.
+Generated: 2026-05-10
 
-It is not a chatbot framework, not a knowledge-state engine, and not an LLM gateway.
+This is a recompiled package after reviewing the current Agentor starter repo docs.
 
-## Service boundaries
+## What changed from v1
 
-```text
-Agentor = agent execution runtime
-Athanor = canonical knowledge-state / provenance service
-Conexus = LLM/model gateway
-MCP    = later tool/protocol connectivity layer
-```
+This version explicitly incorporates:
 
-Agentor may execute plans, invoke tools, record traces, produce manifests, and submit candidates to Athanor.
+- Anthropic CWC workshop lessons:
+  - decompose agents into tools, skills, memory, evals, policies, traces, and subagents later
+  - do not build a giant agent prompt
+  - evals must appear earlier, not only late in the roadmap
+  - skills are not tools
+  - every run/tool/model action must be traceable
+- Framework strategy:
+  - Microsoft Agent Framework / Semantic Kernel / A2A / MCP / LangGraph / AutoGen are adapters, not Agentor core
+  - A2A is post-v0.1 unless a real requirement appears earlier
+  - MCP enters only through tool-registry boundaries
+- Current Agentor starter docs alignment:
+  - `docs/ROADMAP.md` in the starter is too short and should be replaced or superseded
+  - `AGENTS.md` says "small and vertical"; this package changes the doctrine to "medium-long, coherent, reviewable passes"
+  - service-boundary docs need a framework/adapters section
+  - add ADR-006 for external frameworks as adapters
 
-Agentor must not canonize knowledge, resolve contradictions, create canonical snapshots, or treat tool/LLM output as truth.
-
-## PR1 scope
-
-PR1 proves only the runtime kernel:
-
-```text
-AgentProfile
-→ AgentRun
-→ AgentStep
-→ FakeToolCall
-→ PolicyDecision
-→ ExecutionTrace
-→ RunManifest
-```
-
-No Athanor call.
-No Conexus call.
-No MCP.
-No real tools.
-No memory subsystem.
-No multi-agent orchestration.
-
-## Quick start
-
-```powershell
-dotnet restore
-dotnet build
-dotnet test
-
-dotnet run --project src/Agentor.Api
-```
-
-Smoke test:
-
-```powershell
-./scripts/pr1-smoke.ps1
-```
-
-## API surface in PR1
+## Package layout
 
 ```text
-GET  /health
-POST /agent-runs
-GET  /agent-runs/{runId}
-GET  /agent-runs/{runId}/manifest
+DOCUMENT_CHANGE_REPORT.md
+INSTALL_INSTRUCTIONS.md
+OVERLAY_FILES/
+  AGENTS.md
+  PROJECT_CHARTER.md
+  docs/
+  decisions/
+docs/planning/pr1-pr40/
+  CLAUDE.md
+  00_START_HERE.md
+  PR_INDEX.md
+  MASTER_ROADMAP.md
+  prs/
+  phases/
+  templates/
+  scripts/
 ```
 
-## Architecture source
+## Recommended use
 
-Agentor adopts the service architecture discipline of `conexus.adaptation`:
+Copy `OVERLAY_FILES/*` into the repo root to update the starter docs.
 
-```text
-Domain
-Application
-Infrastructure
-Api
-Contracts
-Tests
-```
+Then copy `docs/planning/pr1-pr40/` into the repo as the long roadmap package.
 
-But its domain is not adaptation. Its domain is agent execution.
+Do not ask Claude Code to implement all 40 PRs at once.
