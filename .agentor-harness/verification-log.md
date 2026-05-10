@@ -1,4 +1,21 @@
-# Agentor harness - verification log
+﻿# Agentor harness - verification log
+
+## Phase 11 + PR55.5 verification (2026-05-10)
+
+Commands (repository root):
+
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results: restore OK; build OK; test OK.
+
+Counts: **Domain 38**, **Application 69**, **Infrastructure 48**, **Api 41** (total **196**).
+
+Scope: Phase 11 governance (PR51 identity and Athanor project resolution, PR52 ActiveProfile policy rules, PR53 human review decisions and handler, PR54 actor accessor, PR55 deterministic audit export and redaction); PR55.5 harness alignment (`feature-list.json` phase **11**, harnessPass **PR55.5**); `docs/GOVERNANCE_BOUNDARY.md`; expanded tests for project id vs profile id, DTO roundtrip, policy profile deny overrides, MCP/external deny lists, human review approve/reject/request-changes and post-approve Deny, actor header vs local fallback, audit hash and redaction, EF persistence. Deferred items remain **false** in harness: PR52-004 (PolicyBundle), PR53-005 (multi-step resume). Phase 12 / PR56 not started.
+
 
 ## Phase 10 + PR50.5 verification (2026-05-10)
 

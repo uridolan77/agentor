@@ -394,4 +394,64 @@ public sealed class AgentRunQueryEndpointsTests
         var r2 = await client.SendAsync(req2);
         Assert.Equal(HttpStatusCode.Conflict, r2.StatusCode);
     }
+
+    [Fact]
+    public async Task PostAgentRuns_WithGovernanceScope_GetReturnsSameIdentifiers()
+    {
+        using var client = _factory.CreateClient();
+        var tenantId = Guid.NewGuid();
+        var workspaceId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var knowledgeScopeId = Guid.NewGuid();
+
+        var post = await client.PostAsJsonAsync(
+            "/api/v1/agent-runs",
+            new StartAgentRunRequestDto(
+                "Scoped API agent",
+                "Governance scope round-trip.",
+                "api-scope-trace",
+                tenantId,
+                workspaceId,
+                projectId,
+                knowledgeScopeId));
+
+        post.EnsureSuccessStatusCode();
+        var created = await post.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(created);
+
+        var get = await client.GetAsync($"/api/v1/agent-runs/{created!.Id}");
+        get.EnsureSuccessStatusCode();
+        var loaded = await get.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(loaded);
+        Assert.Equal(tenantId, loaded!.TenantId);
+        Assert.Equal(workspaceId, loaded.WorkspaceId);
+        Assert.Equal(projectId, loaded.ProjectId);
+        Assert.Equal(knowledgeScopeId, loaded.KnowledgeScopeId);
+        Assert.Equal(projectId, loaded.AthanorProjectId);
+    }
+
+    [Fact]
+    public async Task GetAuditExport_ReturnsStableJsonAndSha256Header()
+    {
+        using var client = _factory.CreateClient();
+        var post = await client.PostAsJsonAsync(
+            "/api/v1/agent-runs",
+            new StartAgentRunRequestDto("Audit agent", "Audit export contract.", "audit-contract-trace"));
+        post.EnsureSuccessStatusCode();
+        var run = await post.Content.ReadFromJsonAsync<AgentRunDto>(JsonOptions);
+        Assert.NotNull(run);
+
+        var first = await client.GetAsync($"/api/v1/agent-runs/{run!.Id}/audit-export");
+        var second = await client.GetAsync($"/api/v1/agent-runs/{run.Id}/audit-export");
+        first.EnsureSuccessStatusCode();
+        second.EnsureSuccessStatusCode();
+
+        var body1 = await first.Content.ReadAsStringAsync();
+        var body2 = await second.Content.ReadAsStringAsync();
+        Assert.Equal(body1, body2);
+
+        Assert.True(first.Headers.TryGetValues("X-Agentor-Audit-Content-SHA256", out var h1));
+        Assert.True(second.Headers.TryGetValues("X-Agentor-Audit-Content-SHA256", out var h2));
+        Assert.Equal(h1!.Single(), h2!.Single());
+    }
 }

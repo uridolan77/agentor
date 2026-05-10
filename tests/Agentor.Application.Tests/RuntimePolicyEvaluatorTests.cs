@@ -162,6 +162,30 @@ public sealed class RuntimePolicyEvaluatorTests
     }
 
     [Fact]
+    public async Task Evaluate_ActiveProfile_DeniedToolKeys_OverrideFlatRuntimeOptions()
+    {
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
+        var clock = new SystemClock();
+        var opts = Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions
+        {
+            DeniedToolKeys = [],
+            ActiveProfile = new PolicyProfileRules
+            {
+                DeniedToolKeys = [WellKnownToolKeys.Pr1FakeTool]
+            }
+        });
+        var policy = new RuntimePolicyEvaluator(registry, clock, opts);
+
+        var decision = await policy.EvaluateToolCallAsync(
+            new PolicyEvaluationRequest(Guid.NewGuid(), Guid.NewGuid(), WellKnownToolKeys.Pr1FakeTool, new Dictionary<string, string>()),
+            CancellationToken.None);
+
+        Assert.Equal(PolicyDecisionOutcome.Deny, decision.Outcome);
+        Assert.Equal("TOOL_DENIED", decision.ReasonCode);
+    }
+
+    [Fact]
     public async Task Evaluate_ActiveProfile_DeniesListedMcpTool()
     {
         var fake = new FakeToolExecutor();

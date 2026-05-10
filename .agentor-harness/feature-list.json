@@ -1,739 +1,867 @@
 {
-    "phase":  10,
-    "title":  "Real service adapters (Phase 10) + harness hardening",
-    "harnessPass":  "PR50.5",
-    "encoding":  "utf-8",
-    "lastVerified":  "2026-05-10",
-    "notes":  [
-                  "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
-                  "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
-                  "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
-                  "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests).",
-                  "Phase 7 PR31-PR35: SkillPackage model; RecipeStepKind.Skill + ISkillPackageCatalog + plan executor skill traces; bounded session memory on AgentRun + EF session_memory_json; RunEvaluationHarness; RunQualityGateEvaluator.",
-                  "PR35.5 (Phase 7 hardening): granular harness acceptance rows for PR31-PR35; evaluation JSON fixture for RunEvaluationSnapshot; stronger quality gate codes + plan warning; skill audit trace assertions; session memory boundary doc; PlanInputBuilder extracted from SequentialAgentPlanExecutor.",
-                  "Phase 8 PR36: IMcpRegistryClient port; FakeMcpRegistryClient (in-memory catalog + deterministic invoke); DI registration; docs/MCP_BOUNDARY.md; Infrastructure tests.",
-                  "Phase 8 PR37: McpToolKeys + McpToolExecutor; ToolRegistry.CreateDefault registers discovered MCP tools; ToolRegistryMcpBindingTests.",
-                  "Phase 8 PR38: ActivitySource + request counter; JSON console logging in Development; docs/OBSERVABILITY.md; ObservabilityTests.",
-                  "Phase 8 PR39: Dockerfile (publish Agentor.Api), docker-compose.yml, .github/workflows/ci.yml, scripts/smoke.ps1, .dockerignore.",
-                  "Phase 8 PR40: appsettings + AgentorRuntimeOptions default version 0.1.0-rc.1; docs/ROADMAP.md v0.1 RC note.",
-                  "Phase 9 PR41-PR45: IExternalAgentProtocolClient + deterministic fakes (generic + A2A-styled); external-agent.discover / external-agent.invoke via ToolRegistry + policy + pipeline; RunManifest v1.2 external-agent telemetry; trace kinds + SequentialAgentPlanExecutor deny/review paths; RunEvaluationHarness snapshot external counts + RunQualityGateEvaluator EXTERNAL_AGENT_OUTPUT_UNREVIEWED; fixtures eval/external-agent-one-call.json; no real network transports.",
-                  "Phase 10 PR46-PR50: Agentor:Integrations modes Fake|Http|Disabled; HTTP adapters (Athanor knowledge state, Conexus model gateway, MCP registry, ExternalAgents protocol); named HttpClients; /health liveness-only; /ready and GET /api/v1/integrations/status via IntegrationSurfaceService.",
-                  "PR50.5: HTTP readiness probes fail on non-2xx; Disabled adapters report detail=disabled while Ready=true; API + Infrastructure tests; harness bumped to phase 10."
-              ],
-    "acceptanceItems":  [
-                            {
-                                "id":  "PR21-001",
-                                "pr":  21,
-                                "description":  "IKnowledgeStateClient port defines read + candidate + review operations without Canonize",
-                                "passes":  true,
-                                "evidence":  "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations; src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs"
-                            },
-                            {
-                                "id":  "PR21-002",
-                                "pr":  21,
-                                "description":  "FakeKnowledgeStateClient implements port with in-memory behavior",
-                                "passes":  true,
-                                "evidence":  "FakeKnowledgeStateClientTests (all methods)"
-                            },
-                            {
-                                "id":  "PR21-003",
-                                "pr":  21,
-                                "description":  "DI registers IKnowledgeStateClient to FakeKnowledgeStateClient",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs (AddSingleton\u003cIKnowledgeStateClient, FakeKnowledgeStateClient\u003e)"
-                            },
-                            {
-                                "id":  "PR22-001",
-                                "pr":  22,
-                                "description":  "LookupCanonicalEntryAsync resolves from seeded snapshot",
-                                "passes":  true,
-                                "evidence":  "FakeKnowledgeStateClientTests.LookupCanonicalEntryAsync_UsesSeededSnapshot"
-                            },
-                            {
-                                "id":  "PR22-002",
-                                "pr":  22,
-                                "description":  "Latest snapshot query returns seeded data when run exists",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.GetLatestSnapshot_ReturnsSeededSnapshot_WhenRunExists"
-                            },
-                            {
-                                "id":  "PR22-003",
-                                "pr":  22,
-                                "description":  "Canonical lookup returns RunExists=false for unknown run",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.LookupCanonical_UnknownRun_ReturnsRunNotExists"
-                            },
-                            {
-                                "id":  "PR22-004",
-                                "pr":  22,
-                                "description":  "Canonical lookup rejects empty canonical key",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.LookupCanonical_EmptyKey_ThrowsArgumentException"
-                            },
-                            {
-                                "id":  "PR22-API-001",
-                                "pr":  22,
-                                "description":  "GET latest snapshot returns 404 for unknown run",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.GetLatestSnapshot_UnknownRun_Returns404"
-                            },
-                            {
-                                "id":  "PR22-API-002",
-                                "pr":  22,
-                                "description":  "GET canonical returns 404 for unknown run",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.GetCanonical_UnknownRun_Returns404"
-                            },
-                            {
-                                "id":  "PR22-API-003",
-                                "pr":  22,
-                                "description":  "GET canonical returns 400 when key is empty",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.GetCanonical_EmptyKey_ReturnsBadRequest"
-                            },
-                            {
-                                "id":  "PR23-001",
-                                "pr":  23,
-                                "description":  "Evidence search provenance attaches trace when run is Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.AttachEvidenceProvenance_WritesTrace_WhenRunRunning"
-                            },
-                            {
-                                "id":  "PR23-API-001",
-                                "pr":  23,
-                                "description":  "POST evidence-provenance returns 409 when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.PostEvidenceProvenance_AfterCompletedStartRun_Returns409"
-                            },
-                            {
-                                "id":  "PR23-API-003",
-                                "pr":  23,
-                                "description":  "Public API returns 2xx for evidence-provenance while run is Running",
-                                "passes":  false,
-                                "evidence":  "TODO: running-run fixture or plan-integrated call"
-                            },
-                            {
-                                "id":  "PR24-001",
-                                "pr":  24,
-                                "description":  "Candidate submission records trace when run is Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
-                            },
-                            {
-                                "id":  "PR24-002",
-                                "pr":  24,
-                                "description":  "Submit candidate returns false without trace when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_WhenRunNotRunning_ReturnsFalseWithoutTrace"
-                            },
-                            {
-                                "id":  "PR24-API-001",
-                                "pr":  24,
-                                "description":  "POST candidates returns 409 when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.PostCandidate_AfterCompletedStartRun_Returns409"
-                            },
-                            {
-                                "id":  "PR24-API-003",
-                                "pr":  24,
-                                "description":  "Public API returns 2xx for candidate submit while run is Running",
-                                "passes":  false,
-                                "evidence":  "TODO: same as PR23-API-003"
-                            },
-                            {
-                                "id":  "PR25-001",
-                                "pr":  25,
-                                "description":  "IKnowledgeStateClient has no Canonize-named operations",
-                                "passes":  true,
-                                "evidence":  "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
-                            },
-                            {
-                                "id":  "PR25-002",
-                                "pr":  25,
-                                "description":  "AgentRun declared public surface has no Canonize-named methods",
-                                "passes":  true,
-                                "evidence":  "NonCanonizationBoundaryTests.AgentRun_public_declared_surface_has_no_Canonize_methods"
-                            },
-                            {
-                                "id":  "PR25-003",
-                                "pr":  25,
-                                "description":  "Fake submit status documents non-canon outcome",
-                                "passes":  true,
-                                "evidence":  "NonCanonizationBoundaryTests.FakeKnowledgeStateClient_submit_status_is_explicitly_non_canon"
-                            },
-                            {
-                                "id":  "PR25-004",
-                                "pr":  25,
-                                "description":  "Review queue records AthanorReviewQueued when run is Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
-                            },
-                            {
-                                "id":  "PR25-005",
-                                "pr":  25,
-                                "description":  "Queue review returns false without trace when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorCommandHandlersTests.QueueReview_WhenRunNotRunning_ReturnsFalseWithoutTrace"
-                            },
-                            {
-                                "id":  "PR25-API-001",
-                                "pr":  25,
-                                "description":  "POST review-queue returns 409 when run is not Running",
-                                "passes":  true,
-                                "evidence":  "AthanorApiTests.PostReviewQueue_AfterCompletedStartRun_Returns409"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "IModelGatewayClient port + ModelCallRequestDto/ModelCallResultDto + FakeModelGatewayClient + DI",
-                                "pr":  26,
-                                "id":  "PR26-001",
-                                "evidence":  "src/Agentor.Application/Abstractions/IModelGatewayClient.cs; src/Agentor.Contracts/Conexus/ModelGatewayDtos.cs; src/Agentor.Infrastructure/Conexus/FakeModelGatewayClient.cs; DependencyInjection.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Fake gateway deterministic CompleteAsync",
-                                "pr":  26,
-                                "id":  "PR26-002",
-                                "evidence":  "tests/Agentor.Infrastructure.Tests/FakeModelGatewayClientTests.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "conexus.model-complete tool routes through ModelGatewayToolExecutor",
-                                "pr":  27,
-                                "id":  "PR27-001",
-                                "evidence":  "WellKnownToolKeys.ConexusModelComplete; ToolRegistry.CreateDefault; ModelGatewayToolExecutorTests"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "PromptProfileRef and ModelProfileRef on gateway DTOs and tool I/O",
-                                "pr":  28,
-                                "id":  "PR28-001",
-                                "evidence":  "ModelGatewayDtos.cs; ModelGatewayToolExecutor.cs; ModelGatewayToolExecutorTests.ExecuteAsync_EchoesProfileRefs_InOutput"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Runtime budget caps for declaredCostUnits / declaredLatencyMs on model tool",
-                                "pr":  29,
-                                "id":  "PR29-001",
-                                "evidence":  "RuntimePolicyOptions.MaxDeclaredModelCallCostUnits/LatencyMs; RuntimePolicyEvaluator; RuntimePolicyEvaluatorTests budget tests"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Run manifest v1.1 + RunManifestDto expose aggregated model-call telemetry",
-                                "pr":  30,
-                                "id":  "PR30-001",
-                                "evidence":  "RunManifest.cs SummarizeConexusModelCalls; RunManifestDto; DtoMappings; ApiContractTests manifest version 1.1"
-                            },
-                            {
-                                "id":  "PR30.5-001",
-                                "pr":  30.5,
-                                "description":  "RunManifest domain stays integration-agnostic; model-call output parsing lives in Application ModelCallTelemetryAggregator",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Application/Manifest/ModelCallTelemetryAggregator.cs; src/Agentor.Domain/RunManifestModelTelemetry.cs; GetRunManifestQueryHandler"
-                            },
-                            {
-                                "id":  "PR30.5-002",
-                                "pr":  30.5,
-                                "description":  "Declared budget caps documented as optional pre-execution tool-input checks (not post-run spend enforcement)",
-                                "passes":  true,
-                                "evidence":  "docs/CONEXUS_INTEGRATION_BOUNDARY.md; RuntimePolicyOptions XML comments"
-                            },
-                            {
-                                "id":  "PR30.5-003",
-                                "pr":  30.5,
-                                "description":  "Runtime policy allows model tool when declaredCostUnits/declaredLatencyMs omitted even if caps are configured",
-                                "passes":  true,
-                                "evidence":  "RuntimePolicyEvaluatorTests.Evaluate_AllowsModelCallWhenDeclaredBudgetKeysAbsentEvenIfCapsConfigured"
-                            },
-                            {
-                                "id":  "PR30.5-004",
-                                "pr":  30.5,
-                                "description":  "Successful conexus.model-complete output rolls into manifest v1.1 token/cost/latency aggregates (non-zero path)",
-                                "passes":  true,
-                                "evidence":  "ModelCallTelemetryAggregatorTests"
-                            },
-                            {
-                                "id":  "PR31-001",
-                                "pr":  31,
-                                "description":  "SkillPackage validates required skill key, name, purpose, and procedure steps",
-                                "passes":  true,
-                                "evidence":  "SkillPackageTests; src/Agentor.Domain/SkillPackage.cs"
-                            },
-                            {
-                                "id":  "PR31-002",
-                                "pr":  31,
-                                "description":  "SkillPackage rejects duplicate procedure step ids/order indexes and enforces ToolRef keys",
-                                "passes":  true,
-                                "evidence":  "SkillPackageTests (duplicate id/order, DeclaredToolKeys)"
-                            },
-                            {
-                                "id":  "PR31-003",
-                                "pr":  31,
-                                "description":  "SkillPackage.DeclaredToolKeys lists ToolRef tool keys for policy/catalog alignment",
-                                "passes":  true,
-                                "evidence":  "SkillPackageTests"
-                            },
-                            {
-                                "id":  "PR32-001",
-                                "pr":  32,
-                                "description":  "Recipe supports RecipeStepKind.Skill with InvokedSkillKey and InvokedSkillVersion",
-                                "passes":  true,
-                                "evidence":  "AgentRecipe / RecipeStepDefinition; SequentialAgentPlanExecutorTests skill recipe"
-                            },
-                            {
-                                "id":  "PR32-002",
-                                "pr":  32,
-                                "description":  "SequentialAgentPlanExecutor resolves skills from ISkillPackageCatalog and records SkillInvocation* traces with skill key and version",
-                                "passes":  true,
-                                "evidence":  "SequentialAgentPlanExecutorTests.SkillPlan_WithSegmentAndTool_RecordsSkillTraces_AndInvokesInnerTool"
-                            },
-                            {
-                                "id":  "PR32-003",
-                                "pr":  32,
-                                "description":  "Skill procedure segments record procedureStepId; inner tool traces include procedureStepId and toolKey",
-                                "passes":  true,
-                                "evidence":  "SequentialAgentPlanExecutorTests (segment and inner policy/tool traces)"
-                            },
-                            {
-                                "id":  "PR32-004",
-                                "pr":  32,
-                                "description":  "Inner skill ToolRef executes through policy + tool pipeline with ToolCall and PolicyDecision evidence on the AgentStep",
-                                "passes":  true,
-                                "evidence":  "SequentialAgentPlanExecutorTests (runStep.ToolCalls, PolicyDecisions)"
-                            },
-                            {
-                                "id":  "PR33-001",
-                                "pr":  33,
-                                "description":  "AgentRun.TryWriteSessionMemory enforces SessionMemoryBudget with accept/reject traces",
-                                "passes":  true,
-                                "evidence":  "AgentRunSessionMemoryTests; SessionMemoryWriteAccepted/Rejected"
-                            },
-                            {
-                                "id":  "PR33-002",
-                                "pr":  33,
-                                "description":  "Plan tool input includes session:{key} entries from run scratch memory",
-                                "passes":  true,
-                                "evidence":  "PlanInputBuilder; AgentRunSessionMemoryTests"
-                            },
-                            {
-                                "id":  "PR33-003",
-                                "pr":  33,
-                                "description":  "Session scratch persisted via EF session_memory_json column and RecordMapper",
-                                "passes":  true,
-                                "evidence":  "migration SessionMemoryOnAgentRun; RecordMapper"
-                            },
-                            {
-                                "id":  "PR34-001",
-                                "pr":  34,
-                                "description":  "RunEvaluationHarness.ExecutePlanAsync returns RunEvaluationSnapshot with status, trace count, tool calls, plan steps",
-                                "passes":  true,
-                                "evidence":  "RunEvaluationHarnessTests.ExecutePlanAsync_CapturesSnapshotMetrics"
-                            },
-                            {
-                                "id":  "PR34-002",
-                                "pr":  34,
-                                "description":  "Evaluation harness regression fixture matches deterministic RunEvaluationSnapshot",
-                                "passes":  true,
-                                "evidence":  "RunEvaluationHarnessTests.ExecutePlanAsync_MatchesEvaluationHarnessFixture; fixtures/eval/evaluation-harness-one-step-tool.json"
-                            },
-                            {
-                                "id":  "PR35-001",
-                                "pr":  35,
-                                "description":  "RunQualityGateEvaluator: completed run with RunCompleted trace passes",
-                                "passes":  true,
-                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_CompletedRunWithRunCompletedTrace_Passes"
-                            },
-                            {
-                                "id":  "PR35-002",
-                                "pr":  35,
-                                "description":  "RunQualityGateEvaluator: failed run yields RUN_FAILED when completion is required",
-                                "passes":  true,
-                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_FailedRun_FailsWhenCompletionRequired"
-                            },
-                            {
-                                "id":  "PR35-003",
-                                "pr":  35,
-                                "description":  "RunQualityGateEvaluator: requires-review run yields RUN_REQUIRES_REVIEW when completion is required",
-                                "passes":  true,
-                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_RequiresReview_FailsWhenCompletionRequired"
-                            },
-                            {
-                                "id":  "PR35-004",
-                                "pr":  35,
-                                "description":  "RunQualityGateEvaluator: completed run without RunCompleted trace yields MISSING_RUN_COMPLETED_TRACE",
-                                "passes":  true,
-                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_CompletedWithoutRunCompletedTrace_Fails"
-                            },
-                            {
-                                "id":  "PR35-005",
-                                "pr":  35,
-                                "description":  "RunQualityGateEvaluator: optional plan warns with COMPLETED_RUN_WITH_FAILED_PLAN_STEP",
-                                "passes":  true,
-                                "evidence":  "RunQualityGateEvaluatorTests.Evaluate_CompletedWithFailedPlanStep_EmitsWarningWhenPlanProvided"
-                            },
-                            {
-                                "id":  "PR35.5-001",
-                                "pr":  35,
-                                "description":  "PR35.5: harness acceptance expanded; evaluator and evaluation harness hardening",
-                                "passes":  true,
-                                "evidence":  ".agentor-harness/feature-list.json; RunQualityGateEvaluator; RunEvaluationHarnessTests"
-                            },
-                            {
-                                "id":  "PR35.5-002",
-                                "pr":  35,
-                                "description":  "PR35.5: PlanInputBuilder isolates plan-step tool input construction",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Application/Coordination/PlanInputBuilder.cs"
-                            },
-                            {
-                                "id":  "PR35.5-003",
-                                "pr":  35,
-                                "description":  "PR35.5: Session memory boundary documented as run-scratch, non-canon, not Athanor",
-                                "passes":  true,
-                                "evidence":  "docs/SESSION_MEMORY_BOUNDARY.md; AgentRun XML comments"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "IMcpRegistryClient lists servers/tools and invokes tools via port (no network)",
-                                "pr":  36,
-                                "id":  "PR36-001",
-                                "evidence":  "src/Agentor.Application/Abstractions/IMcpRegistryClient.cs; src/Agentor.Application/Mcp/McpDescriptors.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "FakeMcpRegistryClient seeds demo-server with echo/stats tools",
-                                "pr":  36,
-                                "id":  "PR36-002",
-                                "evidence":  "src/Agentor.Infrastructure/Mcp/FakeMcpRegistryClient.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "DI registers IMcpRegistryClient to FakeMcpRegistryClient",
-                                "pr":  36,
-                                "id":  "PR36-003",
-                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "MCP boundary documented",
-                                "pr":  36,
-                                "id":  "PR36-004",
-                                "evidence":  "docs/MCP_BOUNDARY.md"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "McpToolKeys.Format produces stable mcp.{server}.{tool} keys",
-                                "pr":  37,
-                                "id":  "PR37-001",
-                                "evidence":  "src/Agentor.Application/McpToolKeys.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "ToolRegistry.CreateDefault binds IMcpRegistryClient tools with McpToolExecutor",
-                                "pr":  37,
-                                "id":  "PR37-002",
-                                "evidence":  "src/Agentor.Infrastructure/ToolRegistry.cs; DependencyInjection.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "MCP tool execution routes through IToolExecutor to fake registry",
-                                "pr":  37,
-                                "id":  "PR37-003",
-                                "evidence":  "tests/Agentor.Infrastructure.Tests/ToolRegistryMcpBindingTests.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "RequestTracingMiddleware starts Activity with agentor.trace_id and increments HTTP counter",
-                                "pr":  38,
-                                "id":  "PR38-001",
-                                "evidence":  "src/Agentor.Api/Middleware/RequestTracingMiddleware.cs; src/Agentor.Api/Observability/AgentorDiagnostics.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Development logging uses JSON console formatter with scopes",
-                                "pr":  38,
-                                "id":  "PR38-002",
-                                "evidence":  "src/Agentor.Api/appsettings.Development.json"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "API test observes agentor.http.server.request.count on /health",
-                                "pr":  38,
-                                "id":  "PR38-003",
-                                "evidence":  "tests/Agentor.Api.Tests/ObservabilityTests.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Multi-stage Dockerfile publishes Agentor.Api to aspnet runtime",
-                                "pr":  39,
-                                "id":  "PR39-001",
-                                "evidence":  "Dockerfile"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "docker-compose exposes agentor-api on 8080",
-                                "pr":  39,
-                                "id":  "PR39-002",
-                                "evidence":  "docker-compose.yml"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "GitHub Actions CI restores/builds/tests Agentor.sln",
-                                "pr":  39,
-                                "id":  "PR39-003",
-                                "evidence":  ".github/workflows/ci.yml"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "scripts/smoke.ps1 hits GET /health",
-                                "pr":  39,
-                                "id":  "PR39-004",
-                                "evidence":  "scripts/smoke.ps1"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Runtime version defaults to 0.1.0-rc.1",
-                                "pr":  40,
-                                "id":  "PR40-001",
-                                "evidence":  "src/Agentor.Api/appsettings.json; AgentorRuntimeOptions.cs; AgentorRuntimeOptionsTests.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "ROADMAP documents Phase 8 / v0.1 RC hardening",
-                                "pr":  40,
-                                "id":  "PR40-002",
-                                "evidence":  "docs/ROADMAP.md"
-                            },
-                            {
-                                "id":  "PR41-001",
-                                "pr":  41,
-                                "description":  "IExternalAgentProtocolClient port + ExternalAgents DTOs (Contracts)",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Application/Abstractions/IExternalAgentProtocolClient.cs; src/Agentor.Contracts/ExternalAgents/ExternalAgentDtos.cs"
-                            },
-                            {
-                                "id":  "PR41-002",
-                                "pr":  41,
-                                "description":  "FakeExternalAgentProtocolClient deterministic in-memory",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Infrastructure/ExternalAgents/FakeExternalAgentProtocolClient.cs"
-                            },
-                            {
-                                "id":  "PR41-003",
-                                "pr":  41,
-                                "description":  "EXTERNAL_AGENT_PROTOCOL_BOUNDARY.md",
-                                "passes":  true,
-                                "evidence":  "docs/EXTERNAL_AGENT_PROTOCOL_BOUNDARY.md"
-                            },
-                            {
-                                "id":  "PR41-004",
-                                "pr":  41,
-                                "description":  "Infrastructure tests for generic fake client",
-                                "passes":  true,
-                                "evidence":  "tests/Agentor.Infrastructure.Tests/FakeExternalAgentProtocolClientTests.cs"
-                            },
-                            {
-                                "id":  "PR42-001",
-                                "pr":  42,
-                                "description":  "A2A-shaped DTOs remain in Contracts",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Contracts/ExternalAgents/A2AExternalAgentDtos.cs"
-                            },
-                            {
-                                "id":  "PR42-002",
-                                "pr":  42,
-                                "description":  "FakeA2AExternalAgentClient deterministic discovery/invoke",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Infrastructure/ExternalAgents/FakeA2AExternalAgentClient.cs"
-                            },
-                            {
-                                "id":  "PR42-003",
-                                "pr":  42,
-                                "description":  "DI wires IExternalAgentProtocolClient to fake A2A-style adapter",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs"
-                            },
-                            {
-                                "id":  "PR42-004",
-                                "pr":  42,
-                                "description":  "FakeA2AExternalAgentClientTests",
-                                "passes":  true,
-                                "evidence":  "tests/Agentor.Infrastructure.Tests/FakeA2AExternalAgentClientTests.cs"
-                            },
-                            {
-                                "id":  "PR43-001",
-                                "pr":  43,
-                                "description":  "ExternalAgentToolKeys discover + invoke",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Application/ExternalAgentToolKeys.cs"
-                            },
-                            {
-                                "id":  "PR43-002",
-                                "pr":  43,
-                                "description":  "External agent tool executors",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Infrastructure/ExternalAgents/ExternalAgentDiscoverToolExecutor.cs; ExternalAgentInvokeToolExecutor.cs"
-                            },
-                            {
-                                "id":  "PR43-003",
-                                "pr":  43,
-                                "description":  "ToolRegistry.CreateDefault registers external-agent tools",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Infrastructure/ToolRegistry.cs; ToolRegistryMcpBindingTests.cs"
-                            },
-                            {
-                                "id":  "PR43-004",
-                                "pr":  43,
-                                "description":  "Policy gates external-agent tools (deny/review never invoke)",
-                                "passes":  true,
-                                "evidence":  "tests/Agentor.Application.Tests/RuntimePolicyEvaluatorTests.cs; SequentialAgentPlanExecutor (ExternalAgentToolKeys)"
-                            },
-                            {
-                                "id":  "PR44-001",
-                                "pr":  44,
-                                "description":  "TraceEventKind external-agent kinds + pipeline completion traces",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Domain/Enums/TraceEventKind.cs; src/Agentor.Application/Coordination/ToolExecutionPipeline.cs"
-                            },
-                            {
-                                "id":  "PR44-002",
-                                "pr":  44,
-                                "description":  "RunManifest v1.2 aggregates ExternalAgentInvocationCompletedCount",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Domain/RunManifest.cs; RunManifestExternalAgentTelemetry.cs; ExternalAgentTelemetryAggregator.cs"
-                            },
-                            {
-                                "id":  "PR44-003",
-                                "pr":  44,
-                                "description":  "API/manifest DTO surface includes external-agent count",
-                                "passes":  true,
-                                "evidence":  "tests/Agentor.Api.Tests/ApiContractTests.cs; RunManifestDto"
-                            },
-                            {
-                                "id":  "PR45-001",
-                                "pr":  45,
-                                "description":  "RunEvaluationSnapshot counts ExternalAgentInvocationCompleted",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Application/Evaluation/RunEvaluationHarness.cs"
-                            },
-                            {
-                                "id":  "PR45-002",
-                                "pr":  45,
-                                "description":  "RunQualityGateEvaluator optional EXTERNAL_AGENT_OUTPUT_UNREVIEWED warning",
-                                "passes":  true,
-                                "evidence":  "src/Agentor.Application/Quality/RunQualityGateEvaluator.cs; RunQualityGateEvaluatorTests.cs"
-                            },
-                            {
-                                "id":  "PR45-003",
-                                "pr":  45,
-                                "description":  "Eval fixtures: one-step tool + external-agent-one-call (schema 3)",
-                                "passes":  true,
-                                "evidence":  "tests/Agentor.Application.Tests/fixtures/eval/evaluation-harness-one-step-tool.json; external-agent-one-call.json"
-                            },
-                            {
-                                "id":  "PR45-004",
-                                "pr":  45,
-                                "description":  "RunEvaluationHarnessTests cover snapshots + external fixture",
-                                "passes":  true,
-                                "evidence":  "tests/Agentor.Application.Tests/Evaluation/RunEvaluationHarnessTests.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "AgentorIntegrationsOptions configures Athanor/Conexus/Mcp/ExternalAgents with Fake|Http|Disabled",
-                                "pr":  46,
-                                "id":  "PR46-001",
-                                "evidence":  "src/Agentor.Infrastructure/Options/AgentorIntegrationsOptions.cs; appsettings.json defaults Fake"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Http mode requires BaseUrl per integration family",
-                                "pr":  46,
-                                "id":  "PR46-002",
-                                "evidence":  "IntegrationOptionsValidatorTests.Validate_HttpModeWithoutBaseUrl_Fails"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "DI wires fake/http/disabled implementations and named integration HttpClients",
-                                "pr":  46,
-                                "id":  "PR46-003",
-                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "HttpKnowledgeStateClient exercises Athanor-shaped GET paths",
-                                "pr":  47,
-                                "id":  "PR47-001",
-                                "evidence":  "HttpKnowledgeStateClientTests"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Canonical lookup returns null on HTTP 404",
-                                "pr":  47,
-                                "id":  "PR47-002",
-                                "evidence":  "HttpKnowledgeStateClientTests.LookupCanonicalEntryAsync_ReturnsNull_On404"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "HttpModelGatewayClient POST v1/model/complete",
-                                "pr":  48,
-                                "id":  "PR48-001",
-                                "evidence":  "HttpModelGatewayClientTests.CompleteAsync_PostsToV1ModelComplete"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "HttpMcpRegistryClient lists servers/tools and invokes via HTTP JSON wire",
-                                "pr":  49,
-                                "id":  "PR49-001",
-                                "evidence":  "HttpMcpRegistryClientExtraTests"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "HttpExternalAgentProtocolClient lists capabilities and posts invocations",
-                                "pr":  49,
-                                "id":  "PR49-002",
-                                "evidence":  "HttpExternalAgentProtocolClientExtraTests"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "GET /health is liveness-only (returns alive)",
-                                "pr":  50,
-                                "id":  "PR50-001",
-                                "evidence":  "IntegrationEndpointsTests.GetHealth_IsLivenessOnly_ReturnsOk"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "GET /ready and GET /api/v1/integrations/status expose modes without secrets",
-                                "pr":  50,
-                                "id":  "PR50-002",
-                                "evidence":  "IntegrationEndpointsTests (fake defaults; substring guards)"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "HTTP integration probes treat unreachable host or non-2xx response as not ready",
-                                "pr":  50,
-                                "id":  "PR50-003",
-                                "evidence":  "IntegrationEndpointsTests; IntegrationSurfaceServiceTests.GetStatusAsync_HttpProbe_ReturnsNotReady_On500"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Harness accepts Phase 10 and records verification",
-                                "pr":  50,
-                                "id":  "PR50.5-001",
-                                "evidence":  ".agentor-harness/feature-list.json phase 10 harnessPass PR50.5"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "Disabled integration reports Ready=true with detail=disabled",
-                                "pr":  50,
-                                "id":  "PR50.5-002",
-                                "evidence":  "IntegrationEndpointsTests.GetIntegrationsStatus_DisabledAdapter_HasDisabledDetail; IntegrationSurfaceServiceTests.GetStatusAsync_DisabledFamily_HasDisabledDetail"
-                            },
-                            {
-                                "passes":  true,
-                                "description":  "IKnowledgeStateClient still exposes no Canonize operation",
-                                "pr":  50,
-                                "id":  "PR50.5-003",
-                                "evidence":  "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
-                            }
-                        ]
+    "phase": 11,
+    "title": "Governance & security (Phase 11) + PR55.5 harness acceptance",
+    "harnessPass": "PR55.5",
+    "encoding": "utf-8",
+    "lastVerified": "2026-05-10",
+    "notes": [
+        "ProfileId-as-projectId is a Phase 5 harness convention; replace with explicit ProjectId/KnowledgeScopeId before a real Athanor HTTP adapter (see docs/ATHANOR_INTEGRATION_BOUNDARY.md).",
+        "Public API success paths for POST athanor/* require AgentRunStatus.Running; default POST /agent-runs completes immediately (PR23-API-003, PR24-API-003 remain false).",
+        "Phase 6 PR26-PR30: Conexus model-gateway port (fake), governed model-call tool, prompt/model profile refs, declared budget gates on model tool input, manifest v1.1 aggregates Conexus telemetry.",
+        "PR30.5: Conexus/budget hardening - model-call telemetry aggregation moved to Application (ModelCallTelemetryAggregator); Domain RunManifest takes RunManifestModelTelemetry; declared budget is pre-execution optional-input gating (docs + tests).",
+        "Phase 7 PR31-PR35: SkillPackage model; RecipeStepKind.Skill + ISkillPackageCatalog + plan executor skill traces; bounded session memory on AgentRun + EF session_memory_json; RunEvaluationHarness; RunQualityGateEvaluator.",
+        "PR35.5 (Phase 7 hardening): granular harness acceptance rows for PR31-PR35; evaluation JSON fixture for RunEvaluationSnapshot; stronger quality gate codes + plan warning; skill audit trace assertions; session memory boundary doc; PlanInputBuilder extracted from SequentialAgentPlanExecutor.",
+        "Phase 8 PR36: IMcpRegistryClient port; FakeMcpRegistryClient (in-memory catalog + deterministic invoke); DI registration; docs/MCP_BOUNDARY.md; Infrastructure tests.",
+        "Phase 8 PR37: McpToolKeys + McpToolExecutor; ToolRegistry.CreateDefault registers discovered MCP tools; ToolRegistryMcpBindingTests.",
+        "Phase 8 PR38: ActivitySource + request counter; JSON console logging in Development; docs/OBSERVABILITY.md; ObservabilityTests.",
+        "Phase 8 PR39: Dockerfile (publish Agentor.Api), docker-compose.yml, .github/workflows/ci.yml, scripts/smoke.ps1, .dockerignore.",
+        "Phase 8 PR40: appsettings + AgentorRuntimeOptions default version 0.1.0-rc.1; docs/ROADMAP.md v0.1 RC note.",
+        "Phase 9 PR41-PR45: IExternalAgentProtocolClient + deterministic fakes (generic + A2A-styled); external-agent.discover / external-agent.invoke via ToolRegistry + policy + pipeline; RunManifest v1.2 external-agent telemetry; trace kinds + SequentialAgentPlanExecutor deny/review paths; RunEvaluationHarness snapshot external counts + RunQualityGateEvaluator EXTERNAL_AGENT_OUTPUT_UNREVIEWED; fixtures eval/external-agent-one-call.json; no real network transports.",
+        "Phase 10 PR46-PR50: Agentor:Integrations modes Fake|Http|Disabled; HTTP adapters (Athanor knowledge state, Conexus model gateway, MCP registry, ExternalAgents protocol); named HttpClients; /health liveness-only; /ready and GET /api/v1/integrations/status via IntegrationSurfaceService.",
+        "PR50.5: HTTP readiness probes fail on non-2xx; Disabled adapters report detail=disabled while Ready=true; API + Infrastructure tests; harness bumped to phase 10.",
+        "PR55.5: Phase 11 harness reconciliation — granular acceptance rows, expanded tests (scope, Athanor project id, policy profile, human review, actor accessor, audit export, persistence), docs/GOVERNANCE_BOUNDARY.md, verification log updated.",
+        "Phase 11 code (PR51–PR55) is implemented in-tree; PR55.5 records harness acceptance only for behaviors covered by automated tests or explicit harness notes."
+    ],
+    "acceptanceItems": [
+        {
+            "id": "PR21-001",
+            "pr": 21,
+            "description": "IKnowledgeStateClient port defines read + candidate + review operations without Canonize",
+            "passes": true,
+            "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations; src/Agentor.Application/Abstractions/IKnowledgeStateClient.cs"
+        },
+        {
+            "id": "PR21-002",
+            "pr": 21,
+            "description": "FakeKnowledgeStateClient implements port with in-memory behavior",
+            "passes": true,
+            "evidence": "FakeKnowledgeStateClientTests (all methods)"
+        },
+        {
+            "id": "PR21-003",
+            "pr": 21,
+            "description": "DI registers IKnowledgeStateClient to FakeKnowledgeStateClient",
+            "passes": true,
+            "evidence": "src/Agentor.Infrastructure/DependencyInjection.cs (AddSingleton<IKnowledgeStateClient, FakeKnowledgeStateClient>)"
+        },
+        {
+            "id": "PR22-001",
+            "pr": 22,
+            "description": "LookupCanonicalEntryAsync resolves from seeded snapshot",
+            "passes": true,
+            "evidence": "FakeKnowledgeStateClientTests.LookupCanonicalEntryAsync_UsesSeededSnapshot"
+        },
+        {
+            "id": "PR22-002",
+            "pr": 22,
+            "description": "Latest snapshot query returns seeded data when run exists",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.GetLatestSnapshot_ReturnsSeededSnapshot_WhenRunExists"
+        },
+        {
+            "id": "PR22-003",
+            "pr": 22,
+            "description": "Canonical lookup returns RunExists=false for unknown run",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.LookupCanonical_UnknownRun_ReturnsRunNotExists"
+        },
+        {
+            "id": "PR22-004",
+            "pr": 22,
+            "description": "Canonical lookup rejects empty canonical key",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.LookupCanonical_EmptyKey_ThrowsArgumentException"
+        },
+        {
+            "id": "PR22-API-001",
+            "pr": 22,
+            "description": "GET latest snapshot returns 404 for unknown run",
+            "passes": true,
+            "evidence": "AthanorApiTests.GetLatestSnapshot_UnknownRun_Returns404"
+        },
+        {
+            "id": "PR22-API-002",
+            "pr": 22,
+            "description": "GET canonical returns 404 for unknown run",
+            "passes": true,
+            "evidence": "AthanorApiTests.GetCanonical_UnknownRun_Returns404"
+        },
+        {
+            "id": "PR22-API-003",
+            "pr": 22,
+            "description": "GET canonical returns 400 when key is empty",
+            "passes": true,
+            "evidence": "AthanorApiTests.GetCanonical_EmptyKey_ReturnsBadRequest"
+        },
+        {
+            "id": "PR23-001",
+            "pr": 23,
+            "description": "Evidence search provenance attaches trace when run is Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.AttachEvidenceProvenance_WritesTrace_WhenRunRunning"
+        },
+        {
+            "id": "PR23-API-001",
+            "pr": 23,
+            "description": "POST evidence-provenance returns 409 when run is not Running",
+            "passes": true,
+            "evidence": "AthanorApiTests.PostEvidenceProvenance_AfterCompletedStartRun_Returns409"
+        },
+        {
+            "id": "PR23-API-003",
+            "pr": 23,
+            "description": "Public API returns 2xx for evidence-provenance while run is Running",
+            "passes": false,
+            "evidence": "TODO: running-run fixture or plan-integrated call"
+        },
+        {
+            "id": "PR24-001",
+            "pr": 24,
+            "description": "Candidate submission records trace when run is Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
+        },
+        {
+            "id": "PR24-002",
+            "pr": 24,
+            "description": "Submit candidate returns false without trace when run is not Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_WhenRunNotRunning_ReturnsFalseWithoutTrace"
+        },
+        {
+            "id": "PR24-API-001",
+            "pr": 24,
+            "description": "POST candidates returns 409 when run is not Running",
+            "passes": true,
+            "evidence": "AthanorApiTests.PostCandidate_AfterCompletedStartRun_Returns409"
+        },
+        {
+            "id": "PR24-API-003",
+            "pr": 24,
+            "description": "Public API returns 2xx for candidate submit while run is Running",
+            "passes": false,
+            "evidence": "TODO: same as PR23-API-003"
+        },
+        {
+            "id": "PR25-001",
+            "pr": 25,
+            "description": "IKnowledgeStateClient has no Canonize-named operations",
+            "passes": true,
+            "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
+        },
+        {
+            "id": "PR25-002",
+            "pr": 25,
+            "description": "AgentRun declared public surface has no Canonize-named methods",
+            "passes": true,
+            "evidence": "NonCanonizationBoundaryTests.AgentRun_public_declared_surface_has_no_Canonize_methods"
+        },
+        {
+            "id": "PR25-003",
+            "pr": 25,
+            "description": "Fake submit status documents non-canon outcome",
+            "passes": true,
+            "evidence": "NonCanonizationBoundaryTests.FakeKnowledgeStateClient_submit_status_is_explicitly_non_canon"
+        },
+        {
+            "id": "PR25-004",
+            "pr": 25,
+            "description": "Review queue records AthanorReviewQueued when run is Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.SubmitCandidate_ThenQueueReview_RecordsBothTraceKinds"
+        },
+        {
+            "id": "PR25-005",
+            "pr": 25,
+            "description": "Queue review returns false without trace when run is not Running",
+            "passes": true,
+            "evidence": "AthanorCommandHandlersTests.QueueReview_WhenRunNotRunning_ReturnsFalseWithoutTrace"
+        },
+        {
+            "id": "PR25-API-001",
+            "pr": 25,
+            "description": "POST review-queue returns 409 when run is not Running",
+            "passes": true,
+            "evidence": "AthanorApiTests.PostReviewQueue_AfterCompletedStartRun_Returns409"
+        },
+        {
+            "passes": true,
+            "description": "IModelGatewayClient port + ModelCallRequestDto/ModelCallResultDto + FakeModelGatewayClient + DI",
+            "pr": 26,
+            "id": "PR26-001",
+            "evidence": "src/Agentor.Application/Abstractions/IModelGatewayClient.cs; src/Agentor.Contracts/Conexus/ModelGatewayDtos.cs; src/Agentor.Infrastructure/Conexus/FakeModelGatewayClient.cs; DependencyInjection.cs"
+        },
+        {
+            "passes": true,
+            "description": "Fake gateway deterministic CompleteAsync",
+            "pr": 26,
+            "id": "PR26-002",
+            "evidence": "tests/Agentor.Infrastructure.Tests/FakeModelGatewayClientTests.cs"
+        },
+        {
+            "passes": true,
+            "description": "conexus.model-complete tool routes through ModelGatewayToolExecutor",
+            "pr": 27,
+            "id": "PR27-001",
+            "evidence": "WellKnownToolKeys.ConexusModelComplete; ToolRegistry.CreateDefault; ModelGatewayToolExecutorTests"
+        },
+        {
+            "passes": true,
+            "description": "PromptProfileRef and ModelProfileRef on gateway DTOs and tool I/O",
+            "pr": 28,
+            "id": "PR28-001",
+            "evidence": "ModelGatewayDtos.cs; ModelGatewayToolExecutor.cs; ModelGatewayToolExecutorTests.ExecuteAsync_EchoesProfileRefs_InOutput"
+        },
+        {
+            "passes": true,
+            "description": "Runtime budget caps for declaredCostUnits / declaredLatencyMs on model tool",
+            "pr": 29,
+            "id": "PR29-001",
+            "evidence": "RuntimePolicyOptions.MaxDeclaredModelCallCostUnits/LatencyMs; RuntimePolicyEvaluator; RuntimePolicyEvaluatorTests budget tests"
+        },
+        {
+            "passes": true,
+            "description": "Run manifest v1.1 + RunManifestDto expose aggregated model-call telemetry",
+            "pr": 30,
+            "id": "PR30-001",
+            "evidence": "RunManifest.cs SummarizeConexusModelCalls; RunManifestDto; DtoMappings; ApiContractTests manifest version 1.1"
+        },
+        {
+            "id": "PR30.5-001",
+            "pr": 30.5,
+            "description": "RunManifest domain stays integration-agnostic; model-call output parsing lives in Application ModelCallTelemetryAggregator",
+            "passes": true,
+            "evidence": "src/Agentor.Application/Manifest/ModelCallTelemetryAggregator.cs; src/Agentor.Domain/RunManifestModelTelemetry.cs; GetRunManifestQueryHandler"
+        },
+        {
+            "id": "PR30.5-002",
+            "pr": 30.5,
+            "description": "Declared budget caps documented as optional pre-execution tool-input checks (not post-run spend enforcement)",
+            "passes": true,
+            "evidence": "docs/CONEXUS_INTEGRATION_BOUNDARY.md; RuntimePolicyOptions XML comments"
+        },
+        {
+            "id": "PR30.5-003",
+            "pr": 30.5,
+            "description": "Runtime policy allows model tool when declaredCostUnits/declaredLatencyMs omitted even if caps are configured",
+            "passes": true,
+            "evidence": "RuntimePolicyEvaluatorTests.Evaluate_AllowsModelCallWhenDeclaredBudgetKeysAbsentEvenIfCapsConfigured"
+        },
+        {
+            "id": "PR30.5-004",
+            "pr": 30.5,
+            "description": "Successful conexus.model-complete output rolls into manifest v1.1 token/cost/latency aggregates (non-zero path)",
+            "passes": true,
+            "evidence": "ModelCallTelemetryAggregatorTests"
+        },
+        {
+            "id": "PR31-001",
+            "pr": 31,
+            "description": "SkillPackage validates required skill key, name, purpose, and procedure steps",
+            "passes": true,
+            "evidence": "SkillPackageTests; src/Agentor.Domain/SkillPackage.cs"
+        },
+        {
+            "id": "PR31-002",
+            "pr": 31,
+            "description": "SkillPackage rejects duplicate procedure step ids/order indexes and enforces ToolRef keys",
+            "passes": true,
+            "evidence": "SkillPackageTests (duplicate id/order, DeclaredToolKeys)"
+        },
+        {
+            "id": "PR31-003",
+            "pr": 31,
+            "description": "SkillPackage.DeclaredToolKeys lists ToolRef tool keys for policy/catalog alignment",
+            "passes": true,
+            "evidence": "SkillPackageTests"
+        },
+        {
+            "id": "PR32-001",
+            "pr": 32,
+            "description": "Recipe supports RecipeStepKind.Skill with InvokedSkillKey and InvokedSkillVersion",
+            "passes": true,
+            "evidence": "AgentRecipe / RecipeStepDefinition; SequentialAgentPlanExecutorTests skill recipe"
+        },
+        {
+            "id": "PR32-002",
+            "pr": 32,
+            "description": "SequentialAgentPlanExecutor resolves skills from ISkillPackageCatalog and records SkillInvocation* traces with skill key and version",
+            "passes": true,
+            "evidence": "SequentialAgentPlanExecutorTests.SkillPlan_WithSegmentAndTool_RecordsSkillTraces_AndInvokesInnerTool"
+        },
+        {
+            "id": "PR32-003",
+            "pr": 32,
+            "description": "Skill procedure segments record procedureStepId; inner tool traces include procedureStepId and toolKey",
+            "passes": true,
+            "evidence": "SequentialAgentPlanExecutorTests (segment and inner policy/tool traces)"
+        },
+        {
+            "id": "PR32-004",
+            "pr": 32,
+            "description": "Inner skill ToolRef executes through policy + tool pipeline with ToolCall and PolicyDecision evidence on the AgentStep",
+            "passes": true,
+            "evidence": "SequentialAgentPlanExecutorTests (runStep.ToolCalls, PolicyDecisions)"
+        },
+        {
+            "id": "PR33-001",
+            "pr": 33,
+            "description": "AgentRun.TryWriteSessionMemory enforces SessionMemoryBudget with accept/reject traces",
+            "passes": true,
+            "evidence": "AgentRunSessionMemoryTests; SessionMemoryWriteAccepted/Rejected"
+        },
+        {
+            "id": "PR33-002",
+            "pr": 33,
+            "description": "Plan tool input includes session:{key} entries from run scratch memory",
+            "passes": true,
+            "evidence": "PlanInputBuilder; AgentRunSessionMemoryTests"
+        },
+        {
+            "id": "PR33-003",
+            "pr": 33,
+            "description": "Session scratch persisted via EF session_memory_json column and RecordMapper",
+            "passes": true,
+            "evidence": "migration SessionMemoryOnAgentRun; RecordMapper"
+        },
+        {
+            "id": "PR34-001",
+            "pr": 34,
+            "description": "RunEvaluationHarness.ExecutePlanAsync returns RunEvaluationSnapshot with status, trace count, tool calls, plan steps",
+            "passes": true,
+            "evidence": "RunEvaluationHarnessTests.ExecutePlanAsync_CapturesSnapshotMetrics"
+        },
+        {
+            "id": "PR34-002",
+            "pr": 34,
+            "description": "Evaluation harness regression fixture matches deterministic RunEvaluationSnapshot",
+            "passes": true,
+            "evidence": "RunEvaluationHarnessTests.ExecutePlanAsync_MatchesEvaluationHarnessFixture; fixtures/eval/evaluation-harness-one-step-tool.json"
+        },
+        {
+            "id": "PR35-001",
+            "pr": 35,
+            "description": "RunQualityGateEvaluator: completed run with RunCompleted trace passes",
+            "passes": true,
+            "evidence": "RunQualityGateEvaluatorTests.Evaluate_CompletedRunWithRunCompletedTrace_Passes"
+        },
+        {
+            "id": "PR35-002",
+            "pr": 35,
+            "description": "RunQualityGateEvaluator: failed run yields RUN_FAILED when completion is required",
+            "passes": true,
+            "evidence": "RunQualityGateEvaluatorTests.Evaluate_FailedRun_FailsWhenCompletionRequired"
+        },
+        {
+            "id": "PR35-003",
+            "pr": 35,
+            "description": "RunQualityGateEvaluator: requires-review run yields RUN_REQUIRES_REVIEW when completion is required",
+            "passes": true,
+            "evidence": "RunQualityGateEvaluatorTests.Evaluate_RequiresReview_FailsWhenCompletionRequired"
+        },
+        {
+            "id": "PR35-004",
+            "pr": 35,
+            "description": "RunQualityGateEvaluator: completed run without RunCompleted trace yields MISSING_RUN_COMPLETED_TRACE",
+            "passes": true,
+            "evidence": "RunQualityGateEvaluatorTests.Evaluate_CompletedWithoutRunCompletedTrace_Fails"
+        },
+        {
+            "id": "PR35-005",
+            "pr": 35,
+            "description": "RunQualityGateEvaluator: optional plan warns with COMPLETED_RUN_WITH_FAILED_PLAN_STEP",
+            "passes": true,
+            "evidence": "RunQualityGateEvaluatorTests.Evaluate_CompletedWithFailedPlanStep_EmitsWarningWhenPlanProvided"
+        },
+        {
+            "id": "PR35.5-001",
+            "pr": 35,
+            "description": "PR35.5: harness acceptance expanded; evaluator and evaluation harness hardening",
+            "passes": true,
+            "evidence": ".agentor-harness/feature-list.json; RunQualityGateEvaluator; RunEvaluationHarnessTests"
+        },
+        {
+            "id": "PR35.5-002",
+            "pr": 35,
+            "description": "PR35.5: PlanInputBuilder isolates plan-step tool input construction",
+            "passes": true,
+            "evidence": "src/Agentor.Application/Coordination/PlanInputBuilder.cs"
+        },
+        {
+            "id": "PR35.5-003",
+            "pr": 35,
+            "description": "PR35.5: Session memory boundary documented as run-scratch, non-canon, not Athanor",
+            "passes": true,
+            "evidence": "docs/SESSION_MEMORY_BOUNDARY.md; AgentRun XML comments"
+        },
+        {
+            "passes": true,
+            "description": "IMcpRegistryClient lists servers/tools and invokes tools via port (no network)",
+            "pr": 36,
+            "id": "PR36-001",
+            "evidence": "src/Agentor.Application/Abstractions/IMcpRegistryClient.cs; src/Agentor.Application/Mcp/McpDescriptors.cs"
+        },
+        {
+            "passes": true,
+            "description": "FakeMcpRegistryClient seeds demo-server with echo/stats tools",
+            "pr": 36,
+            "id": "PR36-002",
+            "evidence": "src/Agentor.Infrastructure/Mcp/FakeMcpRegistryClient.cs"
+        },
+        {
+            "passes": true,
+            "description": "DI registers IMcpRegistryClient to FakeMcpRegistryClient",
+            "pr": 36,
+            "id": "PR36-003",
+            "evidence": "src/Agentor.Infrastructure/DependencyInjection.cs"
+        },
+        {
+            "passes": true,
+            "description": "MCP boundary documented",
+            "pr": 36,
+            "id": "PR36-004",
+            "evidence": "docs/MCP_BOUNDARY.md"
+        },
+        {
+            "passes": true,
+            "description": "McpToolKeys.Format produces stable mcp.{server}.{tool} keys",
+            "pr": 37,
+            "id": "PR37-001",
+            "evidence": "src/Agentor.Application/McpToolKeys.cs"
+        },
+        {
+            "passes": true,
+            "description": "ToolRegistry.CreateDefault binds IMcpRegistryClient tools with McpToolExecutor",
+            "pr": 37,
+            "id": "PR37-002",
+            "evidence": "src/Agentor.Infrastructure/ToolRegistry.cs; DependencyInjection.cs"
+        },
+        {
+            "passes": true,
+            "description": "MCP tool execution routes through IToolExecutor to fake registry",
+            "pr": 37,
+            "id": "PR37-003",
+            "evidence": "tests/Agentor.Infrastructure.Tests/ToolRegistryMcpBindingTests.cs"
+        },
+        {
+            "passes": true,
+            "description": "RequestTracingMiddleware starts Activity with agentor.trace_id and increments HTTP counter",
+            "pr": 38,
+            "id": "PR38-001",
+            "evidence": "src/Agentor.Api/Middleware/RequestTracingMiddleware.cs; src/Agentor.Api/Observability/AgentorDiagnostics.cs"
+        },
+        {
+            "passes": true,
+            "description": "Development logging uses JSON console formatter with scopes",
+            "pr": 38,
+            "id": "PR38-002",
+            "evidence": "src/Agentor.Api/appsettings.Development.json"
+        },
+        {
+            "passes": true,
+            "description": "API test observes agentor.http.server.request.count on /health",
+            "pr": 38,
+            "id": "PR38-003",
+            "evidence": "tests/Agentor.Api.Tests/ObservabilityTests.cs"
+        },
+        {
+            "passes": true,
+            "description": "Multi-stage Dockerfile publishes Agentor.Api to aspnet runtime",
+            "pr": 39,
+            "id": "PR39-001",
+            "evidence": "Dockerfile"
+        },
+        {
+            "passes": true,
+            "description": "docker-compose exposes agentor-api on 8080",
+            "pr": 39,
+            "id": "PR39-002",
+            "evidence": "docker-compose.yml"
+        },
+        {
+            "passes": true,
+            "description": "GitHub Actions CI restores/builds/tests Agentor.sln",
+            "pr": 39,
+            "id": "PR39-003",
+            "evidence": ".github/workflows/ci.yml"
+        },
+        {
+            "passes": true,
+            "description": "scripts/smoke.ps1 hits GET /health",
+            "pr": 39,
+            "id": "PR39-004",
+            "evidence": "scripts/smoke.ps1"
+        },
+        {
+            "passes": true,
+            "description": "Runtime version defaults to 0.1.0-rc.1",
+            "pr": 40,
+            "id": "PR40-001",
+            "evidence": "src/Agentor.Api/appsettings.json; AgentorRuntimeOptions.cs; AgentorRuntimeOptionsTests.cs"
+        },
+        {
+            "passes": true,
+            "description": "ROADMAP documents Phase 8 / v0.1 RC hardening",
+            "pr": 40,
+            "id": "PR40-002",
+            "evidence": "docs/ROADMAP.md"
+        },
+        {
+            "id": "PR41-001",
+            "pr": 41,
+            "description": "IExternalAgentProtocolClient port + ExternalAgents DTOs (Contracts)",
+            "passes": true,
+            "evidence": "src/Agentor.Application/Abstractions/IExternalAgentProtocolClient.cs; src/Agentor.Contracts/ExternalAgents/ExternalAgentDtos.cs"
+        },
+        {
+            "id": "PR41-002",
+            "pr": 41,
+            "description": "FakeExternalAgentProtocolClient deterministic in-memory",
+            "passes": true,
+            "evidence": "src/Agentor.Infrastructure/ExternalAgents/FakeExternalAgentProtocolClient.cs"
+        },
+        {
+            "id": "PR41-003",
+            "pr": 41,
+            "description": "EXTERNAL_AGENT_PROTOCOL_BOUNDARY.md",
+            "passes": true,
+            "evidence": "docs/EXTERNAL_AGENT_PROTOCOL_BOUNDARY.md"
+        },
+        {
+            "id": "PR41-004",
+            "pr": 41,
+            "description": "Infrastructure tests for generic fake client",
+            "passes": true,
+            "evidence": "tests/Agentor.Infrastructure.Tests/FakeExternalAgentProtocolClientTests.cs"
+        },
+        {
+            "id": "PR42-001",
+            "pr": 42,
+            "description": "A2A-shaped DTOs remain in Contracts",
+            "passes": true,
+            "evidence": "src/Agentor.Contracts/ExternalAgents/A2AExternalAgentDtos.cs"
+        },
+        {
+            "id": "PR42-002",
+            "pr": 42,
+            "description": "FakeA2AExternalAgentClient deterministic discovery/invoke",
+            "passes": true,
+            "evidence": "src/Agentor.Infrastructure/ExternalAgents/FakeA2AExternalAgentClient.cs"
+        },
+        {
+            "id": "PR42-003",
+            "pr": 42,
+            "description": "DI wires IExternalAgentProtocolClient to fake A2A-style adapter",
+            "passes": true,
+            "evidence": "src/Agentor.Infrastructure/DependencyInjection.cs"
+        },
+        {
+            "id": "PR42-004",
+            "pr": 42,
+            "description": "FakeA2AExternalAgentClientTests",
+            "passes": true,
+            "evidence": "tests/Agentor.Infrastructure.Tests/FakeA2AExternalAgentClientTests.cs"
+        },
+        {
+            "id": "PR43-001",
+            "pr": 43,
+            "description": "ExternalAgentToolKeys discover + invoke",
+            "passes": true,
+            "evidence": "src/Agentor.Application/ExternalAgentToolKeys.cs"
+        },
+        {
+            "id": "PR43-002",
+            "pr": 43,
+            "description": "External agent tool executors",
+            "passes": true,
+            "evidence": "src/Agentor.Infrastructure/ExternalAgents/ExternalAgentDiscoverToolExecutor.cs; ExternalAgentInvokeToolExecutor.cs"
+        },
+        {
+            "id": "PR43-003",
+            "pr": 43,
+            "description": "ToolRegistry.CreateDefault registers external-agent tools",
+            "passes": true,
+            "evidence": "src/Agentor.Infrastructure/ToolRegistry.cs; ToolRegistryMcpBindingTests.cs"
+        },
+        {
+            "id": "PR43-004",
+            "pr": 43,
+            "description": "Policy gates external-agent tools (deny/review never invoke)",
+            "passes": true,
+            "evidence": "tests/Agentor.Application.Tests/RuntimePolicyEvaluatorTests.cs; SequentialAgentPlanExecutor (ExternalAgentToolKeys)"
+        },
+        {
+            "id": "PR44-001",
+            "pr": 44,
+            "description": "TraceEventKind external-agent kinds + pipeline completion traces",
+            "passes": true,
+            "evidence": "src/Agentor.Domain/Enums/TraceEventKind.cs; src/Agentor.Application/Coordination/ToolExecutionPipeline.cs"
+        },
+        {
+            "id": "PR44-002",
+            "pr": 44,
+            "description": "RunManifest v1.2 aggregates ExternalAgentInvocationCompletedCount",
+            "passes": true,
+            "evidence": "src/Agentor.Domain/RunManifest.cs; RunManifestExternalAgentTelemetry.cs; ExternalAgentTelemetryAggregator.cs"
+        },
+        {
+            "id": "PR44-003",
+            "pr": 44,
+            "description": "API/manifest DTO surface includes external-agent count",
+            "passes": true,
+            "evidence": "tests/Agentor.Api.Tests/ApiContractTests.cs; RunManifestDto"
+        },
+        {
+            "id": "PR45-001",
+            "pr": 45,
+            "description": "RunEvaluationSnapshot counts ExternalAgentInvocationCompleted",
+            "passes": true,
+            "evidence": "src/Agentor.Application/Evaluation/RunEvaluationHarness.cs"
+        },
+        {
+            "id": "PR45-002",
+            "pr": 45,
+            "description": "RunQualityGateEvaluator optional EXTERNAL_AGENT_OUTPUT_UNREVIEWED warning",
+            "passes": true,
+            "evidence": "src/Agentor.Application/Quality/RunQualityGateEvaluator.cs; RunQualityGateEvaluatorTests.cs"
+        },
+        {
+            "id": "PR45-003",
+            "pr": 45,
+            "description": "Eval fixtures: one-step tool + external-agent-one-call (schema 3)",
+            "passes": true,
+            "evidence": "tests/Agentor.Application.Tests/fixtures/eval/evaluation-harness-one-step-tool.json; external-agent-one-call.json"
+        },
+        {
+            "id": "PR45-004",
+            "pr": 45,
+            "description": "RunEvaluationHarnessTests cover snapshots + external fixture",
+            "passes": true,
+            "evidence": "tests/Agentor.Application.Tests/Evaluation/RunEvaluationHarnessTests.cs"
+        },
+        {
+            "passes": true,
+            "description": "AgentorIntegrationsOptions configures Athanor/Conexus/Mcp/ExternalAgents with Fake|Http|Disabled",
+            "pr": 46,
+            "id": "PR46-001",
+            "evidence": "src/Agentor.Infrastructure/Options/AgentorIntegrationsOptions.cs; appsettings.json defaults Fake"
+        },
+        {
+            "passes": true,
+            "description": "Http mode requires BaseUrl per integration family",
+            "pr": 46,
+            "id": "PR46-002",
+            "evidence": "IntegrationOptionsValidatorTests.Validate_HttpModeWithoutBaseUrl_Fails"
+        },
+        {
+            "passes": true,
+            "description": "DI wires fake/http/disabled implementations and named integration HttpClients",
+            "pr": 46,
+            "id": "PR46-003",
+            "evidence": "src/Agentor.Infrastructure/DependencyInjection.cs"
+        },
+        {
+            "passes": true,
+            "description": "HttpKnowledgeStateClient exercises Athanor-shaped GET paths",
+            "pr": 47,
+            "id": "PR47-001",
+            "evidence": "HttpKnowledgeStateClientTests"
+        },
+        {
+            "passes": true,
+            "description": "Canonical lookup returns null on HTTP 404",
+            "pr": 47,
+            "id": "PR47-002",
+            "evidence": "HttpKnowledgeStateClientTests.LookupCanonicalEntryAsync_ReturnsNull_On404"
+        },
+        {
+            "passes": true,
+            "description": "HttpModelGatewayClient POST v1/model/complete",
+            "pr": 48,
+            "id": "PR48-001",
+            "evidence": "HttpModelGatewayClientTests.CompleteAsync_PostsToV1ModelComplete"
+        },
+        {
+            "passes": true,
+            "description": "HttpMcpRegistryClient lists servers/tools and invokes via HTTP JSON wire",
+            "pr": 49,
+            "id": "PR49-001",
+            "evidence": "HttpMcpRegistryClientExtraTests"
+        },
+        {
+            "passes": true,
+            "description": "HttpExternalAgentProtocolClient lists capabilities and posts invocations",
+            "pr": 49,
+            "id": "PR49-002",
+            "evidence": "HttpExternalAgentProtocolClientExtraTests"
+        },
+        {
+            "passes": true,
+            "description": "GET /health is liveness-only (returns alive)",
+            "pr": 50,
+            "id": "PR50-001",
+            "evidence": "IntegrationEndpointsTests.GetHealth_IsLivenessOnly_ReturnsOk"
+        },
+        {
+            "passes": true,
+            "description": "GET /ready and GET /api/v1/integrations/status expose modes without secrets",
+            "pr": 50,
+            "id": "PR50-002",
+            "evidence": "IntegrationEndpointsTests (fake defaults; substring guards)"
+        },
+        {
+            "passes": true,
+            "description": "HTTP integration probes treat unreachable host or non-2xx response as not ready",
+            "pr": 50,
+            "id": "PR50-003",
+            "evidence": "IntegrationEndpointsTests; IntegrationSurfaceServiceTests.GetStatusAsync_HttpProbe_ReturnsNotReady_On500"
+        },
+        {
+            "passes": true,
+            "description": "Harness accepts Phase 10 and records verification",
+            "pr": 50,
+            "id": "PR50.5-001",
+            "evidence": ".agentor-harness/feature-list.json phase 10 harnessPass PR50.5"
+        },
+        {
+            "passes": true,
+            "description": "Disabled integration reports Ready=true with detail=disabled",
+            "pr": 50,
+            "id": "PR50.5-002",
+            "evidence": "IntegrationEndpointsTests.GetIntegrationsStatus_DisabledAdapter_HasDisabledDetail; IntegrationSurfaceServiceTests.GetStatusAsync_DisabledFamily_HasDisabledDetail"
+        },
+        {
+            "passes": true,
+            "description": "IKnowledgeStateClient still exposes no Canonize operation",
+            "pr": 50,
+            "id": "PR50.5-003",
+            "evidence": "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
+        },
+        {
+            "passes": true,
+            "description": "PR51: Optional TenantId/WorkspaceId/ProjectId/KnowledgeScopeId on AgentRun and StartAgentRun round-trip through persistence.",
+            "pr": 51,
+            "id": "PR51-001",
+            "evidence": "EfCoreAgentRunRepositoryTests.SaveAsync_RoundTripsGovernanceScopeFields_FromStartCommand"
+        },
+        {
+            "passes": true,
+            "description": "PR51: ResolveAthanorProjectId() prefers explicit ProjectId over ProfileId.",
+            "pr": 51,
+            "id": "PR51-002",
+            "evidence": "AgentRunTests.Start_WithExplicitProjectId_UsesItForAthanorProjectResolution; AthanorCommandHandlersTests.GetLatestSnapshot_UsesExplicitProjectId_WhenRunScopedToProject"
+        },
+        {
+            "passes": true,
+            "description": "PR51: When ProjectId is unset, Athanor project id falls back to ProfileId (backward compatible).",
+            "pr": 51,
+            "id": "PR51-003",
+            "evidence": "AgentRunTests.Start_WithoutExplicitProjectId_UsesProfileIdForAthanorProjectResolution"
+        },
+        {
+            "passes": true,
+            "description": "PR52: ActiveProfile.DeniedToolKeys overrides flat RuntimePolicyOptions.DeniedToolKeys when profile is set.",
+            "pr": 52,
+            "id": "PR52-001",
+            "evidence": "RuntimePolicyEvaluatorTests.Evaluate_ActiveProfile_DeniedToolKeys_OverrideFlatRuntimeOptions"
+        },
+        {
+            "passes": true,
+            "description": "PR52: ActiveProfile MCP denied tool keys deny MCP tool calls with MCP_TOOL_DENIED.",
+            "pr": 52,
+            "id": "PR52-002",
+            "evidence": "RuntimePolicyEvaluatorTests.Evaluate_ActiveProfile_DeniesListedMcpTool"
+        },
+        {
+            "passes": true,
+            "description": "PR52: ActiveProfile external-agent denied tool keys deny external-agent tools.",
+            "pr": 52,
+            "id": "PR52-003",
+            "evidence": "RuntimePolicyEvaluatorTests.Evaluate_ActiveProfile_DeniesListedExternalAgentTool"
+        },
+        {
+            "passes": false,
+            "description": "PR52: Versioned PolicyBundle / full enterprise policy engine (deferred beyond PolicyProfileRules).",
+            "pr": 52,
+            "id": "PR52-004",
+            "evidence": "Not implemented; PolicyProfileRules is a first runtime profile step only."
+        },
+        {
+            "passes": true,
+            "description": "PR53: Approve human review resumes RequiresReview tool and run to Running.",
+            "pr": 53,
+            "id": "PR53-001",
+            "evidence": "AgentRunTests.ApplyHumanReview_Approve_ResumesRunAndToolFromRequiresReview"
+        },
+        {
+            "passes": true,
+            "description": "PR53: Reject human review fails the reviewed run and tool.",
+            "pr": 53,
+            "id": "PR53-002",
+            "evidence": "AgentRunTests.ApplyHumanReview_Reject_FailsRun"
+        },
+        {
+            "passes": true,
+            "description": "PR53: RequestChanges records a decision without resuming tool execution (run stays RequiresReview).",
+            "pr": 53,
+            "id": "PR53-003",
+            "evidence": "AgentRunTests.ApplyHumanReview_RequestChanges_RecordsDecision_WithoutResumingExecution"
+        },
+        {
+            "passes": true,
+            "description": "PR53: After Approve, post-approval policy Deny still fails the run (approval does not override Deny).",
+            "pr": 53,
+            "id": "PR53-004",
+            "evidence": "ApplyHumanReviewDecisionHandlerTests.Approve_PostPolicyDeny_FailsRunAndDoesNotExecuteTool"
+        },
+        {
+            "passes": false,
+            "description": "PR53: Multi-step plan executor resume semantics beyond the single pending-tool path (deferred).",
+            "pr": 53,
+            "id": "PR53-005",
+            "evidence": "Requires dedicated plan-executor tests and docs; not in this harness pass."
+        },
+        {
+            "passes": true,
+            "description": "PR54: X-Agentor-Actor-Id header selects the acting principal when it is a non-empty GUID.",
+            "pr": 54,
+            "id": "PR54-001",
+            "evidence": "HeaderOrFakeActorAccessorTests.Current_UsesXAgentorActorIdHeader_WhenValidGuid"
+        },
+        {
+            "passes": true,
+            "description": "PR54: When the header is absent, a fixed local-dev fallback actor id is used (not an identity provider).",
+            "pr": 54,
+            "id": "PR54-002",
+            "evidence": "HeaderOrFakeActorAccessorTests.Current_UsesLocalDevFallback_WhenHeaderMissing"
+        },
+        {
+            "passes": true,
+            "description": "PR55: Audit export canonical JSON is stable; SHA-256 matches UTF-8 bytes of canonical JSON.",
+            "pr": 55,
+            "id": "PR55-001",
+            "evidence": "GetRunAuditExportQueryHandlerTests.HandleAsync_SameRunTwice_ReturnsIdenticalCanonicalJsonAndHash; ApiContractTests.GetAuditExport_ReturnsStableJsonAndSha256Header"
+        },
+        {
+            "passes": true,
+            "description": "PR55: Audit export redacts property names matching apiKey/secret/password/token substrings (baseline key-name redaction).",
+            "pr": 55,
+            "id": "PR55-002",
+            "evidence": "GetRunAuditExportQueryHandlerTests.HandleAsync_RedactsPropertyNamesMatchingSensitiveSubstrings"
+        },
+        {
+            "passes": true,
+            "description": "PR55: Human review decisions persist through EF Core save/load (JSON column).",
+            "pr": 55,
+            "id": "PR55-003",
+            "evidence": "EfCoreAgentRunRepositoryTests.SaveAsync_RoundTripsHumanReviewDecisions"
+        },
+        {
+            "passes": true,
+            "description": "PR55.5: StartAgentRunRequestDto governance scope fields round-trip via public GET /agent-runs/{id}.",
+            "pr": 55,
+            "id": "PR55.5-001",
+            "evidence": "ApiContractTests.PostAgentRuns_WithGovernanceScope_GetReturnsSameIdentifiers"
+        }
+    ]
 }

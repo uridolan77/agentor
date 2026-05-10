@@ -91,3 +91,89 @@ Forbidden in PR1:
 - distributed orchestration
 - dashboard
 - authentication beyond simple future docs
+
+## Agentor Session Closeout Protocol — mandatory
+
+A task is not complete when code compiles. A task is complete only when code, tests, harness state, verification evidence, and handoff are reconciled.
+
+For every PR, phase, or multi-step task, complete the closeout protocol before giving a final response.
+
+### Definition of Done
+
+The task is done only when all of the following are true:
+
+1. `dotnet restore Agentor.sln` succeeds.
+2. `dotnet build Agentor.sln --no-restore` succeeds.
+3. `dotnet test Agentor.sln --no-build` succeeds.
+4. `.agentor-harness/current-pr.md` is updated.
+5. `.agentor-harness/feature-list.json` is valid JSON, UTF-8, and updated with item-level acceptance rows.
+6. `.agentor-harness/progress.md` is updated.
+7. `.agentor-harness/verification-log.md` contains the exact commands run, results, and test counts.
+8. `.agentor-harness/session-handoff.md` states:
+   - what was completed,
+   - what is next,
+   - what was explicitly not started,
+   - remaining risks or false acceptance items.
+9. All new or edited `.cs`, `.json`, `.md`, `.yml`, `.yaml`, `.ps1`, and `.sln` files are UTF-8 text, not UTF-16/null-byte encoded.
+10. The next PR/phase was not started unless explicitly requested.
+
+### Required final self-audit
+
+Before the final response, re-open these files from disk and verify their contents:
+
+- `.agentor-harness/current-pr.md`
+- `.agentor-harness/feature-list.json`
+- `.agentor-harness/progress.md`
+- `.agentor-harness/verification-log.md`
+- `.agentor-harness/session-handoff.md`
+
+The final response must quote or summarize the actual re-read values:
+
+- current completed phase/PR
+- next phase/PR
+- `feature-list.json` phase
+- `feature-list.json` harnessPass
+- latest test count from `verification-log.md`
+- explicit confirmation that the next phase was not started
+
+If any harness file is stale, malformed, missing, invalid JSON, UTF-16 encoded, or inconsistent with the code, fix it before reporting completion.
+
+### Harness truth rule
+
+The harness is the project memory. Never leave it stale.
+
+If code says Phase N is complete but the harness still says Phase N-1, the task is incomplete.
+
+If tests pass but the harness is wrong, the task is incomplete.
+
+If the harness says an acceptance item passes but there is no named evidence, the task is incomplete.
+
+If an acceptance item is not verified, leave it as `passes: false` with a clear evidence/TODO string.
+
+### Scope rule
+
+Do not start the next PR or phase during closeout.
+
+If implementation accidentally includes work from a later PR, document it honestly in the handoff and feature list. Do not pretend it did not happen.
+
+### Encoding rule
+
+All repository text files must be UTF-8. Cursor/editor write paths sometimes create UTF-16 files. Detect and fix this before completion.
+
+Null bytes in fetched/rendered file content mean the file is malformed for this repository.
+
+### Harness verification command
+
+After updating harness files, run:
+
+```powershell
+pwsh ./scripts/verify-harness.ps1
+```
+
+For phase-specific closeout, pass expected values:
+
+```powershell
+pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 11 -ExpectedHarnessPass PR55.5
+```
+
+See `.agentor-harness/SESSION_CLOSEOUT_PROTOCOL.md` for the canonical closeout procedure.

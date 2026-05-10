@@ -1,0 +1,58 @@
+---
+description: Agentor mandatory session closeout protocol
+globs:
+alwaysApply: true
+---
+
+# Agentor mandatory session closeout
+
+You are working in the Agentor repo.
+
+A task is not complete when code compiles. A task is complete only when code, tests, harness state, verification evidence, and handoff are reconciled.
+
+Before any final response that claims completion, you must do the following:
+
+1. Run:
+   - `dotnet restore Agentor.sln`
+   - `dotnet build Agentor.sln --no-restore`
+   - `dotnet test Agentor.sln --no-build`
+
+2. Update and re-read:
+   - `.agentor-harness/current-pr.md`
+   - `.agentor-harness/feature-list.json`
+   - `.agentor-harness/progress.md`
+   - `.agentor-harness/verification-log.md`
+   - `.agentor-harness/session-handoff.md`
+
+3. Verify:
+   - `feature-list.json` is valid JSON.
+   - all edited `.cs`, `.json`, `.md`, `.yml`, `.yaml`, `.ps1`, and `.sln` files are UTF-8, not UTF-16/null-byte encoded.
+   - the harness phase and harnessPass match the work just completed.
+   - `current-pr.md` says the correct completed PR/phase and next PR/phase.
+   - `verification-log.md` contains exact commands, results, and test counts.
+   - `session-handoff.md` says what was completed, what is next, what was not started, and remaining risks.
+
+4. Acceptance item rule:
+   - Add item-level acceptance rows.
+   - Mark `passes: true` only with named source/test evidence.
+   - Leave unverified items as `passes: false`.
+
+5. Scope rule:
+   - Do not start the next PR or phase unless explicitly requested.
+   - If later-phase work was accidentally included, document it honestly.
+
+6. Verification script:
+   - Run `pwsh ./scripts/verify-harness.ps1`.
+   - For phase closeout, pass expected values, for example:
+     `pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 11 -ExpectedHarnessPass PR55.5`.
+
+Final response must include:
+- files changed
+- tests run and counts
+- harness phase
+- harnessPass
+- next PR/phase
+- remaining false acceptance items
+- confirmation that the next phase was not started
+
+If any of the above is missing, stale, or inconsistent, fix it before final response.

@@ -1,6 +1,7 @@
 using Agentor.Application.Commands;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Agentor.Domain.Governance;
 using Agentor.Infrastructure;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.Mcp;
@@ -130,6 +131,87 @@ public sealed class EfCoreAgentRunRepositoryTests
         Assert.Single(step.ToolCalls);
         Assert.Equal("pr1.fake-tool", step.ToolCalls[0].ToolKey);
         Assert.Equal(PolicyDecisionOutcome.Allow, step.PolicyDecisions[0].Outcome);
+    }
+
+    [Fact]
+    public async Task SaveAsync_RoundTripsGovernanceScopeFields_FromStartCommand()
+    {
+        await using var ctx = CreateContext("governance-scope-test");
+        await ctx.Database.EnsureCreatedAsync();
+        var repo = new EfCoreAgentRunRepository(ctx);
+        var clock = new SystemClock();
+        var fake = new FakeToolExecutor();
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
+        var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
+        var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
+        var handler = new StartAgentRunHandler(repo, policy, registry, pipeline, clock);
+
+        var tenantId = Guid.NewGuid();
+        var workspaceId = Guid.NewGuid();
+        var projectId = Guid.NewGuid();
+        var knowledgeScopeId = Guid.NewGuid();
+
+        var run = await handler.HandleAsync(
+            new StartAgentRunCommand(
+                "Scoped Agent",
+                "Governance scope persistence.",
+                "scope-trace",
+                tenantId,
+                workspaceId,
+                projectId,
+                knowledgeScopeId),
+            CancellationToken.None);
+
+        var loaded = await repo.GetAsync(run.Id, CancellationToken.None);
+        Assert.NotNull(loaded);
+        Assert.Equal(tenantId, loaded!.TenantId);
+        Assert.Equal(workspaceId, loaded.WorkspaceId);
+        Assert.Equal(projectId, loaded.ProjectId);
+        Assert.Equal(knowledgeScopeId, loaded.KnowledgeScopeId);
+    }
+
+    [Fact]
+    public async Task SaveAsync_RoundTripsHumanReviewDecisions()
+    {
+        await using var ctx = CreateContext("human-review-json-test");
+        await ctx.Database.EnsureCreatedAsync();
+        var repo = new EfCoreAgentRunRepository(ctx);
+        var clock = new SystemClock();
+        var now = clock.UtcNow;
+        var profileId = Guid.NewGuid();
+        var decision = new HumanReviewDecision(
+            Guid.NewGuid(),
+            ReviewDecisionKind.RequestChanges,
+            Guid.NewGuid(),
+            now,
+            "note",
+            ReviewResolutionStatus.ChangesRequested);
+        var run = AgentRun.Reconstitute(
+            Guid.NewGuid(),
+            profileId,
+            "Agent",
+            "Objective",
+            "hr-json-trace",
+            AgentRunStatus.RequiresReview,
+            now.AddMinutes(-1),
+            now,
+            "pending",
+            [],
+            [],
+            null,
+            null,
+            null,
+            null,
+            null,
+            [decision]);
+
+        await repo.SaveAsync(run, CancellationToken.None);
+        var loaded = await repo.GetAsync(run.Id, CancellationToken.None);
+
+        Assert.NotNull(loaded);
+        Assert.Single(loaded!.HumanReviewDecisions);
+        Assert.Equal(decision.Id, loaded.HumanReviewDecisions[0].Id);
+        Assert.Equal(ReviewDecisionKind.RequestChanges, loaded.HumanReviewDecisions[0].Kind);
     }
 
     [Fact]

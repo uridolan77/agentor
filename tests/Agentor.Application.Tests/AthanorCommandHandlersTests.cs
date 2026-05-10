@@ -12,6 +12,29 @@ namespace Agentor.Application.Tests;
 public sealed class AthanorCommandHandlersTests
 {
     [Fact]
+    public async Task GetLatestSnapshot_UsesExplicitProjectId_WhenRunScopedToProject()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var ath = new FakeKnowledgeStateClient();
+        var clock = new SystemClock();
+        var profileId = Guid.Parse("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+        var explicitProject = Guid.Parse("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+        var scope = new AgentRunScope(null, null, explicitProject, null);
+        var run = AgentRun.Start(profileId, "Agent", "objective", "trace-explicit-project", clock.UtcNow, scope);
+        run.StartStep("only", clock.UtcNow);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var snap = new CanonicalSnapshotDto(Guid.NewGuid(), explicitProject, clock.UtcNow, []);
+        ath.SeedLatestSnapshot(snap);
+
+        var handler = new GetLatestAthanorSnapshotForRunQueryHandler(repo, ath);
+        var result = await handler.HandleAsync(run.Id, CancellationToken.None);
+        Assert.True(result.RunExists);
+        Assert.NotNull(result.Snapshot);
+        Assert.Equal(explicitProject, result.Snapshot!.ProjectId);
+    }
+
+    [Fact]
     public async Task GetLatestSnapshot_ReturnsSeededSnapshot_WhenRunExists()
     {
         var repo = new InMemoryAgentRunRepository();
