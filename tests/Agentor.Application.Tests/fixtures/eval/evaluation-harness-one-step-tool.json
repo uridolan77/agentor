@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 2,
   "kind": "RunEvaluationHarness",
   "agentName": "Eval",
@@ -13,6 +13,7 @@
     "runStatus": "Completed",
     "traceEventCount": 12,
     "toolCallCount": 1,
-    "planStepCount": 1
+    "planStepCount": 1,
+    "externalAgentInvocationCompletedCount": 0
   }
 }

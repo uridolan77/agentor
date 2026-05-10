@@ -54,5 +54,12 @@ public enum TraceEventKind
     AthanorCandidateSubmitted,
 
     /// <summary>A review queue item was created in Athanor for human review (not canon).</summary>
-    AthanorReviewQueued
+    AthanorReviewQueued,
+
+    ExternalAgentCapabilityDiscovered,
+    ExternalAgentInvocationStarted,
+    ExternalAgentInvocationCompleted,
+    ExternalAgentInvocationDenied,
+    ExternalAgentInvocationRequiresReview,
+    ExternalAgentInvocationFailed
 }

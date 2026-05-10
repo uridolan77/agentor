@@ -4,6 +4,7 @@ using Agentor.Application.Abstractions;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Conexus;
+using Agentor.Infrastructure.ExternalAgents;
 using Agentor.Infrastructure.Mcp;
 
 namespace Agentor.Infrastructure;
@@ -37,7 +38,8 @@ public sealed class ToolRegistry : IToolRegistry
     public static ToolRegistry CreateDefault(
         FakeToolExecutor fakeExecutor,
         IModelGatewayClient modelGateway,
-        IMcpRegistryClient mcpRegistry)
+        IMcpRegistryClient mcpRegistry,
+        IExternalAgentProtocolClient externalAgents)
     {
         var registry = new ToolRegistry();
         registry.Register(
@@ -61,6 +63,20 @@ public sealed class ToolRegistry : IToolRegistry
                 "Text completion via IModelGatewayClient (Conexus port; fake in default infrastructure).",
                 ToolRiskLevel.Medium),
             new ModelGatewayToolExecutor(modelGateway));
+        registry.Register(
+            new ToolDefinition(
+                ExternalAgentToolKeys.Discover,
+                "External agent capability discovery",
+                "Lists capabilities from the configured external-agent protocol adapter (fake by default).",
+                ToolRiskLevel.Low),
+            new ExternalAgentDiscoverToolExecutor(externalAgents));
+        registry.Register(
+            new ToolDefinition(
+                ExternalAgentToolKeys.Invoke,
+                "External agent invocation",
+                "Invokes a capability via the external-agent protocol adapter (fake by default).",
+                ToolRiskLevel.Medium),
+            new ExternalAgentInvokeToolExecutor(externalAgents));
         RegisterDiscoveredMcpTools(registry, mcpRegistry);
         return registry;
     }

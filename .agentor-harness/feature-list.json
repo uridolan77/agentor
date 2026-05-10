@@ -1,7 +1,7 @@
-{
-    "phase":  8,
-    "title":  "MCP, observability, and release",
-    "harnessPass":  "PR40",
+﻿{
+    "phase":  9,
+    "title":  "External agent protocol adapters",
+    "harnessPass":  "PR45",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
@@ -15,7 +15,8 @@
                   "Phase 8 PR37: McpToolKeys + McpToolExecutor; ToolRegistry.CreateDefault registers discovered MCP tools; ToolRegistryMcpBindingTests.",
                   "Phase 8 PR38: ActivitySource + request counter; JSON console logging in Development; docs/OBSERVABILITY.md; ObservabilityTests.",
                   "Phase 8 PR39: Dockerfile (publish Agentor.Api), docker-compose.yml, .github/workflows/ci.yml, scripts/smoke.ps1, .dockerignore.",
-                  "Phase 8 PR40: appsettings + AgentorRuntimeOptions default version 0.1.0-rc.1; docs/ROADMAP.md v0.1 RC note."
+                  "Phase 8 PR40: appsettings + AgentorRuntimeOptions default version 0.1.0-rc.1; docs/ROADMAP.md v0.1 RC note.",
+                  "Phase 9 PR41-PR45: IExternalAgentProtocolClient + deterministic fakes (generic + A2A-styled); external-agent.discover / external-agent.invoke via ToolRegistry + policy + pipeline; RunManifest v1.2 external-agent telemetry; trace kinds + SequentialAgentPlanExecutor deny/review paths; RunEvaluationHarness snapshot external counts + RunQualityGateEvaluator EXTERNAL_AGENT_OUTPUT_UNREVIEWED; fixtures eval/external-agent-one-call.json; no real network transports."
               ],
     "acceptanceItems":  [
                             {
@@ -500,6 +501,139 @@
                                 "pr":  40,
                                 "id":  "PR40-002",
                                 "evidence":  "docs/ROADMAP.md"
+                            },
+                            {
+                                "id":  "PR41-001",
+                                "pr":  41,
+                                "description":  "IExternalAgentProtocolClient port + ExternalAgents DTOs (Contracts)",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Abstractions/IExternalAgentProtocolClient.cs; src/Agentor.Contracts/ExternalAgents/ExternalAgentDtos.cs"
+                            },
+                            {
+                                "id":  "PR41-002",
+                                "pr":  41,
+                                "description":  "FakeExternalAgentProtocolClient deterministic in-memory",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/ExternalAgents/FakeExternalAgentProtocolClient.cs"
+                            },
+                            {
+                                "id":  "PR41-003",
+                                "pr":  41,
+                                "description":  "EXTERNAL_AGENT_PROTOCOL_BOUNDARY.md",
+                                "passes":  true,
+                                "evidence":  "docs/EXTERNAL_AGENT_PROTOCOL_BOUNDARY.md"
+                            },
+                            {
+                                "id":  "PR41-004",
+                                "pr":  41,
+                                "description":  "Infrastructure tests for generic fake client",
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Infrastructure.Tests/FakeExternalAgentProtocolClientTests.cs"
+                            },
+                            {
+                                "id":  "PR42-001",
+                                "pr":  42,
+                                "description":  "A2A-shaped DTOs remain in Contracts",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Contracts/ExternalAgents/A2AExternalAgentDtos.cs"
+                            },
+                            {
+                                "id":  "PR42-002",
+                                "pr":  42,
+                                "description":  "FakeA2AExternalAgentClient deterministic discovery/invoke",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/ExternalAgents/FakeA2AExternalAgentClient.cs"
+                            },
+                            {
+                                "id":  "PR42-003",
+                                "pr":  42,
+                                "description":  "DI wires IExternalAgentProtocolClient to fake A2A-style adapter",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs"
+                            },
+                            {
+                                "id":  "PR42-004",
+                                "pr":  42,
+                                "description":  "FakeA2AExternalAgentClientTests",
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Infrastructure.Tests/FakeA2AExternalAgentClientTests.cs"
+                            },
+                            {
+                                "id":  "PR43-001",
+                                "pr":  43,
+                                "description":  "ExternalAgentToolKeys discover + invoke",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/ExternalAgentToolKeys.cs"
+                            },
+                            {
+                                "id":  "PR43-002",
+                                "pr":  43,
+                                "description":  "External agent tool executors",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/ExternalAgents/ExternalAgentDiscoverToolExecutor.cs; ExternalAgentInvokeToolExecutor.cs"
+                            },
+                            {
+                                "id":  "PR43-003",
+                                "pr":  43,
+                                "description":  "ToolRegistry.CreateDefault registers external-agent tools",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/ToolRegistry.cs; ToolRegistryMcpBindingTests.cs"
+                            },
+                            {
+                                "id":  "PR43-004",
+                                "pr":  43,
+                                "description":  "Policy gates external-agent tools (deny/review never invoke)",
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Application.Tests/RuntimePolicyEvaluatorTests.cs; SequentialAgentPlanExecutor (ExternalAgentToolKeys)"
+                            },
+                            {
+                                "id":  "PR44-001",
+                                "pr":  44,
+                                "description":  "TraceEventKind external-agent kinds + pipeline completion traces",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Domain/Enums/TraceEventKind.cs; src/Agentor.Application/Coordination/ToolExecutionPipeline.cs"
+                            },
+                            {
+                                "id":  "PR44-002",
+                                "pr":  44,
+                                "description":  "RunManifest v1.2 aggregates ExternalAgentInvocationCompletedCount",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Domain/RunManifest.cs; RunManifestExternalAgentTelemetry.cs; ExternalAgentTelemetryAggregator.cs"
+                            },
+                            {
+                                "id":  "PR44-003",
+                                "pr":  44,
+                                "description":  "API/manifest DTO surface includes external-agent count",
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Api.Tests/ApiContractTests.cs; RunManifestDto"
+                            },
+                            {
+                                "id":  "PR45-001",
+                                "pr":  45,
+                                "description":  "RunEvaluationSnapshot counts ExternalAgentInvocationCompleted",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Evaluation/RunEvaluationHarness.cs"
+                            },
+                            {
+                                "id":  "PR45-002",
+                                "pr":  45,
+                                "description":  "RunQualityGateEvaluator optional EXTERNAL_AGENT_OUTPUT_UNREVIEWED warning",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Quality/RunQualityGateEvaluator.cs; RunQualityGateEvaluatorTests.cs"
+                            },
+                            {
+                                "id":  "PR45-003",
+                                "pr":  45,
+                                "description":  "Eval fixtures: one-step tool + external-agent-one-call (schema 3)",
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Application.Tests/fixtures/eval/evaluation-harness-one-step-tool.json; external-agent-one-call.json"
+                            },
+                            {
+                                "id":  "PR45-004",
+                                "pr":  45,
+                                "description":  "RunEvaluationHarnessTests cover snapshots + external fixture",
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Application.Tests/Evaluation/RunEvaluationHarnessTests.cs"
                             }
                         ]
 }

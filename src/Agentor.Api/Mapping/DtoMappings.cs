@@ -110,6 +110,7 @@ public static class DtoMappings
             manifest.PrimaryModelId,
             manifest.PrimaryPromptProfileRef,
             manifest.PrimaryModelProfileRef,
+            manifest.ExternalAgentInvocationCompletedCount,
             manifest.ManifestVersion,
             manifest.ContentHash);
     }

@@ -21,7 +21,7 @@ public sealed class RunManifestTests
         var manifest = RunManifest.FromRun(run, RunManifestModelTelemetry.Empty);
 
         Assert.Equal(RunManifest.CurrentVersion, manifest.ManifestVersion);
-        Assert.Equal("1.1", manifest.ManifestVersion);
+        Assert.Equal("1.2", manifest.ManifestVersion);
     }
 
     [Fact]
@@ -90,11 +90,11 @@ public sealed class RunManifestTests
 
         var hash1 = RunManifest.ComputeContentHash(
             runId, profileId, "trace-a", AgentRunStatus.Completed,
-            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null);
+            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null, 0);
 
         var hash2 = RunManifest.ComputeContentHash(
             runId, profileId, "trace-b", AgentRunStatus.Completed,
-            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null);
+            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null, 0);
 
         Assert.NotEqual(hash1, hash2);
     }
@@ -108,11 +108,11 @@ public sealed class RunManifestTests
 
         var hash1 = RunManifest.ComputeContentHash(
             runId, profileId, "t", AgentRunStatus.Completed,
-            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null);
+            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null, 0);
 
         var hash2 = RunManifest.ComputeContentHash(
             runId, profileId, "t", AgentRunStatus.Completed,
-            now, now.AddSeconds(1), 2, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null);
+            now, now.AddSeconds(1), 2, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null, 0);
 
         Assert.NotEqual(hash1, hash2);
     }
@@ -126,11 +126,11 @@ public sealed class RunManifestTests
 
         var hash1 = RunManifest.ComputeContentHash(
             runId, profileId, "t", AgentRunStatus.Completed,
-            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null);
+            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null, 0);
 
         var hash2 = RunManifest.ComputeContentHash(
             runId, profileId, "t", AgentRunStatus.Failed,
-            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null);
+            now, now.AddSeconds(1), 1, 1, 1, 5, 0, 0L, 0L, 0m, 0L, null, null, null, null, 0);
 
         Assert.NotEqual(hash1, hash2);
     }
@@ -144,11 +144,11 @@ public sealed class RunManifestTests
 
         var hash1 = RunManifest.ComputeContentHash(
             runId, profileId, "t", AgentRunStatus.Running,
-            now, null, 0, 0, 0, 1, 0, 0L, 0L, 0m, 0L, null, null, null, null);
+            now, null, 0, 0, 0, 1, 0, 0L, 0L, 0m, 0L, null, null, null, null, 0);
 
         var hash2 = RunManifest.ComputeContentHash(
             runId, profileId, "t", AgentRunStatus.Running,
-            now, null, 0, 0, 0, 1, 0, 0L, 0L, 0m, 0L, null, null, null, null);
+            now, null, 0, 0, 0, 1, 0, 0L, 0L, 0m, 0L, null, null, null, null, 0);
 
         Assert.Equal(hash1, hash2);
     }

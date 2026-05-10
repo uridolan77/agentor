@@ -185,3 +185,27 @@ Scope: service version `0.1.0-rc.1` in config and `AgentorRuntimeOptions` defaul
 ### PR completion note — PR40
 
 v0.1 release candidate is configuration- and doc-level; no new runtime services beyond Phase 8 stack.
+
+## Phase 9 verification — PR41–PR45 (2026-05-10)
+
+Commands (repo root):
+
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results: restore OK; build OK; test OK.
+
+Counts: Domain 33, Application 66, Infrastructure 35, Api 35 (**total 169**).
+
+Scope: `IExternalAgentProtocolClient` + `FakeExternalAgentProtocolClient` / `FakeA2AExternalAgentClient`; Contracts external-agent + A2A-shaped DTOs; `ExternalAgentToolKeys` + discover/invoke executors + `ToolRegistry.CreateDefault`; trace kinds + `ToolExecutionPipeline` external completion; `SequentialAgentPlanExecutor` policy deny/review traces for external-agent tools; `RunManifest` **v1.2** + external telemetry aggregator + API contract updates; `RunEvaluationHarness` snapshot external counts; `RunQualityGateEvaluator` `WarnOnExternalAgentOutputUnreviewed`; eval fixtures (`evaluation-harness-one-step-tool.json` extended; `external-agent-one-call.json` schema 3); `PlanInputBuilder` coordination helper (UTF-8). **No real network transports.**
+
+### PR completion notes (Phase 9)
+
+- **PR41** — Application port + Contracts DTOs + generic fake + boundary doc + tests.
+- **PR42** — A2A-styled fake client + DTO records; DI default adapter.
+- **PR43** — Tool keys, executors, registry wiring, policy integration tests.
+- **PR44** — Trace/manifest/API surfaces for external-agent audit telemetry.
+- **PR45** — Evaluation harness metrics + quality gate warning + JSON fixtures + tests.

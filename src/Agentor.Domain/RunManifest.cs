@@ -7,7 +7,7 @@ namespace Agentor.Domain;
 
 public sealed class RunManifest
 {
-    public const string CurrentVersion = "1.1";
+    public const string CurrentVersion = "1.2";
 
     public RunManifest(
         Guid runId,
@@ -29,6 +29,7 @@ public sealed class RunManifest
         string? primaryModelId,
         string? primaryPromptProfileRef,
         string? primaryModelProfileRef,
+        int externalAgentInvocationCompletedCount,
         string manifestVersion,
         string contentHash)
     {
@@ -51,6 +52,7 @@ public sealed class RunManifest
         PrimaryModelId = primaryModelId;
         PrimaryPromptProfileRef = primaryPromptProfileRef;
         PrimaryModelProfileRef = primaryModelProfileRef;
+        ExternalAgentInvocationCompletedCount = externalAgentInvocationCompletedCount;
         ManifestVersion = manifestVersion;
         ContentHash = contentHash;
     }
@@ -93,6 +95,8 @@ public sealed class RunManifest
 
     public string? PrimaryModelProfileRef { get; }
 
+    public int ExternalAgentInvocationCompletedCount { get; }
+
     public string ManifestVersion { get; }
 
     public string ContentHash { get; }
@@ -101,12 +105,19 @@ public sealed class RunManifest
     /// Builds a manifest from run state plus model-gateway telemetry supplied by Application (integration mapping stays out of Domain).
     /// </summary>
     public static RunManifest FromRun(AgentRun run, RunManifestModelTelemetry modelTelemetry)
+        => FromRun(run, modelTelemetry, RunManifestExternalAgentTelemetry.Empty);
+
+    public static RunManifest FromRun(
+        AgentRun run,
+        RunManifestModelTelemetry modelTelemetry,
+        RunManifestExternalAgentTelemetry externalTelemetry)
     {
         var toolCallCount = run.Steps.Sum(step => step.ToolCalls.Count);
         var policyDecisionCount = run.Steps.Sum(step => step.PolicyDecisions.Count);
         var traceEventCount = run.Trace.OrderBy(e => e.OccurredAt).Count();
 
         var mt = modelTelemetry;
+        var ext = externalTelemetry;
 
         var hash = ComputeContentHash(
             run.Id,
@@ -127,7 +138,8 @@ public sealed class RunManifest
             mt.PrimaryProviderName,
             mt.PrimaryModelId,
             mt.PrimaryPromptProfileRef,
-            mt.PrimaryModelProfileRef);
+            mt.PrimaryModelProfileRef,
+            ext.ExternalAgentInvocationCompletedCount);
 
         return new RunManifest(
             run.Id,
@@ -149,6 +161,7 @@ public sealed class RunManifest
             mt.PrimaryModelId,
             mt.PrimaryPromptProfileRef,
             mt.PrimaryModelProfileRef,
+            ext.ExternalAgentInvocationCompletedCount,
             CurrentVersion,
             hash);
     }
@@ -172,7 +185,8 @@ public sealed class RunManifest
         string? primaryModelProviderName,
         string? primaryModelId,
         string? primaryPromptProfileRef,
-        string? primaryModelProfileRef)
+        string? primaryModelProfileRef,
+        int externalAgentInvocationCompletedCount)
     {
         var parts = new[]
         {
@@ -195,6 +209,7 @@ public sealed class RunManifest
             primaryModelId ?? "null",
             primaryPromptProfileRef ?? "null",
             primaryModelProfileRef ?? "null",
+            externalAgentInvocationCompletedCount.ToString(CultureInfo.InvariantCulture),
             CurrentVersion
         };
 

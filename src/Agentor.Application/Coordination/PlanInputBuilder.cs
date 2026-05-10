@@ -1,4 +1,4 @@
-using Agentor.Domain;
+﻿using Agentor.Domain;
 
 namespace Agentor.Application.Coordination;
 

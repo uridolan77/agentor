@@ -8,12 +8,18 @@ public sealed record RunQualitySummary(
     IReadOnlyList<string> Violations,
     IReadOnlyList<string> Warnings);
 
+public sealed record RunQualityGateOptions(bool WarnOnExternalAgentOutputUnreviewed = false);
+
 public static class RunQualityGateEvaluator
 {
     /// <summary>
     /// Evaluates minimal run-level quality signals. Optional <paramref name="plan"/> enables plan-shape warnings.
     /// </summary>
-    public static RunQualitySummary Evaluate(AgentRun run, bool requireCompleted = true, AgentPlan? plan = null)
+    public static RunQualitySummary Evaluate(
+        AgentRun run,
+        bool requireCompleted = true,
+        AgentPlan? plan = null,
+        RunQualityGateOptions? quality = null)
     {
         var violations = new List<string>();
         var warnings = new List<string>();
@@ -45,6 +51,12 @@ public static class RunQualityGateEvaluator
             && plan.Steps.Any(s => s.Status == AgentPlanStepStatus.Failed))
         {
             warnings.Add("COMPLETED_RUN_WITH_FAILED_PLAN_STEP");
+        }
+
+        if (quality?.WarnOnExternalAgentOutputUnreviewed == true
+            && run.Trace.Any(e => e.Kind == TraceEventKind.ExternalAgentInvocationCompleted))
+        {
+            warnings.Add("EXTERNAL_AGENT_OUTPUT_UNREVIEWED");
         }
 
         return new RunQualitySummary(violations.Count == 0, violations, warnings);

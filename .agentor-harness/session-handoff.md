@@ -1,19 +1,23 @@
-# Session handoff
+﻿# Session handoff
 
 ## Completed this session
 
-- **Phase 8 (PR36–PR40)**: MCP (`IMcpRegistryClient`, `FakeMcpRegistryClient`, `McpToolExecutor`, registry binding); observability (`AgentorDiagnostics`, middleware, JSON logging, tests); deployment (`Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml`, `scripts/smoke.ps1`); RC defaults (`0.1.0-rc.1`) and `docs/ROADMAP.md`.
+- **Phase 9 (PR41–PR45)**: External-agent port (`IExternalAgentProtocolClient`) and deterministic fakes (`FakeExternalAgentProtocolClient`, `FakeA2AExternalAgentClient`); Contracts DTOs; `external-agent.discover` / `external-agent.invoke` tools registered in `ToolRegistry.CreateDefault`; `TraceEventKind` external-agent kinds; `RunManifest` **v1.2** + `ExternalAgentTelemetryAggregator`; `ToolExecutionPipeline` / coordinator traces; `RunEvaluationHarness` external invocation counts; `RunQualityGateEvaluator` optional warning `EXTERNAL_AGENT_OUTPUT_UNREVIEWED`; fixtures `fixtures/eval/external-agent-one-call.json`; tests updated (including `PlanInputBuilder` UTF-8 restore).
 
 ## Harness
 
-- `.agentor-harness/feature-list.json` — Phase 8 acceptance rows; `harnessPass`: PR40.
-- `.agentor-harness/verification-log.md` — per-PR verification blocks.
+- `.agentor-harness/feature-list.json` — Phase 9 rows appended; `harnessPass`: **PR45**.
+- `.agentor-harness/verification-log.md` — Phase 9 verification block appended.
+
+## Boundary
+
+No real A2A/ACP/HTTP/WebSocket transports; external protocols stay in Infrastructure/Contracts adapters; Domain has no protocol SDK types.
 
 ## Note on source encoding
 
-Several `.cs` files must remain **UTF-8** (not UTF-16). If the IDE saves UTF-16, run the UTF-16-to-UTF-8 conversion script or rewrite affected files.
+Keep `.cs` / JSON as **UTF-8**. If tooling writes UTF-16, rewrite via PowerShell `Set-Content -Encoding utf8` or Python `encoding="utf-8"`.
 
 ## Next agent
 
-- Optional: run `docker build` locally; wire OTLP exporter when infrastructure is chosen.
-- Post-v0.1 planning only after tag.
+- Proceed with Phase 10 scope from `PR_INDEX_41_75.md`.
+- Optional: expand eval fixtures if new trace shapes change counts.

@@ -4,6 +4,7 @@ using Agentor.Domain.Enums;
 using Agentor.Infrastructure;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.Mcp;
+using Agentor.Infrastructure.ExternalAgents;
 using Agentor.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -109,7 +110,7 @@ public sealed class EfCoreAgentRunRepositoryTests
 
         var clock = new SystemClock();
         var fake = new FakeToolExecutor();
-        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient());
+        var registry = ToolRegistry.CreateDefault(fake, new FakeModelGatewayClient(), new FakeMcpRegistryClient(), new FakeA2AExternalAgentClient());
         var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
         var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
         var handler = new StartAgentRunHandler(repo, policy, registry, pipeline, clock);

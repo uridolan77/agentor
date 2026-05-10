@@ -22,5 +22,6 @@ public sealed record RunManifestDto(
     string? PrimaryModelId,
     string? PrimaryPromptProfileRef,
     string? PrimaryModelProfileRef,
+    int ExternalAgentInvocationCompletedCount,
     string ManifestVersion,
     string ContentHash);

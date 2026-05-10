@@ -1,3 +1,4 @@
+using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
@@ -350,6 +351,14 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
         if (policyDecision.Outcome == PolicyDecisionOutcome.Deny)
         {
+            if (ExternalAgentToolKeys.IsExternalAgentTool(toolKey))
+            {
+                run.RecordTrace(
+                    TraceEventKind.ExternalAgentInvocationDenied,
+                    "External-agent tool denied by policy (not executed).",
+                    _clock.UtcNow,
+                    TraceData(run, plan, ps, "toolKey", toolKey, "reasonCode", policyDecision.ReasonCode));
+            }
             toolCall.Deny(policyDecision.Reason, _clock.UtcNow);
             runStep.AddToolCall(toolCall);
             ps.Status = AgentPlanStepStatus.Failed;
@@ -371,6 +380,14 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
         if (policyDecision.Outcome == PolicyDecisionOutcome.RequiresReview)
         {
+            if (ExternalAgentToolKeys.IsExternalAgentTool(toolKey))
+            {
+                run.RecordTrace(
+                    TraceEventKind.ExternalAgentInvocationRequiresReview,
+                    "External-agent tool requires review (not executed).",
+                    _clock.UtcNow,
+                    TraceData(run, plan, ps, "toolKey", toolKey, "reasonCode", policyDecision.ReasonCode));
+            }
             toolCall.MarkRequiresReview(policyDecision.Reason, _clock.UtcNow);
             runStep.AddToolCall(toolCall);
             runStep.MarkRequiresReview(_clock.UtcNow);
@@ -481,6 +498,14 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
         if (policyDecision.Outcome == PolicyDecisionOutcome.Deny)
         {
+            if (ExternalAgentToolKeys.IsExternalAgentTool(toolKey))
+            {
+                run.RecordTrace(
+                    TraceEventKind.ExternalAgentInvocationDenied,
+                    "External-agent tool denied by policy (not executed).",
+                    _clock.UtcNow,
+                    TraceData(run, plan, ps, "toolKey", toolKey, "reasonCode", policyDecision.ReasonCode));
+            }
             toolCall.Deny(policyDecision.Reason, _clock.UtcNow);
             runStep.AddToolCall(toolCall);
             ps.Status = AgentPlanStepStatus.Failed;
@@ -514,6 +539,14 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
         if (policyDecision.Outcome == PolicyDecisionOutcome.RequiresReview)
         {
+            if (ExternalAgentToolKeys.IsExternalAgentTool(toolKey))
+            {
+                run.RecordTrace(
+                    TraceEventKind.ExternalAgentInvocationRequiresReview,
+                    "External-agent tool requires review (not executed).",
+                    _clock.UtcNow,
+                    TraceData(run, plan, ps, "toolKey", toolKey, "reasonCode", policyDecision.ReasonCode));
+            }
             toolCall.MarkRequiresReview(policyDecision.Reason, _clock.UtcNow);
             runStep.AddToolCall(toolCall);
             runStep.MarkRequiresReview(_clock.UtcNow);

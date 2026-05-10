@@ -1,0 +1,23 @@
+﻿{
+  "schemaVersion": 3,
+  "kind": "RunEvaluationHarness",
+  "agentName": "Eval",
+  "objective": "obj",
+  "traceId": "eval-external-agent-1",
+  "recipeName": "one",
+  "recipeVersion": "1",
+  "toolStepId": "s1",
+  "toolStepOrder": 1,
+  "toolKey": "external-agent.invoke",
+  "toolStepParameters": {
+    "agentKey": "alpha-agent",
+    "capabilityKey": "reply"
+  },
+  "expectedSnapshot": {
+    "runStatus": "Completed",
+    "traceEventCount": 14,
+    "toolCallCount": 1,
+    "planStepCount": 1,
+    "externalAgentInvocationCompletedCount": 1
+  }
+}

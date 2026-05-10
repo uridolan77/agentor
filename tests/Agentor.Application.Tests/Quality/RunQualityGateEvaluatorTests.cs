@@ -113,4 +113,35 @@ public sealed class RunQualityGateEvaluatorTests
         Assert.True(summary.Passed);
         Assert.Contains("COMPLETED_RUN_WITH_FAILED_PLAN_STEP", summary.Warnings);
     }
+
+    [Fact]
+    public void Evaluate_WarnOnExternalAgentOutputUnreviewed_EmitsWarningWhenExternalInvocationCompleted()
+    {
+        var runId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var trace = new List<ExecutionTraceEvent>
+        {
+            new(Guid.NewGuid(), runId, TraceEventKind.RunStarted, "Agent run started.", now),
+            new(Guid.NewGuid(), runId, TraceEventKind.ExternalAgentInvocationCompleted, "External agent invocation completed.", now),
+            new(Guid.NewGuid(), runId, TraceEventKind.RunCompleted, "Agent run completed.", now)
+        };
+        var run = AgentRun.Reconstitute(
+            runId,
+            Guid.NewGuid(),
+            "a",
+            "o",
+            "t",
+            AgentRunStatus.Completed,
+            now,
+            now,
+            null,
+            [],
+            trace);
+
+        var summary = RunQualityGateEvaluator.Evaluate(
+            run,
+            quality: new RunQualityGateOptions(WarnOnExternalAgentOutputUnreviewed: true));
+        Assert.True(summary.Passed);
+        Assert.Contains("EXTERNAL_AGENT_OUTPUT_UNREVIEWED", summary.Warnings);
+    }
 }

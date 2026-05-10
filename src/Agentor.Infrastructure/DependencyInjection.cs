@@ -2,6 +2,7 @@ using System.Linq;
 using Agentor.Application.Abstractions;
 using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
+using Agentor.Infrastructure.ExternalAgents;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -25,12 +26,14 @@ public static class DependencyInjection
         services.AddSingleton<IToolRegistry>(sp => ToolRegistry.CreateDefault(
             sp.GetRequiredService<FakeToolExecutor>(),
             sp.GetRequiredService<IModelGatewayClient>(),
-            sp.GetRequiredService<IMcpRegistryClient>()));
+            sp.GetRequiredService<IMcpRegistryClient>(),
+            sp.GetRequiredService<IExternalAgentProtocolClient>()));
         services.AddScoped<IPolicyEvaluator, RuntimePolicyEvaluator>();
         services.AddSingleton<IToolExecutionPipeline, ToolExecutionPipeline>();
         services.AddSingleton<IKnowledgeStateClient, FakeKnowledgeStateClient>();
         services.AddSingleton<IModelGatewayClient, FakeModelGatewayClient>();
         services.AddSingleton<IMcpRegistryClient, FakeMcpRegistryClient>();
+        services.AddSingleton<IExternalAgentProtocolClient, FakeA2AExternalAgentClient>();
         services.AddSingleton<InMemorySkillPackageCatalog>();
         services.AddSingleton<ISkillPackageCatalog>(sp => sp.GetRequiredService<InMemorySkillPackageCatalog>());
 
