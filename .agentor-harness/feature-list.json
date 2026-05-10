@@ -1,6 +1,6 @@
 {
     "phase":  20,
-    "title":  "Phase 20 durable operational runtime (PR96-PR100) + PR100.5 reconciliation hardening",
+    "title":  "Phase 20 durable operational runtime (PR96-PR100) + PR100.5 reconciliation hardening + PR100.6 atomic claim hardening",
     "harnessPass":  "PR100.5",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",

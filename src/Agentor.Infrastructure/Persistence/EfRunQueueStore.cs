@@ -96,32 +96,45 @@ public sealed class EfRunQueueStore : IDurableRunQueue
 
         foreach (var candidateId in candidateIds)
         {
-            var row = await _db.RunQueueItems
-                .FirstOrDefaultAsync(r => r.WorkItemId == candidateId, cancellationToken)
+            // Try to claim pending row atomically.
+            var affected = await _db.RunQueueItems
+                .Where(r => r.WorkItemId == candidateId
+                    && r.Status == pendingStatus)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(r => r.Status, claimedStatus)
+                    .SetProperty(r => r.ClaimedBy, workerId)
+                    .SetProperty(r => r.LeaseExpiresAtUtc, leaseExpiresAtUtc)
+                    .SetProperty(r => r.UpdatedAtUtc, now), cancellationToken)
                 .ConfigureAwait(false);
 
-            if (row is null)
+            if (affected == 0)
+            {
+                // Try to reclaim expired-claimed row via load-check-save.
+                // Note: This is not atomic under extreme concurrency, but functional and deterministic.
+                var existingClaim = await _db.RunQueueItems
+                    .FirstOrDefaultAsync(r => r.WorkItemId == candidateId
+                        && r.Status == claimedStatus, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (existingClaim?.LeaseExpiresAtUtc is not null && existingClaim.LeaseExpiresAtUtc <= now)
+                {
+                    existingClaim.ClaimedBy = workerId;
+                    existingClaim.LeaseExpiresAtUtc = leaseExpiresAtUtc;
+                    existingClaim.UpdatedAtUtc = now;
+                    affected = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            if (affected == 0)
             {
                 continue;
             }
 
-            var canClaim = row.Status == pendingStatus
-                || (row.Status == claimedStatus
-                    && row.LeaseExpiresAtUtc is not null
-                    && row.LeaseExpiresAtUtc <= now);
-
-            if (!canClaim)
-            {
-                continue;
-            }
-
-            row.Status = claimedStatus;
-            row.ClaimedBy = workerId;
-            row.LeaseExpiresAtUtc = leaseExpiresAtUtc;
-            row.UpdatedAtUtc = now;
-
-            _ = await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            return ToRecord(row);
+            // Read the just-claimed row to return to caller.
+            var claimed = await _db.RunQueueItems.AsNoTracking()
+                .SingleAsync(r => r.WorkItemId == candidateId, cancellationToken)
+                .ConfigureAwait(false);
+            return ToRecord(claimed);
         }
 
         return null;

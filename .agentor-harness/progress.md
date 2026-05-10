@@ -1,5 +1,36 @@
 # Agentor harness progress
 
+## Phase 20 PR100.6 — Attempted Atomic Claim Hardening (2026-05-10)
+
+**Status**: Reverted to PR100.5 baseline due to SQLite LINQ translation limitations.
+
+**Work Attempted**:
+- Refactored `EfRunQueueStore.TryClaimByIdsAsync` from tracked-entity load-check-save to fully atomic `ExecuteUpdateAsync`
+- Complex WHERE predicate: `Status == Pending OR (Status == Claimed AND LeaseExpiresAtUtc <= now)`
+- Multiple SetProperty calls in single transaction
+
+**Issue Discovered**:
+- SQLite EF Core provider cannot translate complex OR expressions combined with nullable DateTimeOffset comparisons
+- Error: `System.InvalidOperationException: The LINQ expression ... could not be translated`
+- Affects both: (1) OR + nullable nullable check, (2) multiple SetProperty chainings
+- Other EF providers (SQL Server, PostgreSQL) likely support this pattern
+
+**Resolution**: Retained PR100.5 implementation with hybrid approach:
+- **Pending claims**: Atomic via simple `ExecuteUpdateAsync` (WHERE: `Status == Pending`)
+- **Expired reclaim**: Load-check-save with functional but non-atomic semantics
+- Result: 373 tests all passing (72 + 128 + 13 + 71 + 89)
+
+**Verification**:
+- `dotnet restore` ✓
+- `dotnet build --no-restore` ✓ (0 errors, 0 warnings)
+- `dotnet test --no-build` ✓ (373 passed, 0 failed)
+- `verify-harness.ps1 -ExpectedPhase 20 -ExpectedHarnessPass PR100.5` ✓
+- `verify-repo-clean.ps1` ✓
+
+**Scope Guard**: Phase 21 not started.
+
+**Lessons Learned**: SQLite testing masks database-specific LINQ translation limits not visible until SQL Server deployment. Complex predicates should be split into separate queries per EF provider compatibility.
+
 ## Phase 20 PR100.5 (2026-05-10)
 
 Completed **Phase 20 reconciliation, ops security, and durability hardening**:
