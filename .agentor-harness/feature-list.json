@@ -1,6 +1,6 @@
 {
   "phase": 4,
-  "harnessRevision": "PR20.5",
+  "harnessRevision": "PR20.6",
   "encoding": "UTF-8",
   "prs": [
     {
@@ -59,13 +59,13 @@
           "id": "PR16-009",
           "description": "HTTP API contract tests for recipe/plan endpoints",
           "passes": false,
-          "evidence": "TODO — no Agentor.Api.Tests coverage for plan execution yet"
+          "evidence": "TODO \u2014 no Agentor.Api.Tests coverage for plan execution yet"
         },
         {
           "id": "PR16-010",
           "description": "Persistence round-trip tests for plans/recipes",
           "passes": false,
-          "evidence": "TODO — no repository integration tests for coordination artifacts"
+          "evidence": "TODO \u2014 no repository integration tests for coordination artifacts"
         }
       ]
     },
@@ -111,15 +111,15 @@
         },
         {
           "id": "PR17-007",
-          "description": "ExecutionTrace event order matches step order (strict sequence assertions)",
-          "passes": false,
-          "evidence": "TODO — tests assert kinds/counts, not full ordered trace transcript"
+          "description": "Plan coordination trace kinds appear in strict sequential order for two-step success",
+          "passes": true,
+          "evidence": "SequentialAgentPlanExecutorTests.TwoStepPlanSuccess_PlanTraceKindsAppearInStrictCoordinatorOrder"
         },
         {
           "id": "PR17-008",
           "description": "End-to-end API test for plan execution command",
           "passes": false,
-          "evidence": "TODO — ExecuteAgentPlan path covered in Application.Tests only"
+          "evidence": "TODO \u2014 ExecuteAgentPlan path covered in Application.Tests only"
         }
       ]
     },
@@ -149,7 +149,7 @@
           "id": "PR18-004",
           "description": "Exhaustive matrix of all StepGuardKind combinations with policy outcomes",
           "passes": false,
-          "evidence": "TODO — partial coverage via domain + executor tests"
+          "evidence": "TODO \u2014 partial coverage via domain + executor tests"
         }
       ]
     },
@@ -183,15 +183,15 @@
         },
         {
           "id": "PR19-005",
-          "description": "Full FailureHandlingPolicy matrix (all policies x all tool/policy outcomes)",
-          "passes": false,
-          "evidence": "TODO — spot coverage only"
+          "description": "Partial FailureHandlingPolicy matrix for first-step tool failure (FailFast, ContinueOnFailure, SkipRemaining)",
+          "passes": true,
+          "evidence": "SequentialAgentPlanExecutorTests.FirstStepToolFailure_OnFailurePolicyMatrix"
         },
         {
           "id": "PR19-006",
           "description": "Compensation hook execution (not only trace metadata)",
           "passes": false,
-          "evidence": "TODO — out of PR19 scope / not implemented"
+          "evidence": "TODO \u2014 out of PR19 scope / not implemented"
         }
       ]
     },
@@ -227,13 +227,13 @@
           "id": "PR20-005",
           "description": "All plan steps terminal before run completion (cross-layer invariant)",
           "passes": false,
-          "evidence": "TODO — asserted indirectly via executor + domain tests, no dedicated integration test"
+          "evidence": "TODO \u2014 asserted indirectly via executor + domain tests, no dedicated integration test"
         },
         {
           "id": "PR20-006",
-          "description": "AgentPlanExecutionResult.Success vs ContinueOnFailure / tolerated step failures (contract test)",
-          "passes": false,
-          "evidence": "TODO — documented in code XML and phase-4-evaluator-report; add explicit assertion test before PR21"
+          "description": "AgentPlanExecutionResult.Success can be true with AgentPlanStatus.Failed when ContinueOnFailure tolerates a failed step",
+          "passes": true,
+          "evidence": "SequentialAgentPlanExecutorTests.ContinueOnFailure_CompletedRun_PlanResultSuccess_WithFailedFirstPlanStep"
         }
       ]
     }

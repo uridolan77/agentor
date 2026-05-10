@@ -23,3 +23,20 @@ Commands:
 Results: all succeeded, 0 failed.
 
 Test counts: Domain 23, Application 37, Api 28, Infrastructure 12 (Total 100).
+
+## PR20.6
+
+Phase 4 acceptance test hardening (strict plan trace order, ContinueOnFailure success semantics, partial FailureHandlingPolicy matrix). No PR21 / no Athanor.
+
+Commands:
+
+- dotnet restore Agentor.sln
+- dotnet build Agentor.sln --no-restore
+- dotnet test Agentor.sln --no-build
+
+### PR20.6 verification (2026-05-10)
+
+Results: all succeeded, 0 failed.
+
+Test counts: Domain 23, Application 42, Api 28, Infrastructure 12 (Total 105).
+

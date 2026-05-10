@@ -257,6 +257,173 @@ public sealed class SequentialAgentPlanExecutorTests
         Assert.Contains(run.Trace, e => e.Kind == TraceEventKind.CompensationHookRecorded);
     }
 
+
+    [Fact]
+    public async Task TwoStepPlanSuccess_PlanTraceKindsAppearInStrictCoordinatorOrder()
+    {
+        var clock = new SystemClock();
+        var run = AgentRun.Start(Guid.NewGuid(), "PlanTest", "obj", "trace-order", clock.UtcNow);
+        var recipe = CreateTwoStepRecipe();
+        var plan = AgentPlan.Instantiate(recipe, Guid.NewGuid(), clock.UtcNow);
+
+        var counting = new CountingExecutor();
+        var registry = new ToolRegistry();
+        registry.Register(new ToolDefinition(FakeTool, "t", "d", ToolRiskLevel.Low), counting);
+        var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(
+            registry,
+            policy,
+            clock,
+            new ToolExecutionOptions { MaxAttempts = 1, TimeoutMilliseconds = 500 });
+
+        await executor.ExecuteAsync(run, plan, CancellationToken.None);
+
+        var kinds = run.Trace.Select(e => e.Kind).Where(PlanCoordinationKinds.Contains).ToArray();
+        var expected = new[]
+        {
+            TraceEventKind.PlanExecutionStarted,
+            TraceEventKind.StepGuardEvaluated,
+            TraceEventKind.PlanExecutionStepStarted,
+            TraceEventKind.PolicyEvaluated,
+            TraceEventKind.ToolCallStarted,
+            TraceEventKind.ToolExecutionAttemptStarted,
+            TraceEventKind.ToolExecutionAttemptFinished,
+            TraceEventKind.PlanExecutionStepCompleted,
+            TraceEventKind.StepGuardEvaluated,
+            TraceEventKind.PlanExecutionStepStarted,
+            TraceEventKind.PolicyEvaluated,
+            TraceEventKind.ToolCallStarted,
+            TraceEventKind.ToolExecutionAttemptStarted,
+            TraceEventKind.ToolExecutionAttemptFinished,
+            TraceEventKind.PlanExecutionStepCompleted,
+            TraceEventKind.PlanExecutionCompleted,
+        };
+        Assert.Equal(expected, kinds);
+    }
+
+    [Fact]
+    public async Task ContinueOnFailure_CompletedRun_PlanResultSuccess_WithFailedFirstPlanStep()
+    {
+        var clock = new SystemClock();
+        var run = AgentRun.Start(Guid.NewGuid(), "PlanTest", "obj", "trace-cof-sem", clock.UtcNow);
+        var ok = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "cof-sem",
+            AgentRecipeVersion.Parse("1"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition("a", 1, RecipeStepKind.Tool, FakeTool, OnFailure: FailureHandlingPolicy.ContinueOnFailure),
+                new RecipeStepDefinition(
+                    "b",
+                    2,
+                    RecipeStepKind.Tool,
+                    FakeTool,
+                    Guard: new StepGuardDefinition(StepGuardKind.PreviousStepFailed),
+                    OnFailure: FailureHandlingPolicy.FailFast)
+            ],
+            null,
+            out var recipe,
+            out _);
+        Assert.True(ok);
+        Assert.NotNull(recipe);
+        var plan = AgentPlan.Instantiate(recipe, Guid.NewGuid(), clock.UtcNow);
+
+        var counting = new FailsOnceThenSucceedsExecutor();
+        var registry = new ToolRegistry();
+        registry.Register(new ToolDefinition(FakeTool, "t", "d", ToolRiskLevel.Low), counting);
+        var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(
+            registry,
+            policy,
+            clock,
+            new ToolExecutionOptions { MaxAttempts = 1, TimeoutMilliseconds = 500 });
+
+        var result = await executor.ExecuteAsync(run, plan, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(AgentRunStatus.Completed, result.RunStatus);
+        Assert.Equal(AgentPlanStatus.Failed, result.PlanStatus);
+        Assert.Equal(2, counting.Invocations);
+
+        var stepA = Assert.Single(result.StepResults, s => s.SourceStepId == "a");
+        var stepB = Assert.Single(result.StepResults, s => s.SourceStepId == "b");
+        Assert.Equal(AgentPlanStepStatus.Failed, stepA.FinalStatus);
+        Assert.Equal(AgentPlanStepStatus.Completed, stepB.FinalStatus);
+    }
+
+    [Theory]
+    [InlineData(FailureHandlingPolicy.FailFast, 1, AgentRunStatus.Failed, AgentPlanStepStatus.Failed, AgentPlanStepStatus.Pending)]
+    [InlineData(FailureHandlingPolicy.ContinueOnFailure, 2, AgentRunStatus.Completed, AgentPlanStepStatus.Failed, AgentPlanStepStatus.Completed)]
+    [InlineData(FailureHandlingPolicy.SkipRemaining, 1, AgentRunStatus.Completed, AgentPlanStepStatus.Failed, AgentPlanStepStatus.Skipped)]
+    public async Task FirstStepToolFailure_OnFailurePolicyMatrix(
+        FailureHandlingPolicy firstOnFailure,
+        int expectedInvocations,
+        AgentRunStatus expectedRunStatus,
+        AgentPlanStepStatus expectedFirstStatus,
+        AgentPlanStepStatus expectedSecondStatus)
+    {
+        var clock = new SystemClock();
+        var run = AgentRun.Start(Guid.NewGuid(), "PlanTest", "obj", $"trace-matrix-{firstOnFailure}", clock.UtcNow);
+        var ok = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "matrix",
+            AgentRecipeVersion.Parse("1"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition("a", 1, RecipeStepKind.Tool, FakeTool, OnFailure: firstOnFailure),
+                new RecipeStepDefinition("b", 2, RecipeStepKind.Tool, FakeTool, Guard: new StepGuardDefinition(StepGuardKind.Always))
+            ],
+            null,
+            out var recipe,
+            out _);
+        Assert.True(ok);
+        Assert.NotNull(recipe);
+        var plan = AgentPlan.Instantiate(recipe, Guid.NewGuid(), clock.UtcNow);
+
+        IToolExecutor toolExecutor = firstOnFailure == FailureHandlingPolicy.FailFast
+            ? new AlwaysFailExecutor()
+            : new FailsOnceThenSucceedsExecutor();
+
+        var registry = new ToolRegistry();
+        registry.Register(new ToolDefinition(FakeTool, "t", "d", ToolRiskLevel.Low), toolExecutor);
+        var policy = new RuntimePolicyEvaluator(registry, clock, Microsoft.Extensions.Options.Options.Create(new RuntimePolicyOptions()));
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(
+            registry,
+            policy,
+            clock,
+            new ToolExecutionOptions { MaxAttempts = 1, TimeoutMilliseconds = 500 });
+
+        await executor.ExecuteAsync(run, plan, CancellationToken.None);
+
+        var invocations = toolExecutor switch
+        {
+            AlwaysFailExecutor a => a.Invocations,
+            FailsOnceThenSucceedsExecutor f => f.Invocations,
+            _ => throw new InvalidOperationException()
+        };
+        Assert.Equal(expectedInvocations, invocations);
+        Assert.Equal(expectedRunStatus, run.Status);
+        Assert.Equal(expectedFirstStatus, plan.Steps[0].Status);
+        Assert.Equal(expectedSecondStatus, plan.Steps[1].Status);
+    }
+
+    private static readonly HashSet<TraceEventKind> PlanCoordinationKinds =
+    [
+        TraceEventKind.PlanExecutionStarted,
+        TraceEventKind.StepGuardEvaluated,
+        TraceEventKind.PlanStepSkipped,
+        TraceEventKind.PlanExecutionStepStarted,
+        TraceEventKind.PolicyEvaluated,
+        TraceEventKind.ToolCallStarted,
+        TraceEventKind.ToolExecutionAttemptStarted,
+        TraceEventKind.ToolExecutionAttemptFinished,
+        TraceEventKind.PlanFailureDecisionRecorded,
+        TraceEventKind.PlanExecutionStepCompleted,
+        TraceEventKind.PlanExecutionRequiresReview,
+        TraceEventKind.PlanExecutionFailed,
+        TraceEventKind.CompensationHookRecorded,
+        TraceEventKind.PlanExecutionCompleted,
+    ];
     private sealed class AlwaysFailExecutor : IToolExecutor
     {
         public int Invocations;
