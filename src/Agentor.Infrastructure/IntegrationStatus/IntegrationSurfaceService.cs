@@ -92,8 +92,10 @@ public sealed class IntegrationSurfaceService(
         switch (family.Mode)
         {
             case IntegrationAdapterMode.Fake:
-            case IntegrationAdapterMode.Disabled:
                 return new IntegrationAdapterStatusDto(mode, Ready: true, Detail: null);
+
+            case IntegrationAdapterMode.Disabled:
+                return new IntegrationAdapterStatusDto(mode, Ready: true, Detail: "disabled");
 
             case IntegrationAdapterMode.Http:
                 var probe = await ProbeHttpAsync(family, httpClientName, cancellationToken);
@@ -127,6 +129,11 @@ public sealed class IntegrationSurfaceService(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return (false, $"http_{(int)response.StatusCode}");
+            }
 
             return (true, null);
         }

@@ -1,7 +1,7 @@
-﻿{
-    "phase":  9,
-    "title":  "External agent protocol adapters",
-    "harnessPass":  "PR45",
+{
+    "phase":  10,
+    "title":  "Real service adapters (Phase 10) + harness hardening",
+    "harnessPass":  "PR50.5",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-10",
     "notes":  [
@@ -16,7 +16,9 @@
                   "Phase 8 PR38: ActivitySource + request counter; JSON console logging in Development; docs/OBSERVABILITY.md; ObservabilityTests.",
                   "Phase 8 PR39: Dockerfile (publish Agentor.Api), docker-compose.yml, .github/workflows/ci.yml, scripts/smoke.ps1, .dockerignore.",
                   "Phase 8 PR40: appsettings + AgentorRuntimeOptions default version 0.1.0-rc.1; docs/ROADMAP.md v0.1 RC note.",
-                  "Phase 9 PR41-PR45: IExternalAgentProtocolClient + deterministic fakes (generic + A2A-styled); external-agent.discover / external-agent.invoke via ToolRegistry + policy + pipeline; RunManifest v1.2 external-agent telemetry; trace kinds + SequentialAgentPlanExecutor deny/review paths; RunEvaluationHarness snapshot external counts + RunQualityGateEvaluator EXTERNAL_AGENT_OUTPUT_UNREVIEWED; fixtures eval/external-agent-one-call.json; no real network transports."
+                  "Phase 9 PR41-PR45: IExternalAgentProtocolClient + deterministic fakes (generic + A2A-styled); external-agent.discover / external-agent.invoke via ToolRegistry + policy + pipeline; RunManifest v1.2 external-agent telemetry; trace kinds + SequentialAgentPlanExecutor deny/review paths; RunEvaluationHarness snapshot external counts + RunQualityGateEvaluator EXTERNAL_AGENT_OUTPUT_UNREVIEWED; fixtures eval/external-agent-one-call.json; no real network transports.",
+                  "Phase 10 PR46-PR50: Agentor:Integrations modes Fake|Http|Disabled; HTTP adapters (Athanor knowledge state, Conexus model gateway, MCP registry, ExternalAgents protocol); named HttpClients; /health liveness-only; /ready and GET /api/v1/integrations/status via IntegrationSurfaceService.",
+                  "PR50.5: HTTP readiness probes fail on non-2xx; Disabled adapters report detail=disabled while Ready=true; API + Infrastructure tests; harness bumped to phase 10."
               ],
     "acceptanceItems":  [
                             {
@@ -634,6 +636,104 @@
                                 "description":  "RunEvaluationHarnessTests cover snapshots + external fixture",
                                 "passes":  true,
                                 "evidence":  "tests/Agentor.Application.Tests/Evaluation/RunEvaluationHarnessTests.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "AgentorIntegrationsOptions configures Athanor/Conexus/Mcp/ExternalAgents with Fake|Http|Disabled",
+                                "pr":  46,
+                                "id":  "PR46-001",
+                                "evidence":  "src/Agentor.Infrastructure/Options/AgentorIntegrationsOptions.cs; appsettings.json defaults Fake"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Http mode requires BaseUrl per integration family",
+                                "pr":  46,
+                                "id":  "PR46-002",
+                                "evidence":  "IntegrationOptionsValidatorTests.Validate_HttpModeWithoutBaseUrl_Fails"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "DI wires fake/http/disabled implementations and named integration HttpClients",
+                                "pr":  46,
+                                "id":  "PR46-003",
+                                "evidence":  "src/Agentor.Infrastructure/DependencyInjection.cs"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "HttpKnowledgeStateClient exercises Athanor-shaped GET paths",
+                                "pr":  47,
+                                "id":  "PR47-001",
+                                "evidence":  "HttpKnowledgeStateClientTests"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Canonical lookup returns null on HTTP 404",
+                                "pr":  47,
+                                "id":  "PR47-002",
+                                "evidence":  "HttpKnowledgeStateClientTests.LookupCanonicalEntryAsync_ReturnsNull_On404"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "HttpModelGatewayClient POST v1/model/complete",
+                                "pr":  48,
+                                "id":  "PR48-001",
+                                "evidence":  "HttpModelGatewayClientTests.CompleteAsync_PostsToV1ModelComplete"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "HttpMcpRegistryClient lists servers/tools and invokes via HTTP JSON wire",
+                                "pr":  49,
+                                "id":  "PR49-001",
+                                "evidence":  "HttpMcpRegistryClientExtraTests"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "HttpExternalAgentProtocolClient lists capabilities and posts invocations",
+                                "pr":  49,
+                                "id":  "PR49-002",
+                                "evidence":  "HttpExternalAgentProtocolClientExtraTests"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "GET /health is liveness-only (returns alive)",
+                                "pr":  50,
+                                "id":  "PR50-001",
+                                "evidence":  "IntegrationEndpointsTests.GetHealth_IsLivenessOnly_ReturnsOk"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "GET /ready and GET /api/v1/integrations/status expose modes without secrets",
+                                "pr":  50,
+                                "id":  "PR50-002",
+                                "evidence":  "IntegrationEndpointsTests (fake defaults; substring guards)"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "HTTP integration probes treat unreachable host or non-2xx response as not ready",
+                                "pr":  50,
+                                "id":  "PR50-003",
+                                "evidence":  "IntegrationEndpointsTests; IntegrationSurfaceServiceTests.GetStatusAsync_HttpProbe_ReturnsNotReady_On500"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Harness accepts Phase 10 and records verification",
+                                "pr":  50,
+                                "id":  "PR50.5-001",
+                                "evidence":  ".agentor-harness/feature-list.json phase 10 harnessPass PR50.5"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "Disabled integration reports Ready=true with detail=disabled",
+                                "pr":  50,
+                                "id":  "PR50.5-002",
+                                "evidence":  "IntegrationEndpointsTests.GetIntegrationsStatus_DisabledAdapter_HasDisabledDetail; IntegrationSurfaceServiceTests.GetStatusAsync_DisabledFamily_HasDisabledDetail"
+                            },
+                            {
+                                "passes":  true,
+                                "description":  "IKnowledgeStateClient still exposes no Canonize operation",
+                                "pr":  50,
+                                "id":  "PR50.5-003",
+                                "evidence":  "NonCanonizationBoundaryTests.IKnowledgeStateClient_has_no_Canonize_operations"
                             }
                         ]
 }

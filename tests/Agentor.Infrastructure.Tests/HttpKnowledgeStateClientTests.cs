@@ -50,6 +50,36 @@ public sealed class HttpKnowledgeStateClientTests
         Assert.Equal(snapshot.SnapshotId, result!.SnapshotId);
     }
 
+    [Fact]
+    public async Task LookupCanonicalEntryAsync_ReturnsNull_On404()
+    {
+        var projectId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+        var handler = new StubHandler(req =>
+        {
+            Assert.Equal(HttpMethod.Get, req.Method);
+            Assert.Contains("/canonical/", req.RequestUri!.PathAndQuery, StringComparison.Ordinal);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://athanor.test/") };
+
+        var integrationOpts = new AgentorIntegrationsOptions
+        {
+            Athanor = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://athanor.test/" },
+            },
+        };
+
+        var sut = new HttpKnowledgeStateClient(new StubHttpClientFactory(httpClient), new StaticMonitor(integrationOpts));
+
+        var result = await sut.LookupCanonicalEntryAsync(projectId, "my-key", CancellationToken.None);
+
+        Assert.Null(result);
+    }
+
     private sealed class StubHttpClientFactory(HttpClient client) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => client;

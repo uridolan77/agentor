@@ -1,23 +1,24 @@
-﻿# Session handoff
+﻿# Session handoff — PR50.5 (Phase 10 harness + readiness hardening)
 
-## Completed this session
+## Done this pass
 
-- **Phase 9 (PR41–PR45)**: External-agent port (`IExternalAgentProtocolClient`) and deterministic fakes (`FakeExternalAgentProtocolClient`, `FakeA2AExternalAgentClient`); Contracts DTOs; `external-agent.discover` / `external-agent.invoke` tools registered in `ToolRegistry.CreateDefault`; `TraceEventKind` external-agent kinds; `RunManifest` **v1.2** + `ExternalAgentTelemetryAggregator`; `ToolExecutionPipeline` / coordinator traces; `RunEvaluationHarness` external invocation counts; `RunQualityGateEvaluator` optional warning `EXTERNAL_AGENT_OUTPUT_UNREVIEWED`; fixtures `fixtures/eval/external-agent-one-call.json`; tests updated (including `PlanInputBuilder` UTF-8 restore).
+- **ProbeHttpAsync**: non-2xx HTTP responses are not ready (`http_{statusCode}`).
+- **Disabled** mode: `Ready: true`, **`detail: "disabled"`**.
+- **Tests**: `IntegrationEndpointsTests`, `IntegrationSurfaceServiceTests`, HTTP adapter stub tests, canonical 404 on `HttpKnowledgeStateClient`; Canonize boundary stays in `NonCanonizationBoundaryTests`.
+- **Harness**: phase **10**, harnessPass **PR50.5**; `verification-log.md` documents **186** tests.
 
-## Harness
+## Verification (2026-05-10)
 
-- `.agentor-harness/feature-list.json` — Phase 9 rows appended; `harnessPass`: **PR45**.
-- `.agentor-harness/verification-log.md` — Phase 9 verification block appended.
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
 
-## Boundary
+## Windows UTF-16 gotcha
 
-No real A2A/ACP/HTTP/WebSocket transports; external protocols stay in Infrastructure/Contracts adapters; Domain has no protocol SDK types.
+If `.cs` files show `Unexpected character '\0'` from the IDE saving UTF-16, re-save as UTF-8 (no BOM) or convert via PowerShell Unicode reader + UTF-8 writer.
 
-## Note on source encoding
+## Next
 
-Keep `.cs` / JSON as **UTF-8**. If tooling writes UTF-16, rewrite via PowerShell `Set-Content -Encoding utf8` or Python `encoding="utf-8"`.
-
-## Next agent
-
-- Proceed with Phase 10 scope from `PR_INDEX_41_75.md`.
-- Optional: expand eval fixtures if new trace shapes change counts.
+**PR51** — tenant/project/workspace identity per `docs/planning/pr41-pr75/PR_INDEX_41_75.md`.

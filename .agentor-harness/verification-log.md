@@ -1,4 +1,21 @@
-﻿# Agentor harness - verification log
+# Agentor harness - verification log
+
+## Phase 10 + PR50.5 verification (2026-05-10)
+
+Commands (repository root):
+
+```
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+```
+
+Results: restore OK; build OK; test OK.
+
+Counts: **Domain 33**, **Application 66**, **Infrastructure 46**, **Api 41** (total **186**).
+
+Scope: `Agentor:Integrations` Fake/Http/Disabled; HTTP adapters (Athanor, Conexus, MCP, ExternalAgents); `GET /health` liveness; `GET /ready` + `GET /api/v1/integrations/status`; `IntegrationSurfaceService` HTTP probes require success status codes; Disabled adapters surface `detail: "disabled"`; tests in `IntegrationEndpointsTests`, `IntegrationSurfaceServiceTests`, HTTP client stub tests; `feature-list.json` phase **10**, harnessPass **PR50.5**. No Phase 11 identity/governance code in this pass.
+
 
 ## PR25.5 verification (2026-05-10)
 
