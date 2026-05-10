@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Json;
 using Agentor.Application.Abstractions;
 using Agentor.Application.Mcp;
@@ -23,7 +22,7 @@ public sealed class HttpMcpRegistryClient(
     {
         EnsureHttpMode();
         using var response = await Client().GetAsync("v1/servers", cancellationToken);
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "MCP", cancellationToken);
         var rows = await response.Content.ReadFromJsonAsync<List<McpServerWire>>(AgentorHttpJson.Options, cancellationToken);
         if (rows is null)
         {
@@ -38,7 +37,7 @@ public sealed class HttpMcpRegistryClient(
         EnsureHttpMode();
         var enc = Uri.EscapeDataString(serverId);
         using var response = await Client().GetAsync($"v1/servers/{enc}/tools", cancellationToken);
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "MCP", cancellationToken);
         var rows = await response.Content.ReadFromJsonAsync<List<McpToolWire>>(AgentorHttpJson.Options, cancellationToken);
         if (rows is null)
         {
@@ -74,7 +73,7 @@ public sealed class HttpMcpRegistryClient(
             content,
             cancellationToken);
 
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "MCP", cancellationToken);
         var body = await response.Content.ReadFromJsonAsync<McpInvokeResponseWire>(AgentorHttpJson.Options, cancellationToken);
         if (body is null)
         {
@@ -95,17 +94,6 @@ public sealed class HttpMcpRegistryClient(
         {
             throw new InvalidOperationException("HttpMcpRegistryClient requires Agentor:Integrations:Mcp:Mode=Http.");
         }
-    }
-
-    private static async Task EnsureSuccess(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        if (response.IsSuccessStatusCode)
-        {
-            return;
-        }
-
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        throw new HttpRequestException($"MCP HTTP {(int)response.StatusCode}: {body[..Math.Min(body.Length, 512)]}");
     }
 
     private sealed record McpServerWire(string Id, string DisplayName);

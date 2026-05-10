@@ -116,6 +116,7 @@ public sealed class HttpExternalAgentProtocolClientExtraTests
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
             sut.ListCapabilitiesAsync(ExternalAgentProtocolKind.A2AStyled));
 
+        Assert.Equal(HttpStatusCode.Forbidden, ex.StatusCode);
         Assert.Contains("403", ex.Message, StringComparison.Ordinal);
     }
 

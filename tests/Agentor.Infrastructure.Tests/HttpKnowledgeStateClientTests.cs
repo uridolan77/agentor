@@ -193,8 +193,43 @@ public sealed class HttpKnowledgeStateClientTests
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
             sut.SubmitCandidateAsync(projectId, runId, submission, CancellationToken.None));
 
+        Assert.Equal(HttpStatusCode.BadGateway, ex.StatusCode);
         Assert.Contains("502", ex.Message, StringComparison.Ordinal);
         Assert.Contains("upstream", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SubmitCandidateAsync_On5xx_redacts_Bearer_in_upstream_body()
+    {
+        var projectId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var runId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var submission = new CandidateKnowledgeSubmissionDto("s", "{}");
+        var secretBody = """{"detail":"Bearer super-secret-token"}""";
+
+        var handler = new StubHandler(_ =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadGateway)
+            {
+                Content = new StringContent(secretBody),
+            }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://athanor.test/") };
+        var integrationOpts = new AgentorIntegrationsOptions
+        {
+            Athanor = new IntegrationFamilyOptions
+            {
+                Mode = IntegrationAdapterMode.Http,
+                Http = new HttpIntegrationOptions { BaseUrl = "http://athanor.test/" },
+            },
+        };
+
+        var sut = new HttpKnowledgeStateClient(new StubHttpClientFactory(httpClient), new StaticMonitor(integrationOpts));
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            sut.SubmitCandidateAsync(projectId, runId, submission, CancellationToken.None));
+
+        Assert.Equal(HttpStatusCode.BadGateway, ex.StatusCode);
+        Assert.DoesNotContain("super-secret", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", ex.Message, StringComparison.Ordinal);
     }
 
     [Fact]

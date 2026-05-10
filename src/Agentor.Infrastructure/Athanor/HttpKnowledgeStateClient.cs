@@ -35,7 +35,7 @@ public sealed class HttpKnowledgeStateClient(
             return null;
         }
 
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "Athanor", cancellationToken);
         return await response.Content.ReadFromJsonAsync<CanonicalSnapshotDto>(AgentorHttpJson.Options, cancellationToken);
     }
 
@@ -54,7 +54,7 @@ public sealed class HttpKnowledgeStateClient(
             return null;
         }
 
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "Athanor", cancellationToken);
         return await response.Content.ReadFromJsonAsync<CanonicalStateEntryDto>(AgentorHttpJson.Options, cancellationToken);
     }
 
@@ -68,7 +68,7 @@ public sealed class HttpKnowledgeStateClient(
             $"v1/projects/{projectId}/evidence/search?query={qs}",
             cancellationToken);
 
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "Athanor", cancellationToken);
         var list = await response.Content.ReadFromJsonAsync<List<EvidenceSearchResultDto>>(AgentorHttpJson.Options, cancellationToken);
         return list ?? [];
     }
@@ -85,7 +85,7 @@ public sealed class HttpKnowledgeStateClient(
             content,
             cancellationToken);
 
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "Athanor", cancellationToken);
         var dto = await response.Content.ReadFromJsonAsync<CandidateSubmissionResultDto>(AgentorHttpJson.Options, cancellationToken);
         return dto ?? throw new InvalidOperationException("Athanor candidate submission returned an empty body.");
     }
@@ -102,7 +102,7 @@ public sealed class HttpKnowledgeStateClient(
             content,
             cancellationToken);
 
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "Athanor", cancellationToken);
         var dto = await response.Content.ReadFromJsonAsync<ReviewQueueResultDto>(AgentorHttpJson.Options, cancellationToken);
         return dto ?? throw new InvalidOperationException("Athanor review queue returned an empty body.");
     }
@@ -116,19 +116,4 @@ public sealed class HttpKnowledgeStateClient(
 
         return httpFactory.CreateClient(HttpClientName);
     }
-
-    private static async Task EnsureSuccess(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        if (response.IsSuccessStatusCode)
-        {
-            return;
-        }
-
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        throw new HttpRequestException(
-            $"Athanor HTTP {(int)response.StatusCode} {response.ReasonPhrase}. Body: {Truncate(body)}");
-    }
-
-    private static string Truncate(string s, int max = 512) =>
-        s.Length <= max ? s : s[..max] + "…";
 }

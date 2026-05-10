@@ -1,5 +1,21 @@
 # Agentor harness progress
 
+## Phase 21 PR105.5 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+- Introduced `Agentor.Infrastructure.Http.IntegrationHttpError` for shared non-2xx handling across integration HTTP adapters.
+- `HttpRequestException` now carries HTTP **`StatusCode`**; messages include redacted + truncated upstream bodies.
+- Documentation and harness updated; Phase 22 not started.
+
+**Verification**:
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **400 passed, 0 failed**
+- `verify-harness.ps1 -ExpectedPhase 21 -ExpectedHarnessPass PR105.5` (Windows PowerShell)
+- `verify-repo-clean.ps1`
+
+**Scope guard**: Phase 22 not started.
+
 ## Phase 21 PR101–PR105 (2026-05-11)
 
 **Status**: Complete.

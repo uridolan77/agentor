@@ -1,11 +1,12 @@
 {
     "phase":  21,
-    "title":  "Phase 21 integration contract conformance (PR101–PR105)",
-    "harnessPass":  "PR105",
+    "title":  "Phase 21 integration contract conformance (PR101–PR105 + PR105.5)",
+    "harnessPass":  "PR105.5",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
-                  "Phase 21 (2026-05-11): Integration HTTP contract test packs — Athanor (HttpKnowledgeStateClientTests + path canonize exclusion), Conexus (HttpModelGatewayClientTests + ModelGatewayToolExecutor declared budget pass-through + HttpModelGatewayClient EnsureSuccess), MCP (HttpMcpRegistryClientExtraTests + ToolRegistryMcpBindingTests + McpDescriptorDomainBoundaryTests), External agents (HttpExternalAgentProtocolClientExtraTests + ExternalAgentInvokeToolExecutorTests + ExternalAgentPolicyPreventsHttpInvocationTests). docs/integrations/compatibility-matrix.md. ModelCallTelemetryAggregator unchanged; evidence ModelCallTelemetryAggregatorTests. Full verification: 394 tests; verify-harness ExpectedPhase 21 PR105; verify-repo-clean.",
+                  "PR105.5 (2026-05-11): Integration HTTP error-shape hardening — shared IntegrationHttpError (ThrowIfUnsuccessfulAsync, RedactAndTruncate) used by Athanor, Conexus, MCP, and external-agent HTTP clients; HttpRequestException.StatusCode populated; upstream bodies truncated and best-effort redacted (Bearer, JSON secret keys, token=apiKey-style pairs). Tests: IntegrationHttpErrorTests; adapter tests assert StatusCode. docs/integrations/compatibility-matrix.md updated. Full verification: 400 tests passed; verify-harness phase 21 PR105.5; verify-repo-clean.",
+                  "Phase 21 (2026-05-11): Integration HTTP contract test packs — Athanor (HttpKnowledgeStateClientTests + path canonize exclusion), Conexus (HttpModelGatewayClientTests + ModelGatewayToolExecutor declared budget pass-through + HttpModelGatewayClient EnsureSuccess), MCP (HttpMcpRegistryClientExtraTests + ToolRegistryMcpBindingTests + McpDescriptorDomainBoundaryTests), External agents (HttpExternalAgentProtocolClientExtraTests + ExternalAgentInvokeToolExecutorTests + ExternalAgentPolicyPreventsHttpInvocationTests). docs/integrations/compatibility-matrix.md. ModelCallTelemetryAggregator unchanged; evidence ModelCallTelemetryAggregatorTests. Superseded for harness pass by PR105.5 error-shape hardening; see PR105.5 note.",
                   "PR100.5 (2026-05-10): Phase 20 reconciliation hardening — added OpsRead permission and enforced it on /api/v1/ops/queue|outbox|leases; Service role explicitly denied OpsRead; ops queue/outbox error fields now sanitized and truncated for secret-safety; EfRunQueueStore claims pending or expired-claimed work only; MarkCompleted/MarkFailed now ownership-checked with worker id in durable queue implementations; OutboxHostedService blocks NoOpOutboxSink outside Development/Test unless OutboxDispatch:AllowNoOpSinkOutsideDevelopment=true. Full verification: restore/build/test and harness scripts passed.",
                   "PR95.5 (2026-05-10): Phase 19 authorization hardening — protected Phase 13 alias endpoints (GET /runs/{runId}/audit-packet requires AuditRead; POST /reviews/{runId}/decisions requires GovernanceReviewWrite); guarded GET /reviews/pending with GovernanceReviewRead; Jwt actor role claim now strict (missing or unrecognized role causes unauthorized via actor resolution failure); docs updated to state Jwt mode consumes an already-authenticated principal and does not configure bearer validation middleware itself. Full verification: restore/build/test and harness scripts passed.",
                   "Phase 20 PR96-PR100 (2026-05-10): Durable operational runtime — IDurableRunQueue + RunQueueRecord abstraction; EfRunQueueStore + InMemoryDurableRunQueueStore implementations; RunQueueHostedService + RunWorkerOptions (disabled by default, lease-aware processing); OutboxHostedService + OutboxDispatchOptions (disabled by default, batch dispatch + retry/poison behavior); EfOutboxStore.TryMarkDispatchingAsync atomic conditional update; read-only ops endpoints GET /api/v1/ops/queue|outbox|leases with no secret fields. Full verification: 357 tests passing; verify-harness and verify-repo-clean passed.",
@@ -1690,6 +1691,20 @@
                                 "description":  "Integration compatibility matrix documents Fake/Http/Disabled modes, required endpoints, and known limits.",
                                 "passes":  true,
                                 "evidence":  "docs/integrations/compatibility-matrix.md"
+                            },
+                            {
+                                "id":  "PR105.5-001",
+                                "pr":  105.5,
+                                "description":  "Shared IntegrationHttpError helper throws status-code-bearing HttpRequestException for integration HTTP failures.",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Infrastructure/Http/IntegrationHttpError.cs; IntegrationHttpErrorTests.ThrowIfUnsuccessfulAsync_sets_status_code_on_exception; HttpKnowledgeStateClientTests.SubmitCandidateAsync_On5xx_throws_HttpRequestException_with_status"
+                            },
+                            {
+                                "id":  "PR105.5-002",
+                                "pr":  105.5,
+                                "description":  "Upstream error bodies are truncated and best-effort redacted (Bearer, JSON apiKey/token/password/secret/authorization, key=value patterns).",
+                                "passes":  true,
+                                "evidence":  "IntegrationHttpErrorTests (RedactAndTruncate_*); HttpKnowledgeStateClientTests.SubmitCandidateAsync_On5xx_redacts_Bearer_in_upstream_body"
                             }
                         ]
 }

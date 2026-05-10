@@ -171,6 +171,7 @@ public sealed class HttpMcpRegistryClientExtraTests
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() => sut.ListServersAsync());
 
+        Assert.Equal(HttpStatusCode.InternalServerError, ex.StatusCode);
         Assert.Contains("500", ex.Message, StringComparison.Ordinal);
         Assert.Contains("boom", ex.Message, StringComparison.Ordinal);
     }

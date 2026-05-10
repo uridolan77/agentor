@@ -10,6 +10,10 @@ This table summarizes how Agentor integration ports behave across **Fake**, **Ht
 | **Http** | JSON HTTP client (`IHttpClientFactory` named client); expects remote contract described below. |
 | **Disabled** | Port throws or returns a stable “disabled” outcome where applicable; readiness may still report `Ready: true` with `detail: disabled` (see integration status docs). |
 
+## HTTP error handling (integration adapters)
+
+When an integration HTTP call returns a non-success status, adapters throw **`HttpRequestException`** with **`StatusCode` set** to the corresponding HTTP status (via `HttpRequestException`’s status-code constructor). The exception message includes a **truncated** upstream body snippet after **best-effort redaction** of obvious secret-bearing fragments (for example `Bearer …`, JSON fields such as `apiKey` / `token` / `password` / `secret` / `authorization`, and `token=` / `apiKey:` style pairs). This is **not** a substitute for centralized log or APM redaction in production.
+
 ## Athanor (`IKnowledgeStateClient`)
 
 | Operation | Fake | Http | Disabled |
@@ -24,7 +28,7 @@ This table summarizes how Agentor integration ports behave across **Fake**, **Ht
 
 **Unsupported / intentionally absent:** there is **no** Canonize, promote, or merge-into-canon route on this port (`IKnowledgeStateClient`); canonization remains an Athanor-side concern outside Agentor’s adapter surface.
 
-**Known limitations:** Agentor does not retry Athanor reads beyond the host `HttpClient` policy; error bodies are truncated in thrown `HttpRequestException` messages for safety.
+**Known limitations:** Agentor does not retry Athanor reads beyond the host `HttpClient` policy; non-2xx failures use **`HttpRequestException`** with **`StatusCode`** and a redacted/truncated body snippet in the message (see [HTTP error handling](#http-error-handling-integration-adapters)).
 
 ## Conexus (`IModelGatewayClient`)
 
@@ -36,7 +40,7 @@ This table summarizes how Agentor integration ports behave across **Fake**, **Ht
 
 **Telemetry → manifest:** successful `conexus.model-complete` tool outputs are aggregated into `RunManifestModelTelemetry` in Application (`ModelCallTelemetryAggregator`); Domain stores aggregates only.
 
-**Known limitations:** no OpenAI/Anthropic (or other) provider SDKs in Agentor; only this HTTP JSON contract or Fake/Disabled adapters.
+**Known limitations:** no OpenAI/Anthropic (or other) provider SDKs in Agentor; only this HTTP JSON contract or Fake/Disabled adapters. Http-mode failures follow [HTTP error handling](#http-error-handling-integration-adapters).
 
 ## MCP (`IMcpRegistryClient`)
 
@@ -50,7 +54,7 @@ This table summarizes how Agentor integration ports behave across **Fake**, **Ht
 
 **Tool registry:** MCP tools are registered under stable keys `McpToolKeys.Format(serverId, toolName)` (deterministic string format).
 
-**Known limitations:** invalid `nominalRisk` strings in HTTP tool rows fall back to **Medium** risk.
+**Known limitations:** invalid `nominalRisk` strings in HTTP tool rows fall back to **Medium** risk. Http-mode failures follow [HTTP error handling](#http-error-handling-integration-adapters).
 
 ## External agents (`IExternalAgentProtocolClient`)
 
@@ -61,7 +65,7 @@ This table summarizes how Agentor integration ports behave across **Fake**, **Ht
 
 **Non-canon:** external outputs are treated as **non-canon evidence**; successful invoke tool output includes `nonCanon` / `isNonCanonEvidence` markers. Policy **Deny** or **RequiresReview** stops plan execution **before** the HTTP client or fake invoke path runs for that tool call.
 
-**Known limitations:** protocol conformance beyond this JSON shape is not claimed by these adapters.
+**Known limitations:** protocol conformance beyond this JSON shape is not claimed by these adapters. Http-mode failures follow [HTTP error handling](#http-error-handling-integration-adapters).
 
 ## Related documentation
 

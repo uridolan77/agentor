@@ -32,23 +32,8 @@ public sealed class HttpModelGatewayClient(
             content,
             cancellationToken);
 
-        await EnsureSuccess(response, cancellationToken);
+        await IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "Conexus", cancellationToken);
         var dto = await response.Content.ReadFromJsonAsync<ModelCallResultDto>(AgentorHttpJson.Options, cancellationToken);
         return dto ?? throw new InvalidOperationException("Conexus returned an empty model completion body.");
     }
-
-    private static async Task EnsureSuccess(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        if (response.IsSuccessStatusCode)
-        {
-            return;
-        }
-
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        throw new HttpRequestException(
-            $"Conexus HTTP {(int)response.StatusCode} {response.ReasonPhrase}. Body: {Truncate(body)}");
-    }
-
-    private static string Truncate(string s, int max = 512) =>
-        s.Length <= max ? s : s[..max] + "…";
 }

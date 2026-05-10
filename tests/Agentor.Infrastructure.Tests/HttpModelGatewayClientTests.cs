@@ -139,6 +139,7 @@ public sealed class HttpModelGatewayClientTests
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
             sut.CompleteAsync(new ModelCallRequestDto("a", "b"), CancellationToken.None));
 
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         Assert.Contains("503", ex.Message, StringComparison.Ordinal);
         Assert.Contains("overload", ex.Message, StringComparison.Ordinal);
     }
