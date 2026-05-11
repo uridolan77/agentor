@@ -80,8 +80,10 @@ The full route matrix lives in **[AUTHORIZATION_MATRIX.md](./AUTHORIZATION_MATRI
 
 ## Readiness probe (`GET /ready`)
 
-The route is annotated with **`RequireAuthorization(Agentor.Authenticated)`** alongside other system routes. Deployers should confirm that their ingress and health-check clients match the chosen **Auth** mode (for example, **Header** mode health checks must send the configured actor id header when probes hit Agentor directly). Phase 38 matrix sampling for unauthenticated **Header** mode focused on `/api/v1/*` operational routes; see **`docs/security/v1-security-review.md`**.
+The route is annotated with **`RequireAuthorization(Agentor.Authenticated)`** alongside other system routes. Deployers should confirm that their ingress and health-check clients match the chosen **Auth** mode (for example, **Header** mode health checks must send the configured actor id header when probes hit Agentor directly). Phase 38 automated **Header**-mode unauthenticated sampling used `/api/v1/*` routes only; **`GET /ready`** was excluded from that test list because **`WebApplicationFactory`** + **Header** mode did not yield a stable **401** for `/ready` without the actor header in the same configuration used for `/api/v1/*` — see **`docs/security/v1-security-review.md`**.
 
-## Scope note (SCOPE-001)
+## Scope note (HTTP actor boundary and policy scope)
 
-Auth does not implement Tenant/Workspace/Project policy-scope filtering for HTTP actors beyond what policy evaluation already does for runs. It establishes the actor/authorization boundary so future scope enforcement can consume trusted run identity context in the policy evaluation path.
+The historical **SCOPE-001** work item (policy bundle rules filtered and merged by **`AgentRunScope`**) was **closed in Phase 26 (PR117)**; see **`docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`** and `PolicyScopeEvaluationTests` / `PolicyBundleRulesAdapter`.
+
+Auth and the HTTP surface do **not** add a second tenant/workspace/project **authorization** layer on top of that: **`AgentorPermission`** gates routes and **`RuntimePolicyEvaluator`** applies bundle rules using **run-scoped** identity from the aggregate. This section describes the **boundary**, not an open **SCOPE-001** deferral.

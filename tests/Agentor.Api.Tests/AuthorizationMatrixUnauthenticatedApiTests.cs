@@ -30,6 +30,8 @@ public sealed class AuthorizationMatrixUnauthenticatedApiTests
 
         using var client = factory.CreateClient();
         // /api/v1 group: anonymous must not reach handlers (see Phase29WebAuthenticationApiTests).
+        // GET /ready is not asserted here: under WebApplicationFactory + Header mode, /ready without the
+        // actor header did not reliably return 401 alongside /api/v1/* in the same configuration (PR158.5).
         var response = await client.GetAsync("/api/v1/agent-runs");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
 

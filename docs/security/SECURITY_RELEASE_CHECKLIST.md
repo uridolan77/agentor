@@ -10,7 +10,7 @@ Use this list before tagging a release candidate or publishing images. It summar
 | PR155 | Authorization matrix table tests | `AuthorizationMatrixApiTests`, `AuthorizationMatrixApiFixture`, `AuthorizationMatrixUnauthenticatedApiTests`; matrix doc: `docs/security/AUTHORIZATION_MATRIX.md` |
 | PR156 | Threat-model refresh | `docs/security/deployment-threat-notes.md`, `docs/security/auth-boundary.md` (this checklist cross-linked) |
 | PR157 | Production safe defaults | `ProductionAuthSafeDefaultsApiTests`, `AgentorAuthOptionsValidatorTests`, `OpenApiExposureApiTests`, `OutboxHostedServiceTests` |
-| PR158 | Consolidated security review | `docs/security/v1-security-review.md` |
+| PR158.5 | Phase 38 doc correction (SCOPE-001 closed; matrix coverage honesty; `/ready` sampling) | `.agentor-harness/session-handoff.md`, `docs/security/v1-security-review.md`, `docs/security/auth-boundary.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `feature-list.json` note **PR158.5** |
 
 ## Authentication modes
 

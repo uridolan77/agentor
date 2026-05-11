@@ -2,12 +2,14 @@
 
 This document is an engineering security review for the v1.0 runtime surface. It states **evidence** (tests and code), **boundaries**, **residual risks**, and **production assumptions**. It is not a penetration test report or a formal certification.
 
+**PR158.5 (documentation)**: Clarifies that **SCOPE-001** is **closed** (Phase 26 / PR117 per `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`); distinguishes that closure from the separate HTTP-actor boundary below; and states authorization-matrix automation coverage accurately (see **Residual risks** and [`AUTHORIZATION_MATRIX.md`](./AUTHORIZATION_MATRIX.md)).
+
 ## Evidence (automated)
 
 | Area | Evidence |
 |------|----------|
-| Route → permission matrix (`Service` vs privileged writes, `HumanGovernanceApprover` / `System` samples) | `tests/Agentor.Api.Tests/AuthorizationMatrixApiTests.cs`, `AuthorizationMatrixApiFixture.cs`, `AuthorizationMatrixUnauthenticatedApiTests.cs` |
-| Unauthenticated sampling under **Header** auth (no `X-Agentor-Actor-Id`) on selected `/api/v1/*` routes | `AuthorizationMatrixUnauthenticatedApiTests` |
+| Route → permission matrix — **`Service`** role table-driven (forbidden vs allowed reads); **`HumanGovernanceApprover`**, **`System`**, and unauthenticated **Header** mode **sampled** (not an exhaustive full role × route product) | `tests/Agentor.Api.Tests/AuthorizationMatrixApiTests.cs`, `AuthorizationMatrixApiFixture.cs`, `AuthorizationMatrixUnauthenticatedApiTests.cs` |
+| Unauthenticated sampling under **Header** auth (no `X-Agentor-Actor-Id`) on selected `/api/v1/*` routes (`GET /ready` excluded — see residual risks) | `AuthorizationMatrixUnauthenticatedApiTests` |
 | Production blocks **Fake** auth without explicit override | `tests/Agentor.Api.Tests/ProductionAuthSafeDefaultsApiTests.cs`, `AgentorAuthOptionsValidator` |
 | JWT unvalidated-bearer escape hatch outside Development/Test | `AgentorAuthOptionsValidator`, `AgentorAuthOptionsValidatorTests`, `OpenApiExposureApiTests` |
 | OpenAPI document disabled in Production by default | `Program.cs`, `OpenApiExposureApiTests` |
@@ -33,9 +35,9 @@ This document is an engineering security review for the v1.0 runtime surface. It
 
 ## Residual risks (honest)
 
-- **SCOPE-001** (policy scope filtering for HTTP actors beyond run-scoped evaluation) remains deferred per `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`.
-- **Matrix completeness**: new routes must update `docs/security/AUTHORIZATION_MATRIX.md` and extend `AuthorizationMatrixApiTests` / fixture seed data; drift is guarded by process, not by a single generated enumerator.
-- **Readiness probe (`GET /ready`)**: automated Header-mode sampling in Phase 38 focused on `/api/v1/*` routes that match the matrix table-driven tests; operators should confirm ingress and probe configuration for `/ready` in their deployment (see `docs/security/auth-boundary.md` note).
+- **HTTP actor vs run-scoped policy scope**: ASP.NET authentication and `ICurrentActorAccessor` do **not** add a separate tenant/workspace/project **authorization** layer on top of policy evaluation. **Policy bundle rules are filtered and merged by `AgentRunScope`**; that work was tracked historically as **SCOPE-001** and is **closed in Phase 26 (PR117)** — see `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` and `docs/security/auth-boundary.md` (scope note). This is a product boundary statement, not an open deferral.
+- **Matrix completeness**: new routes must update `docs/security/AUTHORIZATION_MATRIX.md` and extend `AuthorizationMatrixApiTests` / fixture seed data. **`Service`** expectations are table-driven; other roles and unauthenticated paths are **sampled**. Full generated role × route coverage is **future hardening**, not claimed here.
+- **Readiness probe (`GET /ready`)**: Phase 38 **Header**-mode unauthenticated tests intentionally targeted `/api/v1/*` samples only. Under **`WebApplicationFactory`** + **Header** mode, `GET /ready` without the actor header did **not** reliably produce **401** in the same harness configuration as `/api/v1/agent-runs`, so it was **excluded** from automated assertions to avoid a flaky or misleading gate. Operators must still align probes with their **Auth** mode in real deployments (see `docs/security/auth-boundary.md`).
 - **Third-party adapters**: HTTP adapters redact common secret patterns; novel secret encodings may require catalog updates (`SensitiveFieldCatalog` / redaction policies).
 
 ## Related documents

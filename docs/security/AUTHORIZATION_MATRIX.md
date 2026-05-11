@@ -46,9 +46,15 @@ This matrix maps **HTTP routes** to **`AgentorPermission`** checks and default *
 
 **Header mode note**: ASP.NET authentication builds a principal with role **`HumanOperator`** from the actor id header; elevated roles such as **`HumanGovernanceApprover`** require **JWT** (or future header extensions) so claims carry the correct **`ActorRole`**.
 
-## Automated matrix coverage (Phase 38)
+## Automated matrix coverage (Phase 38, PR158.5 wording)
 
-Table-driven API tests mirror this matrix for the **`Service`** role (forbidden vs allowed reads), **`HumanGovernanceApprover`** / **`System`** samples, and unauthenticated sampling under **Header** mode on selected `/api/v1/*` routes:
+- **`Service` role**: table-driven in `AuthorizationMatrixApiTests` — explicit **forbidden** routes (writes, ops, integrations, dashboard, etc.) and **allowed read** routes (run read surfaces, management reads, inbox read, etc.).
+- **`HumanGovernanceApprover`** and **`System`**: **sampled** (representative assertions), not every matrix row × role.
+- **Unauthenticated** under **Header** mode (no actor id header): **sampled** on `/api/v1/agent-runs`, `/api/v1/integrations/status`, `/api/v1/ops/queue` — **not** `GET /ready` (see `docs/security/v1-security-review.md` residual risks: `WebApplicationFactory` + Header behavior for `/ready` was not a stable 401 signal alongside `/api/v1/*` in the same configuration).
+
+Full exhaustive **role × route** automation (including every human role on every row) is **optional future hardening** unless extended here.
+
+Files:
 
 - `tests/Agentor.Api.Tests/AuthorizationMatrixApiTests.cs`
 - `tests/Agentor.Api.Tests/AuthorizationMatrixApiFixture.cs`

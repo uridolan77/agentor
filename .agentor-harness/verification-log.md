@@ -1,5 +1,25 @@
 # Verification log
 
+## PR158.5 documentation correction (2026-05-11)
+
+Retroactive Phase 38 security documentation and harness wording (SCOPE-001 closed; matrix coverage claims; `/ready` sampling note). **No product code or test count change** from Phase 39 PR163 verification below.
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 39 -ExpectedHarnessPass PR163
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results (re-run after doc edits):
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **595 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=39`, `ExpectedHarnessPass=PR163`)
+- verify-repo-clean: passed
+
 ## Phase 39 PR163 (2026-05-11)
 
 ```powershell

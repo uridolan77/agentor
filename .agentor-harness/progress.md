@@ -30,6 +30,7 @@
 - Redaction regression gates: `ObservabilityRedactionTests` expansion; diagnostics markdown no-secret checks in `IntegrationEndpointsTests`.
 - Production Fake auth startup guard: `ProductionAuthSafeDefaultsApiTests`.
 - Docs: `docs/security/v1-security-review.md`; threat-model updates (`deployment-threat-notes.md`, `auth-boundary.md`, `SECURITY_RELEASE_CHECKLIST.md`); matrix automated coverage footnote.
+- **PR158.5** (retroactive doc correction, 2026-05-11): `SCOPE-001` **closed** wording; HTTP actor vs policy-scope boundary; matrix coverage claims (`Service` table-driven, other roles sampled); `/ready` Header unauthenticated sampling exclusion documented (`v1-security-review.md`, `AUTHORIZATION_MATRIX.md`, `auth-boundary.md`, `session-handoff.md`).
 
 **Verification**:
 

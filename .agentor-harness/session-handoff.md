@@ -28,5 +28,6 @@ Per-assembly test totals (latest run): Domain **87**, Application **181**, Contr
 
 ## Deferred harness rows / product risks
 
-- **Active deferred harness rows (`passes: false` in `feature-list.json`)**: **0** for Phase 39 acceptance slice; **SCOPE-001** remains the canonical product deferral where applicable (`docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`).
+- **Active deferred harness rows (`passes: false` in `feature-list.json`)**: **0** for Phase 39 acceptance slice. **SCOPE-001 is closed** (Phase 26 / PR117); see `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`.
+- **Residual auth-scope boundary (not SCOPE-001)**: HTTP-level auth does not duplicate run-scoped policy scope filtering; policy evaluation consumes run identity — see `docs/security/auth-boundary.md` scope note and `docs/security/v1-security-review.md` (PR158.5).
 - **Residual**: `load-smoke.ps1` is best-effort local tooling; Header/Jwt deployments may require `-ActorHeaderValue` / different base URLs than Fake defaults.
