@@ -68,15 +68,27 @@ public sealed record PlanResumeCursor(
 }
 
 /// <summary>Describes the review resume disposition for a run awaiting human review.</summary>
+/// <param name="IsMultiStepPlan">
+/// True when post-approval work remains: unexecuted plan steps after the blocked step and/or an active
+/// <see cref="PlanResumeCursor.SkillContinuation"/> (skill-only suspension uses <see cref="RemainingStepCount"/> 0 with this flag true).
+/// </param>
+/// <param name="RemainingStepCount">Count of pending <em>plan</em> steps after the blocked step (excludes inner skill procedure work).</param>
+/// <param name="HasSkillProcedureContinuation">True when the cursor carries a <see cref="PlanResumeCursor.SkillContinuation"/>.</param>
 public sealed record ReviewResumeState(
     bool IsMultiStepPlan,
     int RemainingStepCount,
+    bool HasSkillProcedureContinuation,
     string BlockedAtSourceStepId,
     string BlockedAtToolKey)
 {
     public static ReviewResumeState FromCursor(PlanResumeCursor cursor) =>
-        new(cursor.HasRemainingSteps, cursor.RemainingSteps.Count, cursor.BlockedAtSourceStepId, cursor.BlockedAtToolKey);
+        new(
+            cursor.HasContinuationWork,
+            cursor.RemainingSteps.Count,
+            cursor.SkillContinuation is not null,
+            cursor.BlockedAtSourceStepId,
+            cursor.BlockedAtToolKey);
 
     public static ReviewResumeState SingleStep(string blockedAtToolKey) =>
-        new(false, 0, string.Empty, blockedAtToolKey);
+        new(false, 0, false, string.Empty, blockedAtToolKey);
 }

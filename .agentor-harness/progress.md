@@ -1,5 +1,23 @@
 # Agentor harness progress
 
+## Phase 35 PR137.5 retro hardening (2026-05-11)
+
+**Status**: Complete (recorded under **Phase 35 / PR142** harness marker; adds **PR137.5-*** acceptance rows + note).
+
+**Work**:
+
+- **Fingerprint**: **`JsonFingerprintCanonicalizer`** + **`StartAgentRunFingerprint`** canonical **`ToolInputPayload`** segment; **`StartAgentRunFingerprintTests`**.
+- **Resume UX**: **`ReviewResumeState.HasSkillProcedureContinuation`**; **`FromCursor`** uses **`PlanResumeCursor.HasContinuationWork`**; **`PlanResumeCursorTests`**.
+- **Skill traces**: **`ReviewedToolContinuationService`** **`PlanExecutionCompleted`** after tail-less skill resume; **`MultiStepReviewResumeTests`** (skill-only plan trace ordering; inner pipeline fail + **ContinueOnFailure** / **FailFast** on skill plan step; second inner **RequiresReview** records new **`SkillContinuation`**).
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **524 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 35 -ExpectedHarnessPass PR142`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 36 not started.
+
 ## Phase 35 PR142 (2026-05-11)
 
 **Status**: Complete.
@@ -36,7 +54,7 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 34 -ExpectedHarnessPass PR137`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 36 not started (Phase 35 completed in the Phase 35 section above).
+**Scope guard**: Phase 36 not started.
 
 ## Phase 33 PR132 (2026-05-11)
 

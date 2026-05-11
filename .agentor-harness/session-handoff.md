@@ -1,22 +1,24 @@
-# Session handoff — Phase 35 PR142
+# Session handoff — Phase 35 PR142 + PR137.5 hardening
 
 ## Completed
 
-- **PR138**: **`SmokeMode`**, **`SmokeTarget`**, **`IntegrationSmokeOptions`** ( **`Agentor:IntegrationSmoke`** ); **`IntegrationSmokeConfigurationMerger`** maps smoke modes onto **`Agentor:Integrations:*:*:Mode`** for the smoke host.
-- **PR139**: Athanor smoke steps — latest snapshot, canonical lookup, evidence search; **candidate submit** only when **`AllowAthanorWriteSmoke=true`**; **`Program.SeedFakeAthanor`** for Fake mode.
-- **PR140**: Conexus **`CompleteAsync`** with **declared** cost/latency fields plus telemetry scalar checks on **`ModelCallResultDto`** payload.
-- **PR141**: MCP list servers / list tools / invoke; external-agent list capabilities / invoke (A2A-styled defaults).
-- **PR142**: **`IntegrationSmokeReportWriter`** (**`integration-smoke-report.json`** + **`.md`**), **`IntegrationFailureRedaction`** for operator-safe text, **`scripts/run-integration-smoke.ps1`**, **`docs/operator/integration-smoke.md`**, **`Agentor.sln`** includes **`tools/Agentor.IntegrationSmoke`**.
+- **PR138–PR142 (Phase 35 smoke)**: unchanged from prior closeout — **`IntegrationSmokeOptions`**, **`IntegrationSmokeRunner`**, **`IntegrationSmokeReportWriter`**, **`scripts/run-integration-smoke.ps1`**, **`docs/operator/integration-smoke.md`**, **`IntegrationSmokeTests`**.
+- **PR137.5 (Phase 34 closeout / retro hardening)**:
+  - **`JsonFingerprintCanonicalizer`** + **`StartAgentRunFingerprint`** use canonical JSON for **`ToolInputPayload`** idempotency (**`StartAgentRunFingerprintTests`**).
+  - **`ReviewResumeState`**: **`HasSkillProcedureContinuation`**; **`FromCursor`** uses **`PlanResumeCursor.HasContinuationWork`** (**`PlanResumeCursorTests`**).
+  - **`ReviewedToolContinuationService`**: **`RecordPlanExecutionCompletedAfterReview`** before **`run.Complete`** when a skill continuation finishes with **no** tail plan steps.
+  - **`MultiStepReviewResumeTests`**: skill-only plan **`PlanExecutionCompleted`** ordering; inner pipeline failure after first approval with **ContinueOnFailure** vs **FailFast** on the skill plan step; chained inner **RequiresReview** records a new **`SkillContinuation`**.
+  - **`docs/REPO_TRUTH.md`**: idempotency fingerprint bullet.
 
 ## Verification
 
 - `dotnet restore Agentor.sln` succeeded
 - `dotnet build Agentor.sln --no-restore` succeeded
-- `dotnet test Agentor.sln --no-build` succeeded (**516 passed, 0 failed**)
+- `dotnet test Agentor.sln --no-build` succeeded (**524 passed, 0 failed**)
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 35 -ExpectedHarnessPass PR142` succeeded
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
-Per-assembly test totals (latest run): Domain **86**, Application **173**, Contracts **14**, Infrastructure **118**, Api **125**.
+Per-assembly test totals (latest run): Domain **87**, Application **177**, Contracts **14**, Infrastructure **118**, Api **128**.
 
 ## What is next
 
@@ -24,8 +26,10 @@ Per-assembly test totals (latest run): Domain **86**, Application **173**, Contr
 
 ## What was explicitly not started
 
-- **Phase 36+** (repo truth sweep, migration audit, API contract snapshot, release smoke, etc.).
+- **Phase 36+** (repo-wide RC consolidation, contract snapshot churn, etc.).
 
-## Remaining risks / false acceptance
+## Deferred / risks
 
-- **Real HTTP** integration smoke against live Athanor/Conexus/MCP/external-agent gateways is **operator-driven** (configure **`Agentor:Integrations:*:Http:BaseUrl`** + headers via env); CI continues to rely on **Fake** smoke (**`IntegrationSmokeFakeRunnerTests`**) plus existing HTTP adapter contract tests. **SCOPE-001** and other deferred items unchanged unless listed in **`docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`**.
+- **`docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`** lists **Count: 0** active harness `passes: false` rows; **SCOPE-001** is documented there as **closed** (Phase 26 / PR117). No active SCOPE-001 deferral.
+- **Exhaustive** inner skill-procedure failure matrix (every **`FailureHandlingPolicy`** × policy vs pipeline × chained review) is **not** fully enumerated; PR137.5 adds the highest-value regression slices only.
+- **Phase 36** was **not** started.

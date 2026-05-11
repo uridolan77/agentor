@@ -128,6 +128,7 @@ public sealed class ReviewedToolContinuationService(
                     return;
                 }
 
+                traceWriter.RecordPlanExecutionCompletedAfterReview(run, cursor.PlanId);
                 run.Complete(clock.UtcNow);
                 return;
             }

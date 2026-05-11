@@ -65,8 +65,45 @@ public sealed class PlanResumeCursorTests
 
         Assert.True(state.IsMultiStepPlan);
         Assert.Equal(3, state.RemainingStepCount);
+        Assert.False(state.HasSkillProcedureContinuation);
         Assert.Equal("step-2", state.BlockedAtSourceStepId);
         Assert.Equal("tool.risky", state.BlockedAtToolKey);
+    }
+
+    [Fact]
+    public void ReviewResumeState_FromCursor_SkillOnlyContinuation_IsMultiStepWithZeroRemainingPlanSteps()
+    {
+        var now = Now;
+        var skillStep = new PendingPlanStep(
+            Guid.NewGuid(),
+            "s2",
+            2,
+            string.Empty,
+            RecipeStepKind.Skill,
+            FailureHandlingPolicy.FailFast,
+            null,
+            null,
+            InvokedSkillKey: "k",
+            InvokedSkillVersion: AgentRecipeVersion.Parse("1.0"));
+        var sc = new SkillResumeCursor(
+            skillStep,
+            new SkillInnerToolCheckpoint("p1", "tool.review", 1),
+            new SkillProcedureResumeState(null));
+        var cursor = new PlanResumeCursor(
+            Guid.NewGuid(),
+            skillStep.PlanStepId,
+            "s2",
+            "tool.review",
+            RemainingSteps: [],
+            CompletedStepHistory: [],
+            SuspendedAt: now,
+            SkillContinuation: sc);
+
+        var state = ReviewResumeState.FromCursor(cursor);
+        Assert.True(state.IsMultiStepPlan);
+        Assert.Equal(0, state.RemainingStepCount);
+        Assert.True(state.HasSkillProcedureContinuation);
+        Assert.Equal("s2", state.BlockedAtSourceStepId);
     }
 
     [Fact]
@@ -75,6 +112,7 @@ public sealed class PlanResumeCursorTests
         var state = ReviewResumeState.SingleStep("tool.foo");
         Assert.False(state.IsMultiStepPlan);
         Assert.Equal(0, state.RemainingStepCount);
+        Assert.False(state.HasSkillProcedureContinuation);
         Assert.Equal("tool.foo", state.BlockedAtToolKey);
     }
 

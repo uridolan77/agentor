@@ -5,6 +5,7 @@ This document states **what the code and HTTP surface actually do today**, so op
 ## Public agent runs
 
 - **`POST /api/v1/agent-runs`** flows through **`IAgentRunOrchestrator`** (`AgentRunOrchestrator`). Clients select execution with **`planId`**, **`recipeId`**, **`toolKey`**, **`skillKey`**, and/or **`mode`** (see `StartAgentRunRequestDto`). **`RunExecutionMode.LegacyFakeTool`** (or **`Agentor:PublicRuns:TreatMissingExecutionSelectorAsLegacyFakeTool=true`**, the default) keeps the historical PR1 fake-tool path without specifying selectors.
+- **Idempotency fingerprint (PR137.5)**: **`StartAgentRunFingerprint.Compute`** includes a canonical JSON segment for **`ToolInputPayload`** via **`JsonFingerprintCanonicalizer`** (sorted object keys, compact UTF-8) so equivalent structured payloads produce the same fingerprint regardless of JSON member order or insignificant whitespace.
 - **Plan / recipe / skill** starts materialize a fresh `AgentPlan` and execute via **`SequentialAgentPlanExecutor`**. **Single-tool** paths (including Conexus, MCP, external-agent tool keys) use the shared governed single-tool driver (policy + pipeline) without embedding tool logic in `StartAgentRunHandler`.
 
 ## Real execution kernel

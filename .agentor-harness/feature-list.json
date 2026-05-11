@@ -5,6 +5,7 @@
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR137.5 (2026-05-11): Phase 34 closeout hardening (applied atop Phase 35 tree) \u2014 JsonFingerprintCanonicalizer + StartAgentRunFingerprint canonical ToolInputPayload for idempotency; StartAgentRunFingerprintTests; ReviewResumeState.HasSkillProcedureContinuation + FromCursor uses HasContinuationWork; PlanResumeCursorTests; ReviewedToolContinuationService PlanExecutionCompleted after tail-less skill resume; MultiStepReviewResumeTests (skill-only plan trace order; inner pipeline fail + ContinueOnFailure/FailFast on skill plan step; chained inner RequiresReview). Verification: dotnet test Agentor.sln \u2014 524 passed; verify-harness ExpectedPhase 35 PR142; verify-repo-clean.",
         "PR142 (2026-05-11): Phase 35 integration smoke \u2014 IntegrationSmokeOptions + SmokeMode + SmokeTarget; IntegrationSmokeConfigurationMerger; IntegrationSmokeRunner + IntegrationSmokeReportWriter + IntegrationFailureRedaction; tools/Agentor.IntegrationSmoke + scripts/run-integration-smoke.ps1; docs/operator/integration-smoke.md; tests IntegrationSmokeTests + REPO_TRUTH. Verification: dotnet test Agentor.sln \u2014 516 passed; verify-harness ExpectedPhase 35 PR142; verify-repo-clean.",
         "PR137 (2026-05-11): Phase 34 skill resume \u2014 Domain SkillResumeCursor + SkillInnerToolCheckpoint + SkillProcedureResumeState + PlanResumeCursor.SkillContinuation/HasContinuationWork; PendingPlanStep invoked skill fields; SequentialAgentPlanExecutor skill continuation + ExecuteResumedSkillPlanStepAsync; PlanResumeOrchestrator + ReviewedToolContinuationService skill path (no double step.Complete); ReviewTraceWriter removed unsupported stub; tests MultiStepReviewResumeTests.Approve_SkillInnerReview_ThenResumesTailPlanStep + Approve_SkillInnerReview_TailDeniedWithContinueOnFailure_ThenCompletesRun + PlanResumeCursorTests; EfCoreAgentRunRepositoryTests.SaveAsync_RoundTripsResumeCursorWithSkillContinuationJson; docs/design/skill-resume.md; fixture tests/Agentor.Application.Tests/fixtures/eval/skill-resume-audit-export.json + registry; Phase18FixtureTests.SkillResumeAuditExport_Fixture_ExistsAndIsValidJson; docs/REPO_TRUTH skill resume bullet. Verification: dotnet test Agentor.sln \u2014 509 passed; verify-harness ExpectedPhase 34 PR137; verify-repo-clean.",
         "PR132 (2026-05-11): Phase 33 structured queue payload \u2014 RunQueuePayloadVersion + RunQueuePayloadSerialization; StartAgentRunCommand/RunOrchestrationRequest ToolInputPayload; StartAgentRunRequestDto.toolInputPayload + StartAgentRunRequestMapping + StartAgentRunFingerprint; GovernedSingleToolRunDriver ToolPayload merge for policy + ToolCall + pipeline; EF run_queue_items.tool_payload_json (migration 20260512100000_Phase33QueueStructuredToolPayload) + EfRunQueueStore v2 + legacy tool_input_json; tests EfRunQueueStoreTests + RunQueueHostedServiceEfSqliteScopeTests structured + GovernedSingleToolRunDriverStructuredPayloadTests + AgentRunOrchestrationApiTests queued structured + ContractDtoCompatibilityTests toolInputPayload; docs/operator/queue-payloads.md; fixture tests/Agentor.Application.Tests/fixtures/eval/queued-structured-toolpayload.json; docs/REPO_TRUTH queue columns; CI verify-harness Phase 33 PR132. Verification: dotnet test Agentor.sln \u2014 504 passed; verify-harness ExpectedPhase 33 PR132; verify-repo-clean.",
@@ -58,6 +59,27 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR137.5-003",
+                                "pr": 137,
+                                "description": "PR137.5: Skill inner edge tests + PlanExecutionCompleted when skill resume completes with no tail plan steps",
+                                "passes": true,
+                                "evidence": "tests/Agentor.Application.Tests/MultiStepReviewResumeTests.cs (Approve_SkillOnlyPlan_AfterInnerApproval_EmitsPlanExecutionCompletedBeforeRunCompleted, Approve_SkillInnerThenPipelineFails_* , Approve_SkillInnerThenSecondInnerRequiresReview_RecordsNewSkillContinuation); src/Agentor.Application/HumanReview/ReviewedToolContinuationService.cs"
+                            },
+                            {
+                                "id": "PR137.5-002",
+                                "pr": 137,
+                                "description": "PR137.5: ReviewResumeState reflects skill continuation (HasContinuationWork + HasSkillProcedureContinuation)",
+                                "passes": true,
+                                "evidence": "src/Agentor.Domain/Governance/ReviewResumeCursor.cs; tests/Agentor.Domain.Tests/Governance/PlanResumeCursorTests.cs (ReviewResumeState_FromCursor_SkillOnlyContinuation_IsMultiStepWithZeroRemainingPlanSteps)"
+                            },
+                            {
+                                "id": "PR137.5-001",
+                                "pr": 137,
+                                "description": "PR137.5: Canonical JSON for ToolInputPayload idempotency fingerprint (property order + whitespace)",
+                                "passes": true,
+                                "evidence": "src/Agentor.Api/JsonFingerprintCanonicalizer.cs; src/Agentor.Api/StartAgentRunFingerprint.cs; tests/Agentor.Api.Tests/StartAgentRunFingerprintTests.cs"
+                            },
                             {
                                 "id": "PR142-001",
                                 "pr": 142,

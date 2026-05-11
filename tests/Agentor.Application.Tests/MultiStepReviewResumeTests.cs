@@ -444,6 +444,290 @@ public sealed class MultiStepReviewResumeTests
     }
 
     // ───────────────────────────────────────────────────────────────────────
+    // PR137.5 — skill resume edge cases (inner procedure after first approval)
+    // ───────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Approve_SkillOnlyPlan_AfterInnerApproval_EmitsPlanExecutionCompletedBeforeRunCompleted()
+    {
+        const string skillKey = "harness.skill-only-plan";
+        var skillVersion = AgentRecipeVersion.Parse("1.0");
+        var okSkill = SkillPackage.TryCreate(
+            Guid.NewGuid(),
+            skillKey,
+            skillVersion,
+            "Skill only",
+            "Review then ok.",
+            [
+                new SkillProcedureStepDefinition("p1", 1, "review", SkillProcedureStepKind.ToolRef, ReviewTool),
+                new SkillProcedureStepDefinition("p2", 2, "ok", SkillProcedureStepKind.ToolRef, FakeTool)
+            ],
+            out var skillPkg,
+            out var skillVal);
+        Assert.True(okSkill);
+        Assert.True(skillVal.IsValid);
+        var catalog = new InMemorySkillPackageCatalog();
+        catalog.Register(skillPkg!);
+
+        var clock = new SystemClock();
+        var counting = new CountingExecutor();
+        var policy = new StubPolicyEvaluator(reviewKeys: [ReviewTool]);
+        var registry = MakeRegistry(counting);
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock, skillCatalog: catalog);
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Obj", "trace-pr1375-skillonly", clock.UtcNow);
+
+        var okRecipe = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "one-skill",
+            AgentRecipeVersion.Parse("1.0"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition(
+                    "s1",
+                    1,
+                    RecipeStepKind.Skill,
+                    string.Empty,
+                    InvokedSkillKey: skillKey,
+                    InvokedSkillVersion: skillVersion)
+            ],
+            null,
+            out var recipe,
+            out var recipeVal);
+        Assert.True(okRecipe);
+        Assert.True(recipeVal.IsValid);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+
+        await executor.ExecuteAsync(run, plan, CancellationToken.None);
+        Assert.Equal(AgentRunStatus.RequiresReview, run.Status);
+        Assert.NotNull(run.ResumeCursor?.SkillContinuation);
+        Assert.Empty(run.ResumeCursor!.RemainingSteps);
+
+        var repo = new InMemoryAgentRunRepository();
+        await repo.SaveAsync(run, CancellationToken.None);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor(), skillCatalog: catalog);
+        var done = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(done);
+        Assert.Equal(AgentRunStatus.Completed, done!.Status);
+        var kinds = done.Trace.Select(e => e.Kind).ToList();
+        var planDoneIdx = kinds.IndexOf(TraceEventKind.PlanExecutionCompleted);
+        var runDoneIdx = kinds.IndexOf(TraceEventKind.RunCompleted);
+        Assert.True(planDoneIdx >= 0, "PlanExecutionCompleted expected after skill-only tail-less resume");
+        Assert.True(runDoneIdx > planDoneIdx, "RunCompleted should follow PlanExecutionCompleted");
+    }
+
+    [Fact]
+    public async Task Approve_SkillInnerThenPipelineFails_WithContinueOnFailure_OnSkillPlanStep_CompletesRun()
+    {
+        const string skillKey = "harness.skill-cof-inner";
+        var skillVersion = AgentRecipeVersion.Parse("1.0");
+        const string failInner = "tool.fail-inner-cof";
+        var okSkill = SkillPackage.TryCreate(
+            Guid.NewGuid(),
+            skillKey,
+            skillVersion,
+            "Skill cof",
+            "Review then fail inner.",
+            [
+                new SkillProcedureStepDefinition("p1", 1, "review", SkillProcedureStepKind.ToolRef, ReviewTool),
+                new SkillProcedureStepDefinition("p2", 2, "fail", SkillProcedureStepKind.ToolRef, failInner)
+            ],
+            out var skillPkg,
+            out var skillVal);
+        Assert.True(okSkill);
+        Assert.True(skillVal.IsValid);
+        var catalog = new InMemorySkillPackageCatalog();
+        catalog.Register(skillPkg!);
+
+        var clock = new SystemClock();
+        var counting = new CountingExecutor();
+        var failEx = new FailingExecutor();
+        var policy = new StubPolicyEvaluator(reviewKeys: [ReviewTool]);
+        var registry = MakeRegistry(counting);
+        registry.Register(new ToolDefinition(failInner, "Fail", "desc", ToolRiskLevel.Low), failEx);
+
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock, skillCatalog: catalog);
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Obj", "trace-pr1375-cof", clock.UtcNow);
+
+        var okRecipe = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "one-skill-cof",
+            AgentRecipeVersion.Parse("1.0"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition(
+                    "s1",
+                    1,
+                    RecipeStepKind.Skill,
+                    string.Empty,
+                    OnFailure: FailureHandlingPolicy.ContinueOnFailure,
+                    InvokedSkillKey: skillKey,
+                    InvokedSkillVersion: skillVersion)
+            ],
+            null,
+            out var recipe,
+            out var recipeVal);
+        Assert.True(okRecipe);
+        Assert.True(recipeVal.IsValid);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+
+        await executor.ExecuteAsync(run, plan, CancellationToken.None);
+        Assert.Equal(AgentRunStatus.RequiresReview, run.Status);
+
+        var repo = new InMemoryAgentRunRepository();
+        await repo.SaveAsync(run, CancellationToken.None);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor(), skillCatalog: catalog);
+        var done = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(done);
+        Assert.Equal(AgentRunStatus.Completed, done!.Status);
+    }
+
+    [Fact]
+    public async Task Approve_SkillInnerThenPipelineFails_WithFailFast_OnSkillPlanStep_FailsRun()
+    {
+        const string skillKey = "harness.skill-ff-inner";
+        var skillVersion = AgentRecipeVersion.Parse("1.0");
+        const string failInner = "tool.fail-inner-ff";
+        var okSkill = SkillPackage.TryCreate(
+            Guid.NewGuid(),
+            skillKey,
+            skillVersion,
+            "Skill ff",
+            "Review then fail inner.",
+            [
+                new SkillProcedureStepDefinition("p1", 1, "review", SkillProcedureStepKind.ToolRef, ReviewTool),
+                new SkillProcedureStepDefinition("p2", 2, "fail", SkillProcedureStepKind.ToolRef, failInner)
+            ],
+            out var skillPkg,
+            out var skillVal);
+        Assert.True(okSkill);
+        Assert.True(skillVal.IsValid);
+        var catalog = new InMemorySkillPackageCatalog();
+        catalog.Register(skillPkg!);
+
+        var clock = new SystemClock();
+        var counting = new CountingExecutor();
+        var failEx = new FailingExecutor();
+        var policy = new StubPolicyEvaluator(reviewKeys: [ReviewTool]);
+        var registry = MakeRegistry(counting);
+        registry.Register(new ToolDefinition(failInner, "Fail", "desc", ToolRiskLevel.Low), failEx);
+
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock, skillCatalog: catalog);
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Obj", "trace-pr1375-ff", clock.UtcNow);
+
+        var okRecipe = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "one-skill-ff",
+            AgentRecipeVersion.Parse("1.0"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition(
+                    "s1",
+                    1,
+                    RecipeStepKind.Skill,
+                    string.Empty,
+                    OnFailure: FailureHandlingPolicy.FailFast,
+                    InvokedSkillKey: skillKey,
+                    InvokedSkillVersion: skillVersion)
+            ],
+            null,
+            out var recipe,
+            out var recipeVal);
+        Assert.True(okRecipe);
+        Assert.True(recipeVal.IsValid);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+
+        await executor.ExecuteAsync(run, plan, CancellationToken.None);
+        Assert.Equal(AgentRunStatus.RequiresReview, run.Status);
+
+        var repo = new InMemoryAgentRunRepository();
+        await repo.SaveAsync(run, CancellationToken.None);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor(), skillCatalog: catalog);
+        var done = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(done);
+        Assert.Equal(AgentRunStatus.Failed, done!.Status);
+    }
+
+    [Fact]
+    public async Task Approve_SkillInnerThenSecondInnerRequiresReview_RecordsNewSkillContinuation()
+    {
+        const string skillKey = "harness.skill-double-review";
+        var skillVersion = AgentRecipeVersion.Parse("1.0");
+        var okSkill = SkillPackage.TryCreate(
+            Guid.NewGuid(),
+            skillKey,
+            skillVersion,
+            "Skill double review",
+            "Two gated inners.",
+            [
+                new SkillProcedureStepDefinition("p1", 1, "a", SkillProcedureStepKind.ToolRef, ReviewTool),
+                new SkillProcedureStepDefinition("p2", 2, "b", SkillProcedureStepKind.ToolRef, ReviewTool)
+            ],
+            out var skillPkg,
+            out var skillVal);
+        Assert.True(okSkill);
+        Assert.True(skillVal.IsValid);
+        var catalog = new InMemorySkillPackageCatalog();
+        catalog.Register(skillPkg!);
+
+        var clock = new SystemClock();
+        var counting = new CountingExecutor();
+        var policy = new StubPolicyEvaluator(reviewKeys: [ReviewTool]);
+        var registry = MakeRegistry(counting);
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock, skillCatalog: catalog);
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Obj", "trace-pr1375-dblrev", clock.UtcNow);
+
+        var okRecipe = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "one-skill-dbl",
+            AgentRecipeVersion.Parse("1.0"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition(
+                    "s1",
+                    1,
+                    RecipeStepKind.Skill,
+                    string.Empty,
+                    InvokedSkillKey: skillKey,
+                    InvokedSkillVersion: skillVersion)
+            ],
+            null,
+            out var recipe,
+            out var recipeVal);
+        Assert.True(okRecipe);
+        Assert.True(recipeVal.IsValid);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+
+        await executor.ExecuteAsync(run, plan, CancellationToken.None);
+        Assert.Equal(AgentRunStatus.RequiresReview, run.Status);
+        Assert.Equal("p1", run.ResumeCursor!.SkillContinuation!.BlockedAtInnerTool.ProcedureStepId);
+
+        var repo = new InMemoryAgentRunRepository();
+        await repo.SaveAsync(run, CancellationToken.None);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor(), skillCatalog: catalog);
+        var mid = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(mid);
+        Assert.Equal(AgentRunStatus.RequiresReview, mid!.Status);
+        Assert.NotNull(mid.ResumeCursor?.SkillContinuation);
+        Assert.Equal("p2", mid.ResumeCursor!.SkillContinuation!.BlockedAtInnerTool.ProcedureStepId);
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
     // PR88-c: Reject fails the run without executing remaining steps
     // ───────────────────────────────────────────────────────────────────────
 

@@ -37,7 +37,7 @@ public static class StartAgentRunFingerprint
             && dto.ToolInputPayload.Value.ValueKind != System.Text.Json.JsonValueKind.Undefined
             && dto.ToolInputPayload.Value.ValueKind != System.Text.Json.JsonValueKind.Null)
         {
-            structuredTok = dto.ToolInputPayload.Value.GetRawText();
+            structuredTok = JsonFingerprintCanonicalizer.Canonicalize(dto.ToolInputPayload.Value);
         }
 
         var canonical = string.Concat(
