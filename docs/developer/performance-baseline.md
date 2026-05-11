@@ -21,6 +21,8 @@ Phase 32 emits **`evaluation-report.{md,json}`** and **`evaluation-summary.csv`*
 
 Phase 39 adds **`performance-report.{md,json}`** and **`performance-summary.csv`** in the same output folder. The performance triple is populated by `PerformanceCiArtifactsTests` with stable placeholder rows for CI determinism; replace with real benchmark medians when publishing a human-maintained baseline.
 
+**CI / artifact truth:** those placeholder rows are **deterministic plumbing evidence** for the report generator and upload path. They are **not** BenchmarkDotNet medians and **must not** be read as measured production or staging performance. Phase 40 release closure must **not** treat them as environment-specific SLO baselines unless you replace them with human-maintained outputs from real benchmark runs.
+
 ## Load smoke (`scripts/load-smoke.ps1`)
 
 Parallel HTTP smoke against `/api/v1/agent-runs` (and optional `/api/v1/agent-runs/queued`). Requires PowerShell 7+.
@@ -30,6 +32,8 @@ pwsh ./scripts/load-smoke.ps1 -StartHost -RunCount 30 -QueueCount 5 -Concurrency
 ```
 
 Use `-BaseUrl` when the API is already running elsewhere. See also `docs/operator/integration-smoke.md` for integration proof boundaries.
+
+When `-OutputDirectory` is set, **`load-smoke-report.json`** includes up to 20 failure summaries: strings are **single-lined, truncated, and best-effort redacted** (e.g. bearer-like fragments, common `token=` / `apikey`-style pairs) before persist—aligned with the integration-smoke safety posture, not a full secret audit.
 
 ## Persistence stress tests
 

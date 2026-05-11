@@ -1,5 +1,24 @@
 # Agentor harness progress
 
+## Phase 39 PR163.5 closeout polish (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **SCOPE-001**: `session-handoff.md` — active `passes:false` = **0**; **SCOPE-001 closed** (Phase 26 / PR117); residual risks scoped to local/dev performance evidence and environment-specific SLO measurement (not a harness deferral).
+- **Performance artifact truth**: `docs/developer/performance-baseline.md` — CI **`performance-report.*`** rows are deterministic **placeholder** evidence; Phase 40 must not treat them as measured production baselines.
+- **Load smoke report safety**: `scripts/load-smoke.ps1` — `load-smoke-report.json` **errors** truncated + best-effort redacted before persist; doc note in performance-baseline.
+- Harness: **`harnessPass` PR163.5**, acceptance **`PR163.5-001`**, `current-pr.md`, `verification-log.md`, **`.github/workflows/ci.yml`** verify-harness.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **595 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 39 -ExpectedHarnessPass PR163.5`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 40 not started.
+
 ## Phase 39 PR159–PR163 performance and stress baseline (2026-05-11)
 
 **Status**: Complete.
@@ -15,10 +34,10 @@
 **Verification**:
 
 - `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **595 passed, 0 failed**
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 39 -ExpectedHarnessPass PR163`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 39 -ExpectedHarnessPass PR163.5`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 40 not started.
+**Scope guard**: Phase 40 not started (PR163.5 closeout complete; see Phase 39 PR163.5 section above).
 
 ## Phase 38 PR154–PR158 security hardening final pass (2026-05-11)
 

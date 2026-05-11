@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 39 PR163.5 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 39 -ExpectedHarnessPass PR163.5
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **595 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=39`, `ExpectedHarnessPass=PR163.5`)
+- verify-repo-clean: passed
+
+Counts (unchanged from PR163):
+
+- Agentor.Domain.Tests: Passed 87 / Total 87
+- Agentor.Application.Tests: Passed 181 / Total 181
+- Agentor.Contracts.Tests: Passed 14 / Total 14
+- Agentor.Infrastructure.Tests: Passed 138 / Total 138
+- Agentor.Api.Tests: Passed 175 / Total 175
+
+Scope:
+
+- completed: PR163.5 — Phase 39 closeout polish (SCOPE-001 wording, CI performance placeholder truth, load-smoke report redaction, harness PR163.5)
+- not started: Phase 40+
+
 ## PR158.5 documentation correction (2026-05-11)
 
 Retroactive Phase 38 security documentation and harness wording (SCOPE-001 closed; matrix coverage claims; `/ready` sampling note). **No product code or test count change** from Phase 39 PR163 verification below.

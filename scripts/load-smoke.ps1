@@ -19,7 +19,7 @@
   fake | review | required | mixed — shapes the POST body (default fake). With -StartHost and review, sets MaxAutoApproveRisk=Low for high-risk tool path.
 
 .PARAMETER OutputDirectory
-  When set, writes load-smoke-report.json here.
+  When set, writes load-smoke-report.json here (error strings in the report are truncated and best-effort redacted before persist).
 
 .PARAMETER StartHost
   Builds and starts Agentor.Api on BaseUrl (Development). Child process is stopped when the script ends.
@@ -48,6 +48,28 @@ param(
 $ErrorActionPreference = "Stop"
 if ($PSVersionTable.PSVersion.Major -lt 7) {
     throw "PowerShell 7+ is required (ForEach-Object -Parallel)."
+}
+
+function Sanitize-LoadSmokeReportError {
+    param(
+        [string] $Text,
+        [int] $MaxLen = 240
+    )
+    if ([string]::IsNullOrWhiteSpace($Text)) {
+        return $null
+    }
+
+    $s = ($Text -replace "[\r\n]+", " ").Trim()
+    $s = [regex]::Replace($s, '(?i)bearer\s+\S+', 'bearer [redacted]')
+    $s = [regex]::Replace($s, '(?i)basic\s+[a-z0-9+/=]+', 'basic [redacted]')
+    $s = [regex]::Replace($s, '(?i)(authorization)\s*:\s*\S+', '$1: [redacted]')
+    $s = [regex]::Replace($s, '(?i)(apikey|api-key|api_key|password|secret|token)\s*[:=]\s*\S+', '$1=[redacted]')
+    $s = [regex]::Replace($s, '(?i)[?&]((?:access_)?token|api_?key|secret|password|code)=[^&\s]+', '?$1=[redacted]')
+    if ($s.Length -gt $MaxLen) {
+        return $s.Substring(0, $MaxLen) + '...'
+    }
+
+    return $s
 }
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
@@ -146,6 +168,14 @@ $failCount = ($results | Where-Object { -not $_.ok }).Count
 $msList = @($results | Where-Object { $_.ok } | ForEach-Object { $_.ms })
 $meanMs = if ($msList.Count -gt 0) { ($msList | Measure-Object -Average).Average } else { 0 }
 
+$sanitizedErrors = @(
+    $results
+    | Where-Object { -not $_.ok }
+    | ForEach-Object { Sanitize-LoadSmokeReportError -Text $_.error }
+    | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    | Select-Object -First 20
+)
+
 $report = [ordered]@{
     generatedAtUtc = [DateTimeOffset]::UtcNow.ToString("o")
     baseUrl        = $root
@@ -157,7 +187,7 @@ $report = [ordered]@{
     failed         = $failCount
     elapsedSeconds = [Math]::Round($swTotal.Elapsed.TotalSeconds, 3)
     meanLatencyMs  = [Math]::Round($meanMs, 3)
-    errors         = @($results | Where-Object { -not $_.ok } | ForEach-Object { $_.error } | Select-Object -First 20)
+    errors         = $sanitizedErrors
 }
 
 Write-Host ($report | ConvertTo-Json -Depth 5)
