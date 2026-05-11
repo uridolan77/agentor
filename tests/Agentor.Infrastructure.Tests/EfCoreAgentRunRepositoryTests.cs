@@ -1,3 +1,4 @@
+using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Domain;
@@ -11,6 +12,7 @@ using Agentor.Infrastructure.Persistence;
 using Agentor.Infrastructure.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Text.Json.Nodes;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -74,6 +76,43 @@ public sealed class EfCoreAgentRunRepositoryTests
         Assert.NotNull(loaded);
         Assert.Equal(run.Steps.Count, loaded!.Steps.Count);
         Assert.Equal(AgentStepStatus.Completed, loaded.Steps[0].Status);
+    }
+
+    [Fact]
+    public async Task SaveAsync_RoundTripsStructuredToolPayload_V2OnToolCall()
+    {
+        await using var ctx = CreateContext("tool-payload-v2-ef");
+        await ctx.Database.EnsureCreatedAsync();
+        var repo = new EfCoreAgentRunRepository(ctx);
+
+        var now = DateTimeOffset.UtcNow;
+        var profile = AgentProfile.Create("Agent", "EF ToolPayload", now);
+        var run = AgentRun.Start(profile.Id, profile.Name, "objective", "tp-v2-trace", now);
+        var step = run.StartStep("One", now);
+        var body = new JsonObject { ["count"] = 7, ["label"] = "x" };
+        var input = new ToolPayload(
+            body,
+            "https://example.com/schemas/tool-in.json",
+            "application/json",
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["slot"] = "summary-val" });
+        var tool = ToolCall.Start(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, input, now);
+        step.AddToolCall(tool);
+        var outBody = new JsonObject { ["ok"] = true };
+        tool.Succeed(new ToolPayload(outBody, "out-schema", "application/json", new Dictionary<string, string> { ["o"] = "1" }), now);
+        step.Complete(now);
+        run.Complete(now);
+
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var loaded = await repo.GetAsync(run.Id, CancellationToken.None);
+        Assert.NotNull(loaded);
+        var tc = loaded!.Steps.Single().ToolCalls.Single();
+        Assert.Equal("https://example.com/schemas/tool-in.json", tc.InputPayload.SchemaId);
+        Assert.Equal("application/json", tc.InputPayload.ContentType);
+        Assert.Equal("summary-val", tc.InputPayload.Summary["slot"]);
+        Assert.Equal(7, tc.InputPayload.Body["count"]!.GetValue<int>());
+        Assert.Equal("out-schema", tc.OutputPayload.SchemaId);
+        Assert.True(tc.OutputPayload.Body["ok"]!.GetValue<bool>());
     }
 
     [Fact]

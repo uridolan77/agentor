@@ -15,8 +15,9 @@ See also: **[AUTHORIZATION_MATRIX.md](./AUTHORIZATION_MATRIX.md)** (route → pe
 
 - **`AddAuthentication`** registers schemes for the configured **`Agentor:Auth:Mode`**:
   - **Fake** — `Agentor.Fake` handler issues a fixed development principal (stable actor id + `HumanOperator` role claim).
-  - **Header** — `Agentor.Header` handler requires a valid GUID in **`HeaderActorIdHeaderName`** and issues a principal (`HumanOperator` role claim).
-  - **Jwt** — when **`JwtAuthority`** is set, **`JwtBearerDefaults.AuthenticationScheme`** validates access tokens against that OIDC authority. When **`JwtAcceptUnvalidatedBearerTokens=true`** (trusted path / dev only), **`Agentor.JwtUnvalidated`** parses bearer JWTs **without signature validation** to populate `HttpContext.User`.
+  - **Header** — `Agentor.Header` handler requires a valid GUID in **`HeaderActorIdHeaderName`** and issues a principal with **`HumanOperator`** role claim. **`HumanGovernanceApprover`** is **not** representable in Header mode today; use **JWT** with an appropriate role claim (or a future header-role extension).
+  - **Jwt** — when **`JwtAuthority`** is set, **`JwtBearerDefaults.AuthenticationScheme`** validates access tokens against that OIDC authority. When **`JwtAcceptUnvalidatedBearerTokens=true`** (trusted path / dev only), **`Agentor.JwtUnvalidated`** parses bearer JWTs **without signature validation** to populate `HttpContext.User`. Outside Development/Test, that combination requires **`JwtAllowUnvalidatedTokensOutsideDevelopment=true`** or startup validation fails.
+- **`/openapi/v1.json`** is exposed in **Development**/**Test**/**Testing** by default; in **Production** enable **`Agentor:OpenApi:Enabled`** explicitly (route mapping runs after full configuration merge).
 - **`/api/v1/*`** is grouped with **`RequireAuthorization(Agentor.Authenticated)`** so anonymous callers receive **401** before route handlers run.
 - **`GET /health`** remains anonymous (liveness).
 - **`GET /ready`** and **`GET /api/v1/integrations/status`** require an authenticated principal; integrations status additionally requires **`AgentorPermission.OpsRead`** at the Agentor layer.
@@ -33,7 +34,8 @@ Configured under `Agentor:Auth`:
 - `JwtRoleClaimType` (default: `role`)
 - `JwtAuthority` (optional) — when set in **Jwt** mode, enables in-process **JWT bearer validation**.
 - `JwtAudience` (optional) — passed to JWT bearer when `JwtAuthority` is set.
-- `JwtAcceptUnvalidatedBearerTokens` (default `false`) — when **Jwt** mode is used **without** `JwtAuthority`, must be `true` to register the unvalidated bearer scheme (gateway / lab only).
+- `JwtAcceptUnvalidatedBearerTokens` (default `false`) — when **Jwt** mode is used **without** `JwtAuthority`, must be `true` to register the unvalidated bearer scheme (gateway / lab only). **Production-like hosts** additionally require `JwtAllowUnvalidatedTokensOutsideDevelopment=true`.
+- `JwtAllowUnvalidatedTokensOutsideDevelopment` (default `false`) — explicit escape hatch when **must** run **`JwtAcceptUnvalidatedBearerTokens`** outside Development/Test (dangerous).
 
 ### Fake mode
 
@@ -47,7 +49,7 @@ Configured under `Agentor:Auth`:
 
 ### Jwt mode
 
-- **Startup**: `JwtAuthority` **or** `JwtAcceptUnvalidatedBearerTokens=true` is required (validated by `AgentorAuthOptionsValidator`).
+- **Startup**: `JwtAuthority` **or** `JwtAcceptUnvalidatedBearerTokens=true` is required (validated by `AgentorAuthOptionsValidator`). If **`JwtAcceptUnvalidatedBearerTokens`** is used **without** **`JwtAuthority`** in **Production**/**Staging**, validation fails unless **`JwtAllowUnvalidatedTokensOutsideDevelopment=true`**.
 - Actor id is read from configured claim types on `HttpContext.User` and must parse to a non-empty GUID.
 - Display name and role claim mappings are configurable.
 - Missing or unrecognized role claim causes actor resolution to fail (**401** on protected endpoints after authentication succeeds).

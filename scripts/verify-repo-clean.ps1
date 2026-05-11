@@ -15,6 +15,25 @@ function Add-Failure([string]$Message) {
     [void]$failures.Add($Message)
 }
 
+function Test-MojibakeTokens([string]$fullPath) {
+    try {
+        $text = [System.IO.File]::ReadAllText($fullPath, [System.Text.UTF8Encoding]::new($false))
+    } catch {
+        return
+    }
+    # UTF-8 punctuation corrupted into Greek/control sequences (avoid non-ASCII literals in this script file).
+    $mojibakeTokens = @(
+        (-join [char[]](0x0393, 0x00C7, 0x00F4, 0x2013)),
+        (-join [char[]](0x0393, 0x00E5, 0x2192)),
+        (-join [char[]](0x0393, 0x00C7, 0x00F4, 0x2014))
+    )
+    foreach ($t in $mojibakeTokens) {
+        if ($text.Contains($t)) {
+            Add-Failure "Mojibake token detected (replace with UTF-8 punctuation): '$t' in $fullPath"
+        }
+    }
+}
+
 function Test-TextFileEncoding([string]$fullPath) {
     $bytes = [System.IO.File]::ReadAllBytes($fullPath)
     if ($bytes.Length -eq 0) { return }
@@ -172,6 +191,7 @@ foreach ($root in $scanRoots) {
         $allowed = ($textExtensions -contains $ext) -or ($_.Name -eq ".gitignore") -or $isHarnessTextFile
         if (-not $allowed) { return }
         Test-TextFileEncoding $full
+        Test-MojibakeTokens $full
     }
 }
 
@@ -179,6 +199,9 @@ foreach ($root in $scanRoots) {
 foreach ($pat in @("*.sln", "*.md", "*.json", "*.yml", "*.yaml", "*.props", "*.targets", "*.csproj")) {
     Get-ChildItem -LiteralPath $repoRoot -File -Filter $pat -ErrorAction SilentlyContinue | ForEach-Object {
         Test-TextFileEncoding $_.FullName
+        if ($pat -eq "*.md") {
+            Test-MojibakeTokens $_.FullName
+        }
     }
 }
 

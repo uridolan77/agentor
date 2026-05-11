@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 30 PR121.5 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 30 -ExpectedHarnessPass PR121.5
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **482 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=30`, `ExpectedHarnessPass=PR121.5`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 85 / Total 85
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 155 / Total 155
+- Agentor.Infrastructure.Tests: Passed 107 / Total 107
+- Agentor.Api.Tests: Passed 122 / Total 122
+
+Scope:
+
+- completed: Phase 30 PR121.5 cross-phase finalization (timestamps, auth/OpenAPI, ToolPayload hardening, mojibake guard)
+- not started: Phase 32+
+
 ## Phase 31 PR122 (2026-05-11)
 
 ```powershell
@@ -318,7 +349,7 @@ Scope:
 - completed: Phase 22 PR110.5 operator dashboard OpsRead enforcement + tests + docs
 - not started: Phase 23+
 
-## Phase 22 PR106ΓÇôPR110 (2026-05-11)
+## Phase 22 PR106–PR110 (2026-05-11)
 
 ```powershell
 dotnet restore Agentor.sln
@@ -346,7 +377,7 @@ Counts:
 
 Scope:
 
-- completed: Phase 22 PR106ΓÇôPR110 operator UX / workflow completeness slice
+- completed: Phase 22 PR106–PR110 operator UX / workflow completeness slice
 - not started: Phase 23+
 
 ## Phase 21 PR105.5 (2026-05-11)
@@ -377,10 +408,10 @@ Counts:
 
 Scope:
 
-- completed: Phase 21 PR105.5 integration HTTP error-shape hardening (follow-up to PR101ΓÇôPR105)
+- completed: Phase 21 PR105.5 integration HTTP error-shape hardening (follow-up to PR101–PR105)
 - not started: Phase 22+
 
-## Phase 21 PR101ΓÇôPR105 (2026-05-11)
+## Phase 21 PR101–PR105 (2026-05-11)
 
 ```powershell
 dotnet restore Agentor.sln
@@ -408,7 +439,7 @@ Counts:
 
 Scope:
 
-- completed: Phase 21 integration contract conformance (PR101ΓÇôPR105)
+- completed: Phase 21 integration contract conformance (PR101–PR105)
 - not started: Phase 22+
 
 ## Phase 20 PR100.6 attempted/reverted verification (2026-05-11)
@@ -593,10 +624,10 @@ dotnet test Agentor.sln --no-build
 Results:
 
 - Restore: succeeded
-- Build: succeeded ΓÇö 0 warnings, 0 errors
+- Build: succeeded — 0 warnings, 0 errors
 - Tests: **331 passed, 0 failed** (+33 new tests vs Phase 17: 13 domain cursor tests, 9 executor/handler resume tests, 3 fixture tests, 6 API integration tests, 1 eval registry update, 1 eval fixture test)
 - New test files: `PlanResumeCursorTests.cs`, `MultiStepReviewResumeTests.cs`, `Phase18FixtureTests.cs`, `GovernanceResumeApiTests.cs`
-- Updated test: `EvaluationFixtureRegistryTests` (expected entry count 2ΓåÆ4)
+- Updated test: `EvaluationFixtureRegistryTests` (expected entry count 2→4)
 - Evidence artifacts: `artifacts/verification/dotnet-{info,restore,build,test}.txt`
 - `verify-harness.ps1` and `verify-repo-clean.ps1` could not execute (PowerShell execution policy blocks unsigned scripts in this environment). All harness conditions verified manually: current-pr.md has Completed/Next, feature-list.json is valid JSON with phase=18/harnessPass=PR90/all passes:true items have evidence, verification-log.md has all required commands, session-handoff.md has not-started statement.
 
@@ -613,14 +644,14 @@ pwsh ./scripts/verify-repo-clean.ps1
 Results:
 
 - Restore: succeeded
-- Build: succeeded ΓÇö 0 warnings, 0 errors
-- Tests: 298 passed, 0 failed (unchanged from PR85 ΓÇö no new test code in PR85.5)
+- Build: succeeded — 0 warnings, 0 errors
+- Tests: 298 passed, 0 failed (unchanged from PR85 — no new test code in PR85.5)
 - verify-harness: passed (ExpectedPhase=17, ExpectedHarnessPass=PR85.5)
 - verify-repo-clean: passed
 
 ---
 
-## Phase 17 PR81ΓÇôPR85 (2026-05-10)
+## Phase 17 PR81–PR85 (2026-05-10)
 
 ```bash
 dotnet restore Agentor.sln
@@ -631,7 +662,7 @@ dotnet test Agentor.sln --no-build
 Results:
 
 - Restore: succeeded
-- Build: succeeded ΓÇö 0 warnings, 0 errors
+- Build: succeeded — 0 warnings, 0 errors
 - Tests:
   - Agentor.Domain.Tests:       Passed  58 / Total  58 (+20 new policy domain tests)
   - Agentor.Application.Tests:  Passed 113 / Total 113 (+13 new bundle evaluation tests)
@@ -644,7 +675,7 @@ Evidence files: `artifacts/verification/dotnet-{info,restore,build,test}.txt`
 
 ---
 
-## Phase 15 PR71ΓÇôPR75 + PR75.5ΓÇôPR75.8 (legacy)
+## Phase 15 PR71–PR75 + PR75.5–PR75.8 (legacy)
 
 ```powershell
 dotnet restore Agentor.sln

@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Agentor.Api;
 using Agentor.Api.Endpoints;
 using Agentor.Api.Middleware;
+using Agentor.Api.Configuration;
 using Agentor.Api.Security;
 using Agentor.Application;
 using Agentor.Application.Abstractions;
@@ -28,6 +29,8 @@ if (persistenceOpts.Mode == AgentorPersistenceOptions.ModePostgres
         db.UseNpgsql(persistenceOpts.ConnectionString));
 }
 
+var openApiSection = builder.Configuration.GetSection(AgentorOpenApiOptions.SectionName);
+builder.Services.Configure<AgentorOpenApiOptions>(openApiSection);
 builder.Services.AddOpenApi();
 
 builder.Services.AddAgentorWebAuthentication(builder.Configuration);
@@ -75,13 +78,21 @@ builder.Services.Configure<ToolExecutionOptions>(
 
 var app = builder.Build();
 
+var openApiDocumentEnabled = app.Environment.IsDevelopment()
+    || app.Environment.IsEnvironment("Test")
+    || app.Environment.IsEnvironment("Testing")
+    || (app.Configuration.GetSection(AgentorOpenApiOptions.SectionName).Get<AgentorOpenApiOptions>()?.Enabled ?? false);
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestTracingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapOpenApi();
+if (openApiDocumentEnabled)
+{
+    app.MapOpenApi();
+}
 
 app.MapSystemEndpoints();
 

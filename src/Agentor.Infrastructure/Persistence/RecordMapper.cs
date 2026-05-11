@@ -114,12 +114,19 @@ internal static class RecordMapper
 
     internal static AgentRunSummary ToSummary(AgentRunRecord record)
     {
+        var status = Enum.Parse<AgentRunStatus>(record.Status);
+        var terminalAt = record.TerminalAt;
+        if (status == AgentRunStatus.Completed && record.CompletedAt.HasValue)
+        {
+            terminalAt = null;
+        }
+
         return new AgentRunSummary(
             record.Id,
             record.ProfileId,
             record.AgentName,
             record.TraceId,
-            Enum.Parse<AgentRunStatus>(record.Status),
+            status,
             record.StartedAt,
             record.CompletedAt,
             record.TenantId,
@@ -127,7 +134,7 @@ internal static class RecordMapper
             record.ProjectId,
             record.KnowledgeScopeId,
             record.ErrorMessage,
-            record.TerminalAt,
+            terminalAt,
             record.ReviewRequestedAt,
             record.PausedAt,
             ParseReviewWorkflowStatus(record.ReviewWorkflowStatus));

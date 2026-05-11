@@ -78,17 +78,88 @@ public sealed class ToolPayload
             return Empty;
         }
 
-        var node = JsonNode.Parse(json);
-        if (node is JsonObject obj && obj.TryGetPropertyValue("body", out var bodyNode) && bodyNode is JsonObject bodyObj)
+        JsonNode? node;
+        try
         {
-            var schemaId = ReadNullableString(obj["schemaId"]);
-            var contentType = ReadNullableString(obj["contentType"]);
-            var summary = ParseSummaryObject(obj["summary"] as JsonObject, options);
-            return new ToolPayload(bodyObj, schemaId, contentType, summary);
+            node = JsonNode.Parse(json);
+        }
+        catch (JsonException)
+        {
+            return Empty;
         }
 
-        var legacy = JsonSerializer.Deserialize<Dictionary<string, string>>(json, options);
-        return FromLegacyDictionary(legacy);
+        if (node is not JsonObject obj)
+        {
+            return Empty;
+        }
+
+        if (TryParseV2Envelope(obj, options, out var v2))
+        {
+            return v2;
+        }
+
+        try
+        {
+            var legacy = JsonSerializer.Deserialize<Dictionary<string, string>>(json, options);
+            return FromLegacyDictionary(legacy);
+        }
+        catch (JsonException)
+        {
+            return Empty;
+        }
+    }
+
+    /// <summary>
+    /// Detects persisted v2 shape. A root-level <c>body</c> string routes to legacy flat dictionary parsing.
+    /// </summary>
+    private static bool LooksLikeV2Envelope(JsonObject obj)
+    {
+        if (obj.TryGetPropertyValue("body", out var bodyNode))
+        {
+            if (bodyNode is JsonObject)
+            {
+                return true;
+            }
+
+            if (bodyNode is null || bodyNode.GetValueKind() == JsonValueKind.Null)
+            {
+                return true;
+            }
+
+            // String body is ambiguous; treat as legacy <c>Dictionary&lt;string,string&gt;</c> serialization.
+            if (bodyNode.GetValueKind() == JsonValueKind.String)
+            {
+                return false;
+            }
+
+            // Arrays / primitives: v2 envelope with non-object body (degraded to empty body).
+            return true;
+        }
+
+        return obj["summary"] is JsonObject
+               || obj.ContainsKey("schemaId")
+               || obj.ContainsKey("contentType");
+    }
+
+    private static bool TryParseV2Envelope(JsonObject obj, JsonSerializerOptions options, out ToolPayload payload)
+    {
+        payload = Empty;
+        if (!LooksLikeV2Envelope(obj))
+        {
+            return false;
+        }
+
+        JsonObject bodyObj = new();
+        if (obj.TryGetPropertyValue("body", out var bodyNode) && bodyNode is JsonObject concreteBody)
+        {
+            bodyObj = CloneBody(concreteBody);
+        }
+
+        var schemaId = ReadNullableString(obj["schemaId"]);
+        var contentType = ReadNullableString(obj["contentType"]);
+        var summary = ParseSummaryObject(obj["summary"] as JsonObject, options);
+        payload = new ToolPayload(bodyObj, schemaId, contentType, summary);
+        return true;
     }
 
     private static Dictionary<string, string>? ParseSummaryObject(JsonObject? summaryNode, JsonSerializerOptions options)

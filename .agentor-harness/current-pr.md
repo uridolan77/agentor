@@ -1,7 +1,7 @@
 # Current PR — harness marker
 
-Completed: Phase 31 **PR122** — **Human review handler refactor**: extracted **`HumanReviewDecisionApplicator`**, **`ReviewedToolContinuationService`**, **`PlanResumeOrchestrator`**, **`ReviewPolicyReevaluationService`**, **`ReviewTraceWriter`** under **`src/Agentor.Application/HumanReview/`**; **`ApplyHumanReviewDecisionHandler`** is repository load/save + orchestration only; **`AddAgentorApplication`** registers scoped services; **`AgentorTestComposition.CreateApplyHumanReviewDecisionHandler`** for tests; new **`HumanReviewDecisionApplicatorTests`** + **`ReviewPolicyReevaluationServiceTests`**. Verification: restore/build/test — **468 passed**; harness scripts **ExpectedPhase 31 / PR122**.
+Completed: Phase 30 **PR121.5** — **Phase 28–30 finalization**: **`AgentRun.Complete`** sets **`CompletedAt`** and clears **`TerminalAt`** (fail/reject paths keep **`TerminalAt`**); **`AgentRun.Reconstitute`** + **`RecordMapper.ToSummary`** drop stale **`terminal_at`** on **`Completed`** loads; **`JwtAllowUnvalidatedTokensOutsideDevelopment`** gates **`JwtAcceptUnvalidatedBearerTokens`** outside Development/Test; **`OpenApi`** **`MapOpenApi`** after **`Build`** using merged config — Development/Test always on, Production requires **`Agentor:OpenApi:Enabled`**; **`ToolPayload.FromPersistedJson`** v2/malformed-safe paths + tests (EF structured round-trip, audit summary redaction, scalar **`ToolCallStarted`** trace); **`verify-repo-clean`** mojibake scan; security docs updated. Verification: restore/build/test — **482 passed**; harness scripts **ExpectedPhase 30 / PR121.5**.
 
-Next: Phase 32 (evaluation science v2) or next explicitly scheduled phase.
+Next: Phase 31 (**PR122** human-review handler refactor) when explicitly scheduled — confirm branch state vs **`src/Agentor.Application/HumanReview/`** before advancing harness.
 
 Do not start the next phase during closeout.

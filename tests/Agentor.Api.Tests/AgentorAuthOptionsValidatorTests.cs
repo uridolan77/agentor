@@ -119,6 +119,57 @@ public sealed class AgentorAuthOptionsValidatorTests
         Assert.True(result.Succeeded);
     }
 
+    [Fact]
+    public void Validate_Fails_WhenJwtUnvalidatedInProductionWithoutOverride()
+    {
+        var validator = new AgentorAuthOptionsValidator(new FakeHostEnvironment("Production"));
+        var options = new AgentorAuthOptions
+        {
+            Mode = AgentorAuthMode.Jwt,
+            JwtAcceptUnvalidatedBearerTokens = true,
+            JwtAuthority = null,
+            JwtAllowUnvalidatedTokensOutsideDevelopment = false
+        };
+
+        var result = validator.Validate(Options.DefaultName, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains("JwtAllowUnvalidatedTokensOutsideDevelopment", result.FailureMessage);
+    }
+
+    [Fact]
+    public void Validate_Succeeds_WhenJwtUnvalidatedInProductionWithOverride()
+    {
+        var validator = new AgentorAuthOptionsValidator(new FakeHostEnvironment("Production"));
+        var options = new AgentorAuthOptions
+        {
+            Mode = AgentorAuthMode.Jwt,
+            JwtAcceptUnvalidatedBearerTokens = true,
+            JwtAuthority = null,
+            JwtAllowUnvalidatedTokensOutsideDevelopment = true
+        };
+
+        var result = validator.Validate(Options.DefaultName, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_Succeeds_WhenJwtUnvalidatedInTestEnvironment()
+    {
+        var validator = new AgentorAuthOptionsValidator(new FakeHostEnvironment("Test"));
+        var options = new AgentorAuthOptions
+        {
+            Mode = AgentorAuthMode.Jwt,
+            JwtAcceptUnvalidatedBearerTokens = true,
+            JwtAuthority = null
+        };
+
+        var result = validator.Validate(Options.DefaultName, options);
+
+        Assert.True(result.Succeeded);
+    }
+
     private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = environmentName;

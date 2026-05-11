@@ -11,6 +11,7 @@ This matrix maps **HTTP routes** to **`AgentorPermission`** checks and default *
 | Endpoint | Permission | Human roles | Service | Data / notes |
 |----------|------------|-------------|---------|----------------|
 | `GET /health` | *(none)* | Public | Public | Liveness only. |
+| `GET /openapi/v1.json` | *(none)* | Public when mapped | Public when mapped | OpenAPI document: on by default in Development/Test; **Production** maps only when **`Agentor:OpenApi:Enabled=true`**. |
 | `GET /ready` | *(ASP.NET auth only)* | Authenticated | Authenticated | Readiness; no `AgentorPermission` gate. |
 | `GET /api/v1/integrations/status` | `OpsRead` | Allowed | Denied | Integration modes; no secrets in DTO. |
 | `POST /api/v1/agent-runs` | `RunWrite` | Allowed | Denied | Starts runs; idempotency key supported. |

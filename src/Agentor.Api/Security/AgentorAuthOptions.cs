@@ -56,4 +56,10 @@ public sealed class AgentorAuthOptions
     /// Unsafe unless the network path is strictly trusted.
     /// </summary>
     public bool JwtAcceptUnvalidatedBearerTokens { get; set; }
+
+    /// <summary>
+    /// Allows <see cref="JwtAcceptUnvalidatedBearerTokens"/> outside Development/Test (e.g. Production).
+    /// Without this, unvalidated JWT parsing is blocked in Production-like environments.
+    /// </summary>
+    public bool JwtAllowUnvalidatedTokensOutsideDevelopment { get; set; }
 }

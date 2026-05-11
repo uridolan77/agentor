@@ -44,6 +44,16 @@ public sealed class AgentorAuthOptionsValidator(IHostEnvironment hostEnvironment
                     "Agentor:Auth:Mode=Jwt requires JwtAuthority (in-process bearer validation) or " +
                     "JwtAcceptUnvalidatedBearerTokens=true (trusted-path / dev only).");
             }
+
+            if (options.JwtAcceptUnvalidatedBearerTokens
+                && string.IsNullOrWhiteSpace(options.JwtAuthority)
+                && !IsLocalOrTestEnvironment(hostEnvironment)
+                && !options.JwtAllowUnvalidatedTokensOutsideDevelopment)
+            {
+                return ValidateOptionsResult.Fail(
+                    "Agentor:Auth:JwtAcceptUnvalidatedBearerTokens without JwtAuthority is blocked outside " +
+                    "Development/Test unless Agentor:Auth:JwtAllowUnvalidatedTokensOutsideDevelopment=true.");
+            }
         }
 
         return ValidateOptionsResult.Success;

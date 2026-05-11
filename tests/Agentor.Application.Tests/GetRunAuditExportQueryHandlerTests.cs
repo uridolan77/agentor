@@ -124,6 +124,40 @@ public sealed class GetRunAuditExportQueryHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_RedactsSecrets_InToolPayloadSummary()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var now = clock.UtcNow;
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Objective", "trace-summary-redact", now);
+        var step = run.StartStep("Step", now);
+        var body = new JsonObject { ["prompt"] = "hi" };
+        var tool = ToolCall.Start(
+            run.Id,
+            step.Id,
+            WellKnownToolKeys.Pr1FakeTool,
+            new ToolPayload(body, "urn:tool:v1", "application/json", new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["client_secret"] = "summary-secret-999"
+            }),
+            now);
+        step.AddToolCall(tool);
+        tool.Succeed(ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["ok"] = "1" }), now);
+        step.Complete(now);
+        run.Complete(now);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = new GetRunAuditExportQueryHandler(repo, Microsoft.Extensions.Options.Options.Create(new AuditExportOptions()));
+        var result = await handler.HandleAsync(run.Id, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Contains("[REDACTED]", result!.CanonicalJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("summary-secret-999", result.CanonicalJson, StringComparison.Ordinal);
+        Assert.Contains("hi", result.CanonicalJson, StringComparison.Ordinal);
+        Assert.Contains("urn:tool:v1", result.CanonicalJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task HandleAsync_IncludesHumanReviewWorkflowChain_InCanonicalJson()
     {
         var repo = new InMemoryAgentRunRepository();

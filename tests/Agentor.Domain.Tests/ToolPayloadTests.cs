@@ -59,6 +59,47 @@ public sealed class ToolPayloadTests
     }
 
     [Fact]
+    public void FromPersistedJson_EmptyObject_ReturnsEmptyPayload()
+    {
+        var p = ToolPayload.FromPersistedJson("{}", Options);
+
+        Assert.Empty(p.Body);
+        Assert.Empty(p.Summary);
+        Assert.Null(p.SchemaId);
+    }
+
+    [Fact]
+    public void FromPersistedJson_V2BodyArray_Malformed_DegradesToEmptyBody()
+    {
+        var json = """{"body":["not","object"],"schemaId":"s","summary":{}}""";
+        var p = ToolPayload.FromPersistedJson(json, Options);
+
+        Assert.Empty(p.Body);
+        Assert.Equal("s", p.SchemaId);
+    }
+
+    [Fact]
+    public void FromPersistedJson_V2MissingBody_ParsesSummaryAndMetadata()
+    {
+        var json = """{"schemaId":"my-schema","contentType":"application/json","summary":{"k":"v"}}""";
+        var p = ToolPayload.FromPersistedJson(json, Options);
+
+        Assert.Empty(p.Body);
+        Assert.Equal("my-schema", p.SchemaId);
+        Assert.Equal("application/json", p.ContentType);
+        Assert.Equal("v", p.Summary["k"]);
+    }
+
+    [Fact]
+    public void FromPersistedJson_InvalidLegacyJson_ReturnsEmpty()
+    {
+        var p = ToolPayload.FromPersistedJson("not-json", Options);
+
+        Assert.Empty(p.Body);
+        Assert.Empty(p.Summary);
+    }
+
+    [Fact]
     public void ToPolicyEvaluationDictionary_MergesSummaryWithScalarBodyProperties()
     {
         var body = new JsonObject

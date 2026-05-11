@@ -162,6 +162,20 @@ public sealed class AgentRunTests
     }
 
     [Fact]
+    public void Complete_Success_SetsCompletedAt_TerminalAtNull()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Objective", "trace-complete-term", now);
+        var step = run.StartStep("Step", now);
+        step.Complete(now);
+        run.Complete(now);
+
+        Assert.Equal(AgentRunStatus.Completed, run.Status);
+        Assert.Equal(now, run.CompletedAt);
+        Assert.Null(run.TerminalAt);
+    }
+
+    [Fact]
     public void Fail_SetsTerminalAt_NotCompletedAt()
     {
         var now = DateTimeOffset.UtcNow;

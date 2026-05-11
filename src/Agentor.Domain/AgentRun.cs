@@ -293,7 +293,7 @@ public sealed class AgentRun
 
         Status = AgentRunStatus.Completed;
         CompletedAt = now;
-        TerminalAt = now;
+        TerminalAt = null;
         ReviewWorkflowStatus = HumanReviewWorkflowStatus.None;
         RecordTrace(TraceEventKind.RunCompleted, "Agent run completed.", now);
     }
@@ -652,6 +652,12 @@ public sealed class AgentRun
         }
 
         run.ResumeCursor = resumeCursor;
+
+        // Successful completion uses CompletedAt only; ignore stale terminal_at from legacy persistence.
+        if (status == AgentRunStatus.Completed && completedAt.HasValue)
+        {
+            run.TerminalAt = null;
+        }
 
         return run;
     }

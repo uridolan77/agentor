@@ -1,5 +1,25 @@
 # Agentor harness progress
 
+## Phase 30 PR121.5 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **`AgentRun.Complete`**: sets **`TerminalAt`** to null (successful runs use **`CompletedAt`** only); **`Reconstitute`** / **`RecordMapper.ToSummary`** strip stale **`terminal_at`** when status is **`Completed`**.
+- **JWT**: **`JwtAllowUnvalidatedTokensOutsideDevelopment`** required with **`JwtAcceptUnvalidatedBearerTokens`** in Production-like environments; validator + **`AgentorAuthOptionsValidatorTests`**.
+- **OpenAPI**: **`Agentor:OpenApi:Enabled`** + late **`MapOpenApi`** after configuration merge; **`OpenApiExposureApiTests`**.
+- **`ToolPayload`**: safer **`FromPersistedJson`** (v2 envelope vs legacy, malformed JSON → empty); tests + EF structured round-trip + audit summary redaction + scalar trace regression.
+- **Hygiene**: **`verify-repo-clean`** mojibake detection; harness markdown punctuation fixes.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **482 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 30 -ExpectedHarnessPass PR121.5`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 32 not started.
+
 ## Phase 31 PR122 (2026-05-11)
 
 **Status**: Complete.
@@ -71,12 +91,12 @@
 - **`EfCoreAgentRunRepository.SaveAsync`**: merge into existing **`agent_runs`** (no **`Remove`**); upsert steps and nested tool calls / policy decisions; append **`trace_events`** by id with immutability guard (**`AgentRunTraceImmutabilityException`**).
 - **Columns / model**: **`aggregate_version`** (optimistic concurrency), **`resume_cursor_json`**; **`AgentRun.PersistenceConcurrencyVersion`**; migration **`20260511200000_Phase27AgentRunPersistence`** + **`AgentorDbContextModelSnapshot`**.
 - **Exceptions / HTTP**: **`AgentRunPersistenceConcurrencyException`**, **`AgentRunTraceImmutabilityException`**; **`ExceptionHandlingMiddleware`** maps to **409** / **400**.
-- **Tests**: **`EfCoreAgentRunRepositoryTests`** ΓÇö trace re-save dedup, tampered trace, resume cursor JSON, human-review JSON order, SQLite two-writer stale version.
+- **Tests**: **`EfCoreAgentRunRepositoryTests`** — trace re-save dedup, tampered trace, resume cursor JSON, human-review JSON order, SQLite two-writer stale version.
 - **Docs**: **`docs/REPO_TRUTH.md`** persistence section; **`docs/planning/pr76-125/Phase 23 - 31.md`** intro blocker #2 updated.
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **443 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **443 passed, 0 failed**
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 27 -ExpectedHarnessPass PR118`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
@@ -93,7 +113,7 @@
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **438 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **438 passed, 0 failed**
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 26 -ExpectedHarnessPass PR117.5`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
@@ -106,13 +126,13 @@
 **Work**:
 
 - **`RunQueueHostedService`**: constructor takes only **`IServiceScopeFactory`**, **`IClock`**, queue/worker options monitors; each **`TryProcessSingleAsync`** iteration opens an async scope and resolves **`IDurableRunQueue`** + **`IRunExecutionLeaseStore`** + **`IAgentRunOrchestrator`** (claim/lease/process share scoped EF **`DbContext`**).
-- **Orchestrator drain**: **`StartAgentRunRouting`** + **`IOptionsMonitor<AgentorPublicRunOptions>`** + **`IAgentRunOrchestrator.StartAsync`** (validation ΓåÆ **`RunOrchestrationValidationException`** ΓåÆ failed queue item).
+- **Orchestrator drain**: **`StartAgentRunRouting`** + **`IOptionsMonitor<AgentorPublicRunOptions>`** + **`IAgentRunOrchestrator.StartAsync`** (validation → **`RunOrchestrationValidationException`** → failed queue item).
 - **`AddAgentorInfrastructure`**: binds **`Agentor:PublicRuns`** (`AgentorPublicRunOptions`).
-- **Tests**: **`RunQueueHostedServiceTests`** ctor updates; **`RunQueueHostedServiceEfSqliteScopeTests`** ΓÇö SQLite file DB + **`ValidateScopes=true`**, enqueue/process/verify completed.
+- **Tests**: **`RunQueueHostedServiceTests`** ctor updates; **`RunQueueHostedServiceEfSqliteScopeTests`** — SQLite file DB + **`ValidateScopes=true`**, enqueue/process/verify completed.
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **420 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **420 passed, 0 failed**
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 25 -ExpectedHarnessPass PR116`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
@@ -124,11 +144,11 @@
 
 **Work**:
 
-- **`RunOrchestrationRequest`** + **`RunExecutionMode`** (Domain); **`StartAgentRunRouting`** + **`AgentorPublicRunOptions`**; **`GovernedSingleToolRunDriver`**, **`LegacyFakeRunExecutor`**, **`AgentRunOrchestrator`** + **`IAgentRunOrchestrator`**; **`StartAgentRunHandler`** delegates; Infrastructure DI **`IAgentPlanExecutor`/`SequentialAgentPlanExecutor`**; API **`StartAgentRunRequestMapping`**, extended **`StartAgentRunFingerprint`**, **`RunOrchestrationValidationException`** ΓåÆ 400; **`AgentRunOrchestrationApiTests`**; harness/docs/README/appsettings.
+- **`RunOrchestrationRequest`** + **`RunExecutionMode`** (Domain); **`StartAgentRunRouting`** + **`AgentorPublicRunOptions`**; **`GovernedSingleToolRunDriver`**, **`LegacyFakeRunExecutor`**, **`AgentRunOrchestrator`** + **`IAgentRunOrchestrator`**; **`StartAgentRunHandler`** delegates; Infrastructure DI **`IAgentPlanExecutor`/`SequentialAgentPlanExecutor`**; API **`StartAgentRunRequestMapping`**, extended **`StartAgentRunFingerprint`**, **`RunOrchestrationValidationException`** → 400; **`AgentRunOrchestrationApiTests`**; harness/docs/README/appsettings.
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **419 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **419 passed, 0 failed**
 - `verify-harness.ps1 -ExpectedPhase 24 -ExpectedHarnessPass PR115` (Windows PowerShell)
 - `verify-repo-clean.ps1`
 
@@ -142,12 +162,12 @@
 
 - Root **README.md**: product identity, capabilities, explicit limitations (with pointer to repo truth), quickstart, API examples, architecture, runtime model, human review, integrations, development harness, roadmap.
 - **`docs/REPO_TRUTH.md`**: factual current-state bullets (public agent-runs, executor default, policy scope, persistence, Jwt).
-- **`decisions/ADR-023-public-run-kernel-unification.md`**: ADR for public run API ΓåÆ orchestration kernel; fake as adapter.
+- **`decisions/ADR-023-public-run-kernel-unification.md`**: ADR for public run API → orchestration kernel; fake as adapter.
 - **`docs/history/PR1-PR40-package.md`**: archived prior ΓÇ£Claude Code PackageΓÇ¥ root README.
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **413 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **413 passed, 0 failed**
 - `verify-harness.ps1 -ExpectedPhase 23 -ExpectedHarnessPass PR111` (Windows PowerShell)
 - `verify-repo-clean.ps1`
 
@@ -160,33 +180,33 @@
 **Work**:
 
 - `GET /api/v1/operator/dashboard` protected with **`EndpointAuthorization.Require(..., OpsRead)`** (aligned with `/api/v1/ops/*`).
-- API tests: `EndpointAuthorizationApiTests` ΓÇö HumanOperator/System OK, Service **403**, actor accessor failure **401**.
+- API tests: `EndpointAuthorizationApiTests` — HumanOperator/System OK, Service **403**, actor accessor failure **401**.
 - Unit test: `RoleBasedAuthorizationDecisionServiceTests.Authorize_Allows_System_ForOpsRead`.
 - Docs: `auth-boundary.md`, `deployment-threat-notes.md`, `dashboard-and-inbox.md`, `debug-run.md`, `phase13-product-surface.md`, `phase13-workflows` example.
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **413 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **413 passed, 0 failed**
 - `verify-harness.ps1 -ExpectedPhase 22 -ExpectedHarnessPass PR110.5` (Windows PowerShell)
 - `verify-repo-clean.ps1`
 
 **Scope guard**: Phase 23 not started.
 
-## Phase 22 PR106ΓÇôPR110 (2026-05-11)
+## Phase 22 PR106–PR110 (2026-05-11)
 
 **Status**: Complete.
 
 **Work**:
 
-- **PR106**: `PendingHumanReviewListResponseDto` adds totalCount/skip/take; inbox reasons come from `AgentRunSummary.ErrorMessage` (summary projection extended on Domain + EF mapper); `ReviewInboxWorkflowApiTests` + `ReviewInboxPolicyWebApplicationFactory` exercise HTTP RequiresReview ΓåÆ pending ΓåÆ approve ΓåÆ inbox clearance.
-- **PR107**: `RunTimelineResponseDto.timelineGroups` (`RunTimelineGroupKind`) ΓÇö plan step spans, skill invocation spans, policy/review singletons; `GetRunTimelineQueryHandlerTests`.
+- **PR106**: `PendingHumanReviewListResponseDto` adds totalCount/skip/take; inbox reasons come from `AgentRunSummary.ErrorMessage` (summary projection extended on Domain + EF mapper); `ReviewInboxWorkflowApiTests` + `ReviewInboxPolicyWebApplicationFactory` exercise HTTP RequiresReview → pending → approve → inbox clearance.
+- **PR107**: `RunTimelineResponseDto.timelineGroups` (`RunTimelineGroupKind`) — plan step spans, skill invocation spans, policy/review singletons; `GetRunTimelineQueryHandlerTests`.
 - **PR108**: `OperatorDashboardQueryHandler` modules for queue/outbox/deferred risks/policy runtime/expanded integrations + quality proxies; `IIntegrationStatusReader` + `IntegrationStatusReader` DI.
 - **PR109**: `AuditExportFormatKind` + `AuditExportFormatParser`; `RunAuditExportResult` carries response body + canonical hash inputs; governance + audit-packet routes accept `format` query.
 - **PR110**: `docs/operator/review-workflow.md`, `debug-run.md`, `audit-export.md`.
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **408 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **408 passed, 0 failed**
 - `verify-harness.ps1 -ExpectedPhase 22 -ExpectedHarnessPass PR110` (Windows PowerShell)
 - `verify-repo-clean.ps1`
 
@@ -202,13 +222,13 @@
 - Documentation and harness updated; Phase 22 not started.
 
 **Verification**:
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **400 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **400 passed, 0 failed**
 - `verify-harness.ps1 -ExpectedPhase 21 -ExpectedHarnessPass PR105.5` (Windows PowerShell)
 - `verify-repo-clean.ps1`
 
 **Scope guard**: Phase 22 not started.
 
-## Phase 21 PR101ΓÇôPR105 (2026-05-11)
+## Phase 21 PR101–PR105 (2026-05-11)
 
 **Status**: Complete.
 
@@ -218,13 +238,13 @@
 - Documentation: `docs/integrations/compatibility-matrix.md` (Fake/Http/Disabled matrix, endpoints, unsupported features).
 
 **Verification**:
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` ΓÇö **394 passed, 0 failed**
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **394 passed, 0 failed**
 - `verify-harness.ps1 -ExpectedPhase 21 -ExpectedHarnessPass PR105` (via Windows PowerShell)
 - `verify-repo-clean.ps1` (via Windows PowerShell)
 
 **Scope guard**: Phase 22 not started.
 
-## Phase 20 PR100.6 ΓÇö Attempted Atomic Claim Hardening (2026-05-10)
+## Phase 20 PR100.6 — Attempted Atomic Claim Hardening (2026-05-10)
 
 **Status**: Reverted to PR100.5 baseline due to SQLite LINQ translation limitations.
 
@@ -280,7 +300,7 @@ Completed **Phase 20 reconciliation, ops security, and durability hardening**:
 - Updated docs:
 	- `docs/security/auth-boundary.md` (OpsRead permission + ops endpoint authorization)
 	- `docs/security/deployment-threat-notes.md` (ops/read exposure + no-op outbox sink guard)
-	- `docs/planning/pr76-125/Phase 20 ΓÇö Durable operational runtime.md` (PR100.5 reconciliation acceptance)
+	- `docs/planning/pr76-125/Phase 20 — Durable operational runtime.md` (PR100.5 reconciliation acceptance)
 
 Added/updated tests:
 
@@ -332,7 +352,7 @@ Completed **Phase 20 durable operational runtime**:
 - **PR96**: Added durable queue abstraction and records: `IDurableRunQueue`, `RunQueueRecord`, `DurableRunQueueStatus`; implemented `EfRunQueueStore` and `InMemoryDurableRunQueueStore`.
 - **PR97**: Added hosted run worker `RunQueueHostedService` with `RunWorkerOptions` (`Agentor:RunWorker`) and lease-aware processing via `IRunExecutionLeaseStore`.
 - **PR98**: Added hosted outbox dispatcher `OutboxHostedService` with `OutboxDispatchOptions` (`Agentor:OutboxDispatch`) and default `NoOpOutboxSink`.
-- **PR99**: Tightened EF outbox dispatch claiming with atomic conditional update (`ExecuteUpdateAsync` pendingΓåÆdispatching) and contention coverage.
+- **PR99**: Tightened EF outbox dispatch claiming with atomic conditional update (`ExecuteUpdateAsync` pending→dispatching) and contention coverage.
 - **PR100**: Added read-only operational endpoints:
 	- `GET /api/v1/ops/queue`
 	- `GET /api/v1/ops/outbox`
@@ -395,14 +415,14 @@ Active deferred items (`passes: false`): `SCOPE-001` only.
 
 Test totals after PR90.5 verification: **333 passing, 0 failing** across all 5 test projects. Focused hardening slice: `MultiStepReviewResumeTests` 12 passed, 0 failed.
 
-## Phase 18 PR86ΓÇôPR90 (2026-05-10)
+## Phase 18 PR86–PR90 (2026-05-10)
 
 Completed **Phase 18 Multi-step Human Review Resume Semantics**:
 
-- **PR86**: Design doc `docs/design/multi-step-review-resume.md` ΓÇö ReviewCheckpoint, ResumeCursor, PendingPlanStep, ReviewedToolContinuation; FailFast/ContinueOnFailure/SkipRemaining/EscalateToReview interactions; invariants (approval never overrides Deny; approval does not canonize knowledge; chaining semantics).
+- **PR86**: Design doc `docs/design/multi-step-review-resume.md` — ReviewCheckpoint, ResumeCursor, PendingPlanStep, ReviewedToolContinuation; FailFast/ContinueOnFailure/SkipRemaining/EscalateToReview interactions; invariants (approval never overrides Deny; approval does not canonize knowledge; chaining semantics).
 - **PR87**: `PlanResumeCursor`, `PendingPlanStep`, `PlanStepResumeSnapshot`, `ReviewResumeState` in `Agentor.Domain.Governance.ReviewResumeCursor.cs`. `AgentRun.ResumeCursor` property + `RecordPlanResumeCursor` / `ClearResumeCursor` methods. `TraceEventKind.PlanResumeCursorRecorded/Cleared/MultiStepPlanResumed`. `Reconstitute` accepts `PlanResumeCursor?`. 13 domain tests in `PlanResumeCursorTests.cs`.
-- **PR88**: `SequentialAgentPlanExecutor.RecordResumeCursorIfNeeded` ΓÇö records cursor with remaining-step list and completed-step history when `RequiresReview` occurs mid-plan. `ApplyHumanReviewDecisionHandler.ResumeRemainingPlanStepsAsync` + `ExecutePendingResumeStepAsync` ΓÇö resumes remaining steps with full policy evaluation, failure-policy handling (ContinueOnFailure, SkipRemaining, MarkForCompensation, EscalateToReview, FailFast), and RequiresReview chaining (new cursor recorded on re-suspension). `RecordNewCursorForResumedStep` for multi-gate plans. PR90.5 adds 2 focused escalation-hardening tests, bringing `MultiStepReviewResumeTests.cs` to 12 tests.
-- **PR89**: `GovernanceResumeApiTests.cs` ΓÇö 6 API integration tests covering Approve (multistep completion), Reject (failure), RequestChanges (unchanged), Escalate (unchanged), 409 on non-RequiresReview run, 404 on unknown run. `GovernanceResumeApiFixture` using `TestAgentRunRepository`.
+- **PR88**: `SequentialAgentPlanExecutor.RecordResumeCursorIfNeeded` — records cursor with remaining-step list and completed-step history when `RequiresReview` occurs mid-plan. `ApplyHumanReviewDecisionHandler.ResumeRemainingPlanStepsAsync` + `ExecutePendingResumeStepAsync` — resumes remaining steps with full policy evaluation, failure-policy handling (ContinueOnFailure, SkipRemaining, MarkForCompensation, EscalateToReview, FailFast), and RequiresReview chaining (new cursor recorded on re-suspension). `RecordNewCursorForResumedStep` for multi-gate plans. PR90.5 adds 2 focused escalation-hardening tests, bringing `MultiStepReviewResumeTests.cs` to 12 tests.
+- **PR89**: `GovernanceResumeApiTests.cs` — 6 API integration tests covering Approve (multistep completion), Reject (failure), RequestChanges (unchanged), Escalate (unchanged), 409 on non-RequiresReview run, 404 on unknown run. `GovernanceResumeApiFixture` using `TestAgentRunRepository`.
 - **PR90**: `review-gated-multistep-plan.json` (schema 5, kind MultiStepReviewResumeEvaluation), `review-resume-audit-export.json` (schema 5, kind ReviewResumeAuditExport). `registry.json` updated to 4 entries. 3 tests in `Phase18FixtureTests.cs` including the named PR53-005 evidence test.
 
 **PR53-005 closed**: Multi-step plan executor resume semantics with named evidence.
@@ -416,20 +436,20 @@ Evidence: `artifacts/verification/dotnet-{info,restore,build,test}.txt`.
 Policy deferred-item reconciliation after Phase 17.
 
 - **PR52-004 closed**: The versioned `PolicyBundle` enterprise policy model is fully implemented by Phase 17. Row flipped to `passes: true` in `feature-list.json`. Engineering note added to `v1.0-RC-DEFERRED-ITEMS.md`.
-- **SCOPE-001 documented**: `PolicyRuleScope` (Global/Tenant/Workspace/Project) is modeled on `PolicyRule` but `PolicyBundleRulesAdapter.ToProfileRules()` does not filter by run identity ΓÇö all rules are treated as globally effective. Explicit `SCOPE-001` comment added to adapter. "Known limitations" section added to `docs/developer/policy-bundles.md`. New deferred item `SCOPE-001` added to `v1.0-RC-DEFERRED-ITEMS.md` and `feature-list.json` (`passes: false`).
+- **SCOPE-001 documented**: `PolicyRuleScope` (Global/Tenant/Workspace/Project) is modeled on `PolicyRule` but `PolicyBundleRulesAdapter.ToProfileRules()` does not filter by run identity — all rules are treated as globally effective. Explicit `SCOPE-001` comment added to adapter. "Known limitations" section added to `docs/developer/policy-bundles.md`. New deferred item `SCOPE-001` added to `v1.0-RC-DEFERRED-ITEMS.md` and `feature-list.json` (`passes: false`).
 - **Phase 18 not started.**
 
 Active deferred items (`passes: false`): `SCOPE-001`, `PR53-005`.
 
-## Phase 17 PR81ΓÇôPR85 (2026-05-10)
+## Phase 17 PR81–PR85 (2026-05-10)
 
 Completed **Phase 17 Enterprise Policy Model**:
 
 - **PR81**: `PolicyBundle`, `PolicyBundleVersion`, `PolicyRule`, `PolicyRuleKind/Scope/Effect` domain model in `Agentor.Domain.Policy`. Versioned and immutable after publication. Duplicate rule IDs rejected.
 - **PR82**: `PolicyProfile`, `PolicyProfileBinding`, `ActivePolicyProfile` domain types. `IPolicyBundleRepository` and `IPolicyProfileRepository` application abstractions.
-- **PR83**: `PolicyBundleRulesAdapter` (bundle ΓåÆ `PolicyProfileRules`). `InMemoryPolicyBundleRepository`, `InMemoryPolicyProfileRepository`. `RuntimePolicyEvaluator` extended with bundle-aware 2-constructor pattern (3-param test constructor + 5-param DI constructor). `PolicyProfileRules.RequiresReviewToolKeys` added. `RequiresReview` remains distinct from `Deny`.
+- **PR83**: `PolicyBundleRulesAdapter` (bundle → `PolicyProfileRules`). `InMemoryPolicyBundleRepository`, `InMemoryPolicyProfileRepository`. `RuntimePolicyEvaluator` extended with bundle-aware 2-constructor pattern (3-param test constructor + 5-param DI constructor). `PolicyProfileRules.RequiresReviewToolKeys` added. `RequiresReview` remains distinct from `Deny`.
 - **PR84**: `PolicyBundleDtos.cs` contracts. `PolicyBundleEndpoints.cs` (GET/POST bundles, POST activate). `Program.cs` registration. DI wiring in `DependencyInjection.cs`.
-- **PR85**: `PolicyBundleTests.cs` (Domain.Tests ΓÇö 25 new tests). `PolicyBundleEvaluationTests.cs` (Application.Tests ΓÇö 13 new tests). Fixture JSONs: `allow-bundle.json`, `deny-bundle.json`, `review-bundle.json`. Audit export updated with `policyIdentity` section. `docs/developer/policy-bundles.md`.
+- **PR85**: `PolicyBundleTests.cs` (Domain.Tests — 25 new tests). `PolicyBundleEvaluationTests.cs` (Application.Tests — 13 new tests). Fixture JSONs: `allow-bundle.json`, `deny-bundle.json`, `review-bundle.json`. Audit export updated with `policyIdentity` section. `docs/developer/policy-bundles.md`.
 
 Test totals: **298 passing, 0 failing** across all 5 test projects.
 
@@ -444,4 +464,4 @@ Completed **PR75.8** after **PR75.7**: closes Athanor API acceptance gaps **PR23
 
 **Not started:** Phase 16+ roadmap / v1.1 PolicyBundle / multi-step review resume (still tracked as false in harness where applicable).
 
-Next harness marker: postΓÇôPhase 15 work when scheduled; do not start the next phase during closeout.
+Next harness marker: post–Phase 15 work when scheduled; do not start the next phase during closeout.
