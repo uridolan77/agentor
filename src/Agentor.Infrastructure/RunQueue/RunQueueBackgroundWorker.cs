@@ -1,9 +1,11 @@
 using Agentor.Application.Abstractions;
 using Agentor.Application.Options;
+using Agentor.Application.Observability;
 using Agentor.Application.Orchestration;
 using Agentor.Application.RunQueue;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Agentor.Infrastructure.RunQueue;
@@ -15,18 +17,24 @@ public sealed class RunQueueHostedService : BackgroundService
     private readonly IClock _clock;
     private readonly IOptionsMonitor<RunQueueOptions> _options;
     private readonly IOptionsMonitor<RunWorkerOptions> _workerOptions;
+    private readonly ILogger<RunQueueHostedService> _logger;
+    private readonly IRuntimeMetricsRecorder _metrics;
     private readonly string _workerId = $"run-worker:{Environment.MachineName}:{Guid.NewGuid():N}";
 
     public RunQueueHostedService(
         IServiceScopeFactory scopeFactory,
         IClock clock,
         IOptionsMonitor<RunQueueOptions> options,
-        IOptionsMonitor<RunWorkerOptions> workerOptions)
+        IOptionsMonitor<RunWorkerOptions> workerOptions,
+        ILogger<RunQueueHostedService>? logger = null,
+        IRuntimeMetricsRecorder? metrics = null)
     {
         _scopeFactory = scopeFactory;
         _clock = clock;
         _options = options;
         _workerOptions = workerOptions;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<RunQueueHostedService>.Instance;
+        _metrics = metrics ?? NullRuntimeMetricsRecorder.Instance;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -70,6 +78,15 @@ public sealed class RunQueueHostedService : BackgroundService
             return false;
         }
 
+        _metrics.RecordQueueClaimed();
+        using (_logger.BeginScope(new[]
+        {
+            new KeyValuePair<string, object?>(AgentorLogFields.WorkItemId, item.WorkItemId),
+        }))
+        {
+            _logger.LogInformation(AgentorEventIds.QueueClaimed, "queue.claimed");
+        }
+
         var lease = await leaseStore
             .TryAcquireAsync(item.WorkItemId, _workerId, leaseTtl, now, cancellationToken)
             .ConfigureAwait(false);
@@ -111,12 +128,17 @@ public sealed class RunQueueHostedService : BackgroundService
             await queueStore
                 .MarkCompletedAsync(item.WorkItemId, run.Id, _workerId, _clock.UtcNow, cancellationToken)
                 .ConfigureAwait(false);
+            _metrics.RecordQueueCompleted();
+            _logger.LogInformation(AgentorEventIds.QueueCompleted, "queue.completed");
         }
         catch (Exception ex)
         {
+            var safe = ObservabilityRedaction.SanitizeForLog(ex.Message);
             await queueStore
-                .MarkFailedAsync(item.WorkItemId, ex.Message, _workerId, _clock.UtcNow, cancellationToken)
+                .MarkFailedAsync(item.WorkItemId, safe, _workerId, _clock.UtcNow, cancellationToken)
                 .ConfigureAwait(false);
+            _metrics.RecordQueueFailed();
+            _logger.LogWarning(AgentorEventIds.QueueFailed, "queue.failed {Detail}", safe);
         }
     }
 }

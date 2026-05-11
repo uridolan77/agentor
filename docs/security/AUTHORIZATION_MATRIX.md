@@ -28,7 +28,7 @@ This matrix maps **HTTP routes** to **`AgentorPermission`** checks and default *
 | `POST /api/v1/agent-runs/{id}/human-review` | `GovernanceReviewWrite` | Allowed | Denied | Human review decisions. |
 | `GET /api/v1/agent-runs/{id}/audit-export` | `AuditRead` | Allowed | Allowed | Audit export JSON. |
 | `GET/POST /api/v1/policy-bundles`, `POST .../policy-profiles/{id}/activate` | `PolicyBundleRead` / `PolicyBundleWrite` | Per method | Read vs write | See OpenAPI tags **Policy**. |
-| `GET /api/v1/ops/queue`, `.../outbox`, `.../leases` | `OpsRead` | Allowed | Denied | Operational read models. |
+| `GET /api/v1/ops/queue`, `.../outbox`, `.../leases`, `.../diagnostics-report` | `OpsRead` | Allowed | Denied | Operational read models. |
 | `GET /api/v1/recipes`, `GET .../{id}` | `ManagementRead` | Allowed | Allowed | Artifact store. |
 | `POST /api/v1/recipes` | `ManagementWrite` | Allowed | Denied | Create recipe. |
 | `GET /api/v1/plans`, `GET .../{id}` | `ManagementRead` | Allowed | Allowed | Plans. |

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using Agentor.Application.Observability;
 
 namespace Agentor.Infrastructure.Http;
 
@@ -41,7 +42,9 @@ internal static partial class IntegrationHttpError
 
         var raw = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         var safe = RedactAndTruncate(raw);
-        var message = $"{integrationLabel} HTTP {(int)response.StatusCode} {response.ReasonPhrase}. Body: {safe}";
+        var corr = AgentorCorrelationContext.Current;
+        var corrSuffix = string.IsNullOrEmpty(corr) ? string.Empty : $" CorrelationId={corr}";
+        var message = $"{integrationLabel} HTTP {(int)response.StatusCode} {response.ReasonPhrase}. Body: {safe}{corrSuffix}";
         throw new HttpRequestException(message, inner: null, statusCode: response.StatusCode);
     }
 

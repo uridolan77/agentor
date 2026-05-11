@@ -1,8 +1,10 @@
 using Agentor.Application;
 using Agentor.Application.Abstractions;
+using Agentor.Application.Observability;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Domain.Governance;
+using Microsoft.Extensions.Logging;
 
 namespace Agentor.Application.Coordination;
 
@@ -73,6 +75,8 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
     private readonly IClock _clock;
     private readonly IStepGuardEvaluator _guards;
     private readonly ISkillPackageCatalog _skills;
+    private readonly ILogger<SequentialAgentPlanExecutor> _logger;
+    private readonly IRuntimeMetricsRecorder _metrics;
 
     public SequentialAgentPlanExecutor(
         IToolRegistry registry,
@@ -80,7 +84,9 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         IToolExecutionPipeline pipeline,
         IClock clock,
         IStepGuardEvaluator guards,
-        ISkillPackageCatalog skills)
+        ISkillPackageCatalog skills,
+        ILogger<SequentialAgentPlanExecutor>? logger = null,
+        IRuntimeMetricsRecorder? metrics = null)
     {
         _registry = registry;
         _policy = policy;
@@ -88,6 +94,8 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         _clock = clock;
         _guards = guards;
         _skills = skills;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<SequentialAgentPlanExecutor>.Instance;
+        _metrics = metrics ?? NullRuntimeMetricsRecorder.Instance;
     }
 
     public async Task<AgentPlanExecutionResult> ExecuteAsync(AgentRun run, AgentPlan plan, CancellationToken cancellationToken)
@@ -102,6 +110,12 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             "Sequential plan execution started.",
             _clock.UtcNow,
             TraceData(run, plan));
+
+        _metrics.RecordRunStarted();
+        using (_logger.BeginScope(SafeLogContext.ForRun(run.Id, run.TraceId, AgentorCorrelationContext.Current)))
+        {
+            _logger.LogInformation(AgentorEventIds.RunStarted, "run.started");
+        }
 
         foreach (var ps in plan.Steps.OrderBy(s => s.OrderIndex))
         {
@@ -165,7 +179,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                         cancellationToken).ConfigureAwait(false))
                 {
                     plan.RefreshDerivedStatus();
-                    return Finalize(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
+                    return CompletePlan(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
                 }
 
                 continue;
@@ -174,7 +188,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             if (await ExecuteTopLevelToolPlanStepAsync(run, plan, ps, runStep, ps.ToolKey, input, stepResults, ctx, state, cancellationToken).ConfigureAwait(false))
             {
                 plan.RefreshDerivedStatus();
-                return Finalize(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
+                return CompletePlan(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
             }
         }
 
@@ -189,7 +203,41 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         }
 
         plan.RefreshDerivedStatus();
-        return Finalize(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
+        return CompletePlan(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
+    }
+
+    private AgentPlanExecutionResult CompletePlan(
+        AgentPlan plan,
+        AgentRun run,
+        List<PlanStepResult> stepResults,
+        FailureReason? primaryFailure,
+        EscalationDisposition escalation)
+    {
+        var result = Finalize(plan, run, stepResults, primaryFailure, escalation);
+        RecordPlanRunTerminal(run);
+        return result;
+    }
+
+    private void RecordPlanRunTerminal(AgentRun run)
+    {
+        using (_logger.BeginScope(SafeLogContext.ForRun(run.Id, run.TraceId, AgentorCorrelationContext.Current)))
+        {
+            switch (run.Status)
+            {
+                case AgentRunStatus.Completed:
+                    _metrics.RecordRunCompleted();
+                    _logger.LogInformation(AgentorEventIds.RunCompleted, "run.completed");
+                    break;
+                case AgentRunStatus.Failed:
+                    _metrics.RecordRunFailed();
+                    _logger.LogWarning(AgentorEventIds.RunFailed, "run.failed");
+                    break;
+                case AgentRunStatus.RequiresReview:
+                    _metrics.RecordRunRequiresReview();
+                    _logger.LogInformation(AgentorEventIds.RunRequiresReview, "run.requires_review");
+                    break;
+            }
+        }
     }
 
     /// <summary>Returns true when the executor must return immediately (terminal failure / review).</summary>

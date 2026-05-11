@@ -3,6 +3,7 @@ using Agentor.Api;
 using Agentor.Api.Endpoints;
 using Agentor.Api.Middleware;
 using Agentor.Api.Configuration;
+using Agentor.Api.Diagnostics;
 using Agentor.Api.Security;
 using Agentor.Application;
 using Agentor.Application.Abstractions;
@@ -75,6 +76,8 @@ builder.Services.Configure<AuditExportOptions>(
 
 builder.Services.Configure<ToolExecutionOptions>(
     builder.Configuration.GetSection(ToolExecutionOptions.SectionName));
+
+builder.Services.AddScoped<OperatorDiagnosticsService>();
 
 var app = builder.Build();
 

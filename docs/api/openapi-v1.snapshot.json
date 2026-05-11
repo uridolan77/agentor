@@ -347,6 +347,29 @@
         }
       }
     },
+    "/api/v1/ops/diagnostics-report": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Redacted operator diagnostics bundle (JSON default; format=markdown for Markdown).",
+        "operationId": "GetOpsDiagnosticsReport",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/agent-runs/{runId}/athanor/latest-snapshot": {
       "get": {
         "tags": [

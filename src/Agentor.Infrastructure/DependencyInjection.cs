@@ -5,7 +5,9 @@ using Agentor.Application.Orchestration;
 using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.ExternalAgents;
+using Agentor.Infrastructure.Http;
 using Agentor.Infrastructure.IntegrationStatus;
+using Agentor.Infrastructure.Observability;
 using Agentor.Application.Options;
 using Agentor.Application.Reliability;
 using Agentor.Infrastructure.HttpResilience;
@@ -30,6 +32,8 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddAgentorInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddLogging();
+
         services.AddOptions<AgentorIntegrationsOptions>()
             .Bind(configuration.GetSection(AgentorIntegrationsOptions.SectionName))
             .ValidateOnStart();
@@ -147,6 +151,8 @@ public static class DependencyInjection
         services.AddSingleton<InMemoryPolicyProfileRepository>();
         services.AddSingleton<IPolicyProfileRepository>(sp => sp.GetRequiredService<InMemoryPolicyProfileRepository>());
 
+        services.AddSingleton<IRuntimeMetricsRecorder, AgentorRuntimeMetricsRecorder>();
+
         services.AddSingleton<IDurableRunQueue, InMemoryDurableRunQueueStore>();
         services.AddScoped<InMemoryRunQueue>();
         services.AddScoped<IRunQueue>(sp => sp.GetRequiredService<InMemoryRunQueue>());
@@ -185,7 +191,8 @@ public static class DependencyInjection
                 var registry = sp.GetRequiredService<TransportResilienceRegistry>();
                 var tro = sp.GetRequiredService<IOptionsMonitor<TransportResilienceOptions>>();
                 return new ResilientIntegrationDelegatingHandler(clientName, registry, tro);
-            });
+            })
+            .AddHttpMessageHandler(_ => new CorrelationHeadersDelegatingHandler());
     }
 
     private static void ApplyHttpOptions(HttpClient client, HttpIntegrationOptions? http)

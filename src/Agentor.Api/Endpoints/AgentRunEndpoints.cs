@@ -116,12 +116,14 @@ public static class AgentRunEndpoints
                     }
 
                     var run = outcome.Run!;
+                    httpContext.Response.Headers.Append("X-Agentor-Run-Trace-Id", run.TraceId);
                     return Results.Accepted($"/api/v1/agent-runs/{run.Id}", run.ToDto());
                 }
             }
 
             var newRun = await handler.HandleAsync(command, cancellationToken);
 
+            httpContext.Response.Headers.Append("X-Agentor-Run-Trace-Id", newRun.TraceId);
             return Results.Accepted($"/api/v1/agent-runs/{newRun.Id}", newRun.ToDto());
         })
             .WithName("StartAgentRun")

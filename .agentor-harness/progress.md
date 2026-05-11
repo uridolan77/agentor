@@ -1,5 +1,23 @@
 # Agentor harness progress
 
+## Phase 37 PR149–PR153 observability and operator readiness (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- Observability primitives in `Agentor.Application` (`Observability/`, `IRuntimeMetricsRecorder`); runtime meter `Agentor.Runtime` + correlation (`AgentorCorrelationContext`, HTTP handler, middleware scope).
+- Structured logs + safe metrics across run, policy, tool, queue, outbox, integration paths; `POST /agent-runs` response header `X-Agentor-Run-Trace-Id`; `GET /api/v1/ops/diagnostics-report` (JSON + markdown).
+- Operator docs `docs/operator/observability.md`; `docs/OBSERVABILITY.md`; `AUTHORIZATION_MATRIX` row; OpenAPI snapshot; `AddLogging()` in infrastructure DI.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **544 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 37 -ExpectedHarnessPass PR153`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 38 not started.
+
 ## Phase 36 PR148.5 RC closeout polish (2026-05-11)
 
 **Status**: Complete.

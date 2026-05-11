@@ -239,6 +239,27 @@ public sealed class IntegrationEndpointsTests
         Assert.DoesNotContain("token", raw);
     }
 
+    [Fact]
+    public async Task GetOpsDiagnosticsReport_ReturnsRedactedSchemaJson()
+    {
+        await using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/v1/ops/diagnostics-report");
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+
+        using var doc = JsonDocument.Parse(body);
+        Assert.Equal("agentor.diagnostics.v1", doc.RootElement.GetProperty("schema").GetString());
+        Assert.True(doc.RootElement.GetProperty("persistence").TryGetProperty("connectionStringConfigured", out var cs));
+        Assert.True(cs.ValueKind is JsonValueKind.True or JsonValueKind.False);
+        var lower = body.ToLowerInvariant();
+        Assert.DoesNotContain("postgresql://", lower);
+        Assert.DoesNotContain("server=", lower);
+    }
+
     private sealed class FixedStatusHttpClientFactory(HttpStatusCode statusCode) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>

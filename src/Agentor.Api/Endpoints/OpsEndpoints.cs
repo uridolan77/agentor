@@ -1,6 +1,10 @@
 using Agentor.Application.Abstractions;
+using Agentor.Api.Configuration;
+using Agentor.Api.Diagnostics;
 using Agentor.Api.Security;
 using Agentor.Contracts;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Http;
 
 namespace Agentor.Api.Endpoints;
@@ -103,6 +107,43 @@ public static class OpsEndpoints
         .WithName("GetOpsLeases")
         .WithTags("System")
         .WithSummary("Read-only operational status for active execution leases.");
+
+        v1.MapGet("/ops/diagnostics-report", async (
+            HttpContext httpContext,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
+            IWebHostEnvironment environment,
+            IConfiguration configuration,
+            OperatorDiagnosticsService diagnostics,
+            string? format,
+            CancellationToken cancellationToken) =>
+        {
+            var gate = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.OpsRead);
+            if (gate is not null)
+            {
+                return gate;
+            }
+
+            var openApiDocumentEnabled = environment.IsDevelopment()
+                || environment.IsEnvironment("Test")
+                || environment.IsEnvironment("Testing")
+                || (configuration.GetSection(AgentorOpenApiOptions.SectionName).Get<AgentorOpenApiOptions>()?.Enabled ?? false);
+
+            var (json, markdown) = await diagnostics.BuildAsync(openApiDocumentEnabled, cancellationToken).ConfigureAwait(false);
+            if (string.Equals(format, "markdown", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Text(markdown, "text/markdown; charset=utf-8");
+            }
+
+            return Results.Text(json, "application/json; charset=utf-8");
+        })
+        .WithName("GetOpsDiagnosticsReport")
+        .WithTags("System")
+        .WithSummary("Redacted operator diagnostics bundle (JSON default; format=markdown for Markdown).");
 
         return v1;
     }

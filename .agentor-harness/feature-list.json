@@ -1,10 +1,11 @@
 {
-    "phase": 36,
-    "title": "Phase 36 \u2014 Release candidate consolidation (PR143\u2013PR148.5)",
-    "harnessPass": "PR148.5",
+    "phase": 37,
+    "title": "Phase 37 \u2014 Observability and operator readiness (PR149\u2013PR153)",
+    "harnessPass": "PR153",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR153 (2026-05-11): Phase 37 observability end-to-end \u2014 Application observability primitives (AgentorEventIds, AgentorLogFields, SafeLogContext, ObservabilityRedaction, AgentorCorrelationContext, IRuntimeMetricsRecorder); Infrastructure AgentorRuntimeMetricsRecorder (Agentor.Runtime meter + IServiceScopeFactory for scoped queue/outbox gauges); GovernedSingleToolRunDriver/SequentialAgentPlanExecutor/RuntimePolicyEvaluator/ToolExecutionPipeline/OutboxDispatcher/RunQueueHostedService/IntegrationSurfaceService structured logs + metrics; CorrelationHeadersDelegatingHandler + RequestTracingMiddleware Push; IntegrationHttpError correlation suffix; POST /agent-runs X-Agentor-Run-Trace-Id; GET /api/v1/ops/diagnostics-report (JSON + format=markdown) via OperatorDiagnosticsService; docs/operator/observability.md; docs/OBSERVABILITY.md; AUTHORIZATION_MATRIX diagnostics row; openapi snapshot; tests ObservabilityTests, IntegrationEndpointsTests.GetOpsDiagnosticsReport_ReturnsRedactedSchemaJson, IntegrationHttpErrorTests correlation, ObservabilityRedactionTests, IntegrationSurfaceServiceTests ctor; AddLogging in AddAgentorInfrastructure. Verification: dotnet test Agentor.sln \u2014 544 passed; verify-harness ExpectedPhase 37 PR153; verify-repo-clean.",
         "PR148.5 (2026-05-11): Phase 36 RC closeout polish \u2014 IntegrationSmokeCommandLine (rejects unknown flags + missing --target/--output values with InvalidOperationException; CLI exit code 2); tools/Agentor.IntegrationSmoke/Program.cs delegates to IntegrationSmokeCommandLine.Parse; IntegrationSmokeCommandLineTests in tests/Agentor.Infrastructure.Tests (9 new tests covering missing values, unknown flags, target validation); scripts/release-smoke.ps1 optional -OutputDirectory writes release-smoke-report.json/.md; docs/operator/release-smoke.md report section; docs/developer/MIGRATION_AND_UPGRADE.md drops stale PR75.6 note; harness phase 36 / harnessPass PR148.5; CI verify-harness ExpectedPhase 36 PR148.5. Verification: dotnet test Agentor.sln \u2014 539 passed; verify-harness ExpectedPhase 36 PR148.5; verify-repo-clean.",
         "PR148 (2026-05-11): Phase 36 release candidate consolidation \u2014 README + REPO_TRUTH + docs/RELEASE/v1.0-RC.md + docs/security/SECURITY_RELEASE_CHECKLIST.md + docs/operator/release-smoke.md; docs/developer/MIGRATION_AND_UPGRADE.md migration inventory + provider boundaries; docs/api/API_CONTRACT_SNAPSHOT.md + docs/api/openapi-v1.snapshot.json + OpenApiContractSnapshotTests/OpenApiJsonCanonicalizer; scripts/release-smoke.ps1; auth-boundary cross-link; CI verify-harness ExpectedPhase 36 PR148. Verification: dotnet test Agentor.sln \u2014 530 passed; verify-harness ExpectedPhase 36 PR148; verify-repo-clean.",
         "PR142.5 (2026-05-11): Phase 35 smoke closeout \u2014 IntegrationSmokeTargetValidation (unknown --target exit 2); IntegrationSmokeReportWriter.SanitizeForPersist redacts step details on export; IntegrationSmokeRunner explicitTargetNoWork when explicit targets yield zero steps; docs/operator/integration-smoke.md proof boundaries + write gate; session-handoff active deferred harness rows = 0. Verification: dotnet test Agentor.sln \u2014 529 passed; verify-harness ExpectedPhase 35 PR142.5; verify-repo-clean.",
@@ -62,6 +63,41 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR153-001",
+                                "pr": 153,
+                                "description": "PR153 observability operator doc + harness reconciliation: phase 37 harnessPass PR153; CI verify-harness aligned; passes:false = 0",
+                                "passes": true,
+                                "evidence": ".agentor-harness/feature-list.json; .agentor-harness/current-pr.md; .github/workflows/ci.yml; docs/operator/observability.md"
+                            },
+                            {
+                                "id": "PR152-001",
+                                "pr": 152,
+                                "description": "PR152 diagnostics bundle: GET /api/v1/ops/diagnostics-report redacted JSON + markdown; OperatorDiagnosticsService; tests IntegrationEndpointsTests",
+                                "passes": true,
+                                "evidence": "src/Agentor.Api/Diagnostics/OperatorDiagnosticsService.cs; src/Agentor.Api/Endpoints/OpsEndpoints.cs; tests/Agentor.Api.Tests/IntegrationEndpointsTests.cs"
+                            },
+                            {
+                                "id": "PR151-001",
+                                "pr": 151,
+                                "description": "PR151 trace correlation: X-Agentor-Run-Trace-Id on POST agent-runs; AgentorCorrelationContext + outbound X-Agentor-Trace-Id; IntegrationHttpError CorrelationId suffix; tests ObservabilityTests + IntegrationHttpErrorTests",
+                                "passes": true,
+                                "evidence": "src/Agentor.Api/Middleware/RequestTracingMiddleware.cs; src/Agentor.Api/Endpoints/AgentRunEndpoints.cs; src/Agentor.Infrastructure/Http/CorrelationHeadersDelegatingHandler.cs; src/Agentor.Infrastructure/Http/IntegrationHttpError.cs; src/Agentor.Application/Observability/AgentorCorrelationContext.cs; tests/Agentor.Api.Tests/ObservabilityTests.cs; tests/Agentor.Infrastructure.Tests/IntegrationHttpErrorTests.cs"
+                            },
+                            {
+                                "id": "PR150-001",
+                                "pr": 150,
+                                "description": "PR150 metrics surface: Agentor.Runtime counters/gauges via AgentorRuntimeMetricsRecorder + tests ObservabilityTests runtime counter",
+                                "passes": true,
+                                "evidence": "src/Agentor.Infrastructure/Observability/AgentorRuntimeMetricsRecorder.cs; tests/Agentor.Api.Tests/ObservabilityTests.cs"
+                            },
+                            {
+                                "id": "PR149-001",
+                                "pr": 149,
+                                "description": "PR149 observability primitives + structured logs: AgentorEventIds/LogFields/SafeLogContext/ObservabilityRedaction; pipeline/policy/run/queue/outbox/integration logging; tests ObservabilityRedactionTests",
+                                "passes": true,
+                                "evidence": "src/Agentor.Application/Observability; src/Agentor.Application/Abstractions/IRuntimeMetricsRecorder.cs; src/Agentor.Application/Orchestration/GovernedSingleToolRunDriver.cs; src/Agentor.Application/Coordination/SequentialAgentPlanExecutor.cs; src/Agentor.Infrastructure/RuntimePolicyEvaluator.cs; src/Agentor.Infrastructure/ToolExecutionPipeline.cs; tests/Agentor.Application.Tests/ObservabilityRedactionTests.cs"
+                            },
                             {
                                 "id": "PR148.5-004",
                                 "pr": 148,

@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using Agentor.Application;
 using Agentor.Application.Abstractions;
+using Agentor.Application.Observability;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Agentor.Infrastructure;
@@ -11,11 +13,19 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
 {
     private readonly IClock _clock;
     private readonly ToolExecutionOptions _options;
+    private readonly ILogger<ToolExecutionPipeline> _logger;
+    private readonly IRuntimeMetricsRecorder _metrics;
 
-    public ToolExecutionPipeline(IClock clock, IOptions<ToolExecutionOptions> options)
+    public ToolExecutionPipeline(
+        IClock clock,
+        IOptions<ToolExecutionOptions> options,
+        ILogger<ToolExecutionPipeline>? logger = null,
+        IRuntimeMetricsRecorder? metrics = null)
     {
         _clock = clock;
         _options = options.Value;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ToolExecutionPipeline>.Instance;
+        _metrics = metrics ?? NullRuntimeMetricsRecorder.Instance;
     }
 
     public async Task<ToolPipelineExecutionResult> ExecuteAsync(
@@ -63,6 +73,18 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
                 _clock.UtcNow,
                 traceBase);
 
+            using (_logger.BeginScope(SafeLogContext.ForRunId(run.Id)))
+            {
+                _metrics.RecordToolStarted(request.ToolKey);
+                _logger.LogInformation(
+                    AgentorEventIds.ToolStarted,
+                    "tool.started {ToolKey} {StepId} {ToolCallId} {Attempt}",
+                    request.ToolKey,
+                    stepId,
+                    toolCallId,
+                    attempt);
+            }
+
             using var attemptTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             attemptTimeout.CancelAfter(TimeSpan.FromMilliseconds(timeoutMs));
 
@@ -100,6 +122,16 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
                 {
                     RecordExternalAgentCompletion(run, request, result);
                     totalSw.Stop();
+                    using (_logger.BeginScope(SafeLogContext.ForRunId(run.Id)))
+                    {
+                        _metrics.RecordToolCompleted(request.ToolKey);
+                        _logger.LogInformation(
+                            AgentorEventIds.ToolCompleted,
+                            "tool.completed {ToolKey} {DurationMs}",
+                            request.ToolKey,
+                            attemptSw.ElapsedMilliseconds);
+                    }
+
                     return new ToolPipelineExecutionResult(
                         true,
                         result.Output,
@@ -130,6 +162,16 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
                 }
 
                 totalSw.Stop();
+                using (_logger.BeginScope(SafeLogContext.ForRunId(run.Id)))
+                {
+                    _metrics.RecordToolFailed(request.ToolKey);
+                    _logger.LogWarning(
+                        AgentorEventIds.ToolFailed,
+                        "tool.failed {ToolKey} {Outcome}",
+                        request.ToolKey,
+                        "executor_failed");
+                }
+
                 return new ToolPipelineExecutionResult(
                     false,
                     result.Output,
@@ -217,6 +259,16 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
                     });
 
                 totalSw.Stop();
+                using (_logger.BeginScope(SafeLogContext.ForRunId(run.Id)))
+                {
+                    _metrics.RecordToolFailed(request.ToolKey);
+                    _logger.LogWarning(
+                        AgentorEventIds.ToolFailed,
+                        "tool.failed {ToolKey} {Outcome}",
+                        request.ToolKey,
+                        "timeout");
+                }
+
                 return new ToolPipelineExecutionResult(
                     false,
                     null,
@@ -233,7 +285,7 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
                 {
                     ["durationMs"] = attemptSw.ElapsedMilliseconds.ToString(),
                     ["outcome"] = "exception",
-                    ["error"] = ex.Message
+                    ["error"] = ObservabilityRedaction.SanitizeForLog(ex.Message)
                 };
 
                 run.RecordTrace(
@@ -263,6 +315,18 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
                 }
 
                 totalSw.Stop();
+                using (_logger.BeginScope(SafeLogContext.ForRunId(run.Id)))
+                {
+                    _metrics.RecordToolFailed(request.ToolKey);
+                    var detail = ObservabilityRedaction.SanitizeExceptionMessage(ex);
+                    _logger.LogWarning(
+                        AgentorEventIds.ToolFailed,
+                        "tool.failed {ToolKey} {Outcome} {Detail}",
+                        request.ToolKey,
+                        "exception",
+                        detail);
+                }
+
                 return new ToolPipelineExecutionResult(
                     false,
                     null,

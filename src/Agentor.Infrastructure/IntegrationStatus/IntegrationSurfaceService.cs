@@ -1,3 +1,5 @@
+using Agentor.Application.Abstractions;
+using Agentor.Application.Observability;
 using Agentor.Contracts;
 using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
@@ -8,6 +10,7 @@ using Agentor.Infrastructure.Options;
 using Agentor.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Agentor.Infrastructure.IntegrationStatus;
@@ -20,17 +23,20 @@ public sealed class IntegrationSurfaceService(
     IOptionsMonitor<AgentorPersistenceOptions> persistence,
     IHttpClientFactory httpFactory,
     IServiceScopeFactory scopeFactory,
-    TransportResilienceRegistry transportResilience)
+    TransportResilienceRegistry transportResilience,
+    ILogger<IntegrationSurfaceService> logger,
+    IRuntimeMetricsRecorder metrics)
 {
     public async Task<IntegrationsStatusResponseDto> GetStatusAsync(CancellationToken cancellationToken = default)
     {
         var opts = integrations.CurrentValue;
         var dict = new Dictionary<string, IntegrationAdapterStatusDto>(StringComparer.OrdinalIgnoreCase)
         {
-            ["athanor"] = await AdapterStatusAsync(opts.Athanor, HttpKnowledgeStateClient.HttpClientName, cancellationToken),
-            ["conexus"] = await AdapterStatusAsync(opts.Conexus, HttpModelGatewayClient.HttpClientName, cancellationToken),
-            ["mcp"] = await AdapterStatusAsync(opts.Mcp, HttpMcpRegistryClient.HttpClientName, cancellationToken),
+            ["athanor"] = await AdapterStatusAsync("athanor", opts.Athanor, HttpKnowledgeStateClient.HttpClientName, cancellationToken),
+            ["conexus"] = await AdapterStatusAsync("conexus", opts.Conexus, HttpModelGatewayClient.HttpClientName, cancellationToken),
+            ["mcp"] = await AdapterStatusAsync("mcp", opts.Mcp, HttpMcpRegistryClient.HttpClientName, cancellationToken),
             ["externalAgents"] = await AdapterStatusAsync(
+                "externalAgents",
                 opts.ExternalAgents,
                 HttpExternalAgentProtocolClient.HttpClientName,
                 cancellationToken),
@@ -107,6 +113,7 @@ public sealed class IntegrationSurfaceService(
     }
 
     private async Task<IntegrationAdapterStatusDto> AdapterStatusAsync(
+        string integrationName,
         IntegrationFamilyOptions family,
         string httpClientName,
         CancellationToken cancellationToken)
@@ -122,6 +129,18 @@ public sealed class IntegrationSurfaceService(
 
             case IntegrationAdapterMode.Http:
                 var probe = await ProbeHttpAsync(family, httpClientName, cancellationToken);
+                if (!probe.Ok)
+                {
+                    metrics.RecordIntegrationError(integrationName);
+                    var safeDetail = ObservabilityRedaction.SanitizeForLog(probe.Detail ?? "not_ready");
+                    logger.LogWarning(
+                        AgentorEventIds.IntegrationError,
+                        "integration.error {IntegrationName} {Status} {Detail}",
+                        integrationName,
+                        "not_ready",
+                        safeDetail);
+                }
+
                 return new IntegrationAdapterStatusDto(mode, probe.Ok, probe.Detail);
 
             default:

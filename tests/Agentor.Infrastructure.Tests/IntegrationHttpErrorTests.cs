@@ -54,4 +54,19 @@ public sealed class IntegrationHttpErrorTests
         Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
         Assert.Contains("409", ex.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ThrowIfUnsuccessfulAsync_appends_correlation_suffix_when_context_set()
+    {
+        using var _ = Agentor.Application.Observability.AgentorCorrelationContext.Push("abc123correlation");
+        using var response = new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("{\"reason\":\"no\"}"),
+        };
+
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            IntegrationHttpError.ThrowIfUnsuccessfulAsync(response, "Test", CancellationToken.None));
+
+        Assert.Contains("CorrelationId=abc123correlation", ex.Message, StringComparison.Ordinal);
+    }
 }

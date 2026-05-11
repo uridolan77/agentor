@@ -1,10 +1,12 @@
 using System.Globalization;
 using Agentor.Application;
 using Agentor.Application.Abstractions;
+using Agentor.Application.Observability;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Domain.Policy;
 using Agentor.Infrastructure.Policy;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Agentor.Infrastructure;
@@ -16,6 +18,8 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
     private readonly RuntimePolicyOptions _options;
     private readonly IPolicyBundleRepository _bundleRepo;
     private readonly IPolicyProfileRepository _profileRepo;
+    private readonly ILogger<RuntimePolicyEvaluator> _logger;
+    private readonly IRuntimeMetricsRecorder _metrics;
 
     // Lightweight constructor for direct instantiation in unit tests.
     // Falls back to config-only evaluation (no bundle awareness).
@@ -23,7 +27,7 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
         IToolRegistry toolRegistry,
         IClock clock,
         IOptions<RuntimePolicyOptions> options)
-        : this(toolRegistry, clock, options, NullBundleRepo.Instance, NullProfileRepo.Instance)
+        : this(toolRegistry, clock, options, NullBundleRepo.Instance, NullProfileRepo.Instance, null, null)
     {
     }
 
@@ -33,13 +37,17 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
         IClock clock,
         IOptions<RuntimePolicyOptions> options,
         IPolicyBundleRepository bundleRepo,
-        IPolicyProfileRepository profileRepo)
+        IPolicyProfileRepository profileRepo,
+        ILogger<RuntimePolicyEvaluator>? logger = null,
+        IRuntimeMetricsRecorder? metrics = null)
     {
         _toolRegistry = toolRegistry;
         _clock = clock;
         _options = options.Value;
         _bundleRepo = bundleRepo;
         _profileRepo = profileRepo;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<RuntimePolicyEvaluator>.Instance;
+        _metrics = metrics ?? NullRuntimeMetricsRecorder.Instance;
     }
 
     public async Task<PolicyDecision> EvaluateToolCallAsync(
@@ -168,8 +176,42 @@ public sealed class RuntimePolicyEvaluator : IPolicyEvaluator
         PolicyEvaluationRequest request,
         PolicyDecisionOutcome outcome,
         string reasonCode,
-        string reason) =>
-        new(Guid.NewGuid(), request.RunId, request.StepId, outcome, reasonCode, reason, _clock.UtcNow);
+        string reason)
+    {
+        var decision = new PolicyDecision(Guid.NewGuid(), request.RunId, request.StepId, outcome, reasonCode, reason, _clock.UtcNow);
+        using (_logger.BeginScope(SafeLogContext.ForRunId(request.RunId)))
+        {
+            switch (outcome)
+            {
+                case PolicyDecisionOutcome.Allow:
+                    _metrics.RecordPolicyAllowed();
+                    _logger.LogInformation(
+                        AgentorEventIds.PolicyAllowed,
+                        "policy.allowed {ToolKey} {ReasonCode}",
+                        request.ToolKey,
+                        reasonCode);
+                    break;
+                case PolicyDecisionOutcome.Deny:
+                    _metrics.RecordPolicyDenied();
+                    _logger.LogWarning(
+                        AgentorEventIds.PolicyDenied,
+                        "policy.denied {ToolKey} {ReasonCode}",
+                        request.ToolKey,
+                        reasonCode);
+                    break;
+                case PolicyDecisionOutcome.RequiresReview:
+                    _metrics.RecordPolicyRequiresReview();
+                    _logger.LogInformation(
+                        AgentorEventIds.PolicyRequiresReview,
+                        "policy.requires_review {ToolKey} {ReasonCode}",
+                        request.ToolKey,
+                        reasonCode);
+                    break;
+            }
+        }
+
+        return decision;
+    }
 
     private static ToolRiskLevel ParseRisk(string value) =>
         Enum.TryParse<ToolRiskLevel>(value, ignoreCase: true, out var r) ? r : ToolRiskLevel.High;

@@ -1,4 +1,5 @@
 using System.Net;
+using Agentor.Application.Observability;
 using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.HttpResilience;
@@ -6,6 +7,7 @@ using Agentor.Infrastructure.IntegrationStatus;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Agentor.Infrastructure.Tests;
@@ -77,7 +79,9 @@ public sealed class IntegrationSurfaceServiceTests
             persistenceMonitor,
             factory,
             new ThrowingScopeFactory(),
-            new TransportResilienceRegistry());
+            new TransportResilienceRegistry(),
+            NullLogger<IntegrationSurfaceService>.Instance,
+            NullRuntimeMetricsRecorder.Instance);
     }
 
     private sealed class StubHttpClientFactory(HttpClient client) : IHttpClientFactory
