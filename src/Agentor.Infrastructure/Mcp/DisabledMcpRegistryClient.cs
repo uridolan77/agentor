@@ -1,5 +1,6 @@
 using Agentor.Application.Abstractions;
 using Agentor.Application.Mcp;
+using Agentor.Domain;
 
 namespace Agentor.Infrastructure.Mcp;
 
@@ -17,7 +18,7 @@ public sealed class DisabledMcpRegistryClient : IMcpRegistryClient
     public Task<McpToolInvocationResult> InvokeToolAsync(
         string serverId,
         string toolName,
-        IReadOnlyDictionary<string, string> input,
+        ToolPayload arguments,
         CancellationToken cancellationToken = default) =>
         Task.FromException<McpToolInvocationResult>(Error);
 }

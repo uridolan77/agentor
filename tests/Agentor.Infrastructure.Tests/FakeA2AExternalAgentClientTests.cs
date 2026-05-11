@@ -1,4 +1,5 @@
 using Agentor.Contracts.ExternalAgents;
+using Agentor.Domain;
 using Agentor.Infrastructure.ExternalAgents;
 using Xunit;
 
@@ -23,11 +24,11 @@ public sealed class FakeA2AExternalAgentClientTests
             ExternalAgentProtocolKind.A2AStyled,
             "alpha-agent",
             "reply",
-            new Dictionary<string, string> { ["x"] = "1" });
+            ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["x"] = "1" }));
 
         var a = await _sut.InvokeAsync(req);
         var b = await _sut.InvokeAsync(req);
 
-        Assert.Equal(a.OutputPayload!["artifact"], b.OutputPayload!["artifact"]);
+        Assert.Equal(a.OutputPayload!.ToPolicyEvaluationDictionary()["artifact"], b.OutputPayload!.ToPolicyEvaluationDictionary()["artifact"]);
     }
 }

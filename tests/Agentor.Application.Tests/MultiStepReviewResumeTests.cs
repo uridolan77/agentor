@@ -36,7 +36,7 @@ public sealed class MultiStepReviewResumeTests
         public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest req, CancellationToken ct)
         {
             Invocations++;
-            return Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string> { ["result"] = "ok" }));
+            return Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["result"] = "ok" })));
         }
     }
 
@@ -673,7 +673,7 @@ public sealed class MultiStepReviewResumeTests
     private sealed class FailingExecutor : IToolExecutor
     {
         public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest req, CancellationToken ct) =>
-            Task.FromResult(new ToolExecutionResult(false, new Dictionary<string, string>(), "Simulated tool failure."));
+            Task.FromResult(new ToolExecutionResult(false, ToolPayload.Empty, "Simulated tool failure."));
     }
 
     private sealed class FailOnceExecutor : IToolExecutor
@@ -685,10 +685,10 @@ public sealed class MultiStepReviewResumeTests
             _attempts++;
             if (_attempts == 1)
             {
-                return Task.FromResult(new ToolExecutionResult(false, new Dictionary<string, string>(), "Fail once during resume."));
+                return Task.FromResult(new ToolExecutionResult(false, ToolPayload.Empty, "Fail once during resume."));
             }
 
-            return Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string> { ["result"] = "recovered" }));
+            return Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["result"] = "recovered" })));
         }
     }
 }

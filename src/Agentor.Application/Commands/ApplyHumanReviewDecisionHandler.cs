@@ -134,7 +134,7 @@ public sealed class ApplyHumanReviewDecisionHandler
                 run.Id,
                 step.Id,
                 toolCall.ToolKey,
-                toolCall.Input,
+                toolCall.InputPayload.ToPolicyEvaluationDictionary(),
                 new PolicyEvaluationContext(ResumeAfterApprovedHumanReview: true),
                 run.ToPolicyScope()),
             cancellationToken);
@@ -175,7 +175,7 @@ public sealed class ApplyHumanReviewDecisionHandler
             step.Id,
             toolCall.Id,
             registration.Executor,
-            new ToolExecutionRequest(run.Id, step.Id, toolCall.ToolKey, toolCall.Input),
+            new ToolExecutionRequest(run.Id, step.Id, toolCall.ToolKey, toolCall.InputPayload),
             cancellationToken);
 
         if (pipelineResult.Success)
@@ -222,7 +222,7 @@ public sealed class ApplyHumanReviewDecisionHandler
     private async Task ResumeRemainingPlanStepsAsync(
         AgentRun run,
         PlanResumeCursor cursor,
-        IReadOnlyDictionary<string, string>? approvedStepOutput,
+        ToolPayload? approvedStepOutput,
         CancellationToken cancellationToken)
     {
         run.RecordTrace(
@@ -242,12 +242,14 @@ public sealed class ApplyHumanReviewDecisionHandler
         {
             ctx.History.Add(new PlanStepExecutionSnapshot(h.PlanStepId, h.SourceStepId, h.FinalStatus, h.ToolSucceeded, h.Output));
         }
+
+        var approvedFlat = approvedStepOutput?.ToPolicyEvaluationDictionary();
         ctx.History.Add(new PlanStepExecutionSnapshot(
             cursor.BlockedAtPlanStepId,
             cursor.BlockedAtSourceStepId,
             AgentPlanStepStatus.Completed,
-            approvedStepOutput is not null,
-            approvedStepOutput));
+            approvedFlat is not null,
+            approvedFlat));
 
         foreach (var pending in cursor.RemainingSteps)
         {
@@ -409,7 +411,7 @@ public sealed class ApplyHumanReviewDecisionHandler
             runStep.Id,
             toolCall.Id,
             registration.Executor,
-            new ToolExecutionRequest(run.Id, runStep.Id, pending.ToolKey, input),
+            new ToolExecutionRequest(run.Id, runStep.Id, pending.ToolKey, ToolPayload.FromLegacyDictionary(input)),
             cancellationToken);
 
         if (pipelineResult.Success)
@@ -417,8 +419,10 @@ public sealed class ApplyHumanReviewDecisionHandler
             toolCall.Succeed(pipelineResult.Output!, _clock.UtcNow);
             runStep.Complete(_clock.UtcNow);
 
-            IReadOnlyDictionary<string, string>? snapshotOutput = pipelineResult.Output;
-            if (pending.OutputBinding is not null && pipelineResult.Output!.TryGetValue(pending.OutputBinding.NormalizedKey, out var bound))
+            var flatOutput = pipelineResult.Output!.ToPolicyEvaluationDictionary();
+            IReadOnlyDictionary<string, string>? snapshotOutput = flatOutput;
+            if (pending.OutputBinding is not null
+                && flatOutput.TryGetValue(pending.OutputBinding.NormalizedKey, out var bound))
             {
                 snapshotOutput = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [pending.OutputBinding.NormalizedKey] = bound };
             }

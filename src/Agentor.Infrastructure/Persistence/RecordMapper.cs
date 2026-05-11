@@ -73,8 +73,8 @@ internal static class RecordMapper
             StepId = toolCall.StepId,
             ToolKey = toolCall.ToolKey,
             Status = toolCall.Status.ToString(),
-            InputJson = JsonSerializer.Serialize(toolCall.Input, RecordJsonOptions),
-            OutputJson = JsonSerializer.Serialize(toolCall.Output, RecordJsonOptions),
+            InputJson = toolCall.InputPayload.ToPersistedJson(RecordJsonOptions),
+            OutputJson = toolCall.OutputPayload.ToPersistedJson(RecordJsonOptions),
             StartedAt = toolCall.StartedAt,
             CompletedAt = toolCall.CompletedAt,
             ErrorMessage = toolCall.ErrorMessage
@@ -214,10 +214,8 @@ internal static class RecordMapper
 
     private static ToolCall ToDomain(ToolCallRecord record)
     {
-        var input = JsonSerializer.Deserialize<Dictionary<string, string>>(record.InputJson, RecordJsonOptions)
-                    ?? new Dictionary<string, string>();
-        var output = JsonSerializer.Deserialize<Dictionary<string, string>>(record.OutputJson, RecordJsonOptions)
-                     ?? new Dictionary<string, string>();
+        var inputPayload = ToolPayload.FromPersistedJson(record.InputJson, RecordJsonOptions);
+        var outputPayload = ToolPayload.FromPersistedJson(record.OutputJson, RecordJsonOptions);
 
         return ToolCall.Reconstitute(
             record.Id,
@@ -225,8 +223,8 @@ internal static class RecordMapper
             record.StepId,
             record.ToolKey,
             Enum.Parse<ToolCallStatus>(record.Status),
-            input,
-            output,
+            inputPayload,
+            outputPayload,
             record.StartedAt,
             record.CompletedAt,
             record.ErrorMessage);

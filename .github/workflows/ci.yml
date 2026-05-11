@@ -38,7 +38,7 @@ jobs:
         run: dotnet build benchmarks/Agentor.Benchmarks/Agentor.Benchmarks.csproj --configuration Release --no-restore
 
       - name: Verify harness (phase 29 PR120)
-        run: pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 29 -ExpectedHarnessPass PR120
+        run: pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 30 -ExpectedHarnessPass PR121
 
       - name: Verify repository cleanliness
         run: pwsh ./scripts/verify-repo-clean.ps1

@@ -1,7 +1,9 @@
 using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Contracts.Conexus;
+using Agentor.Domain;
 using Agentor.Infrastructure.Conexus;
+using Xunit;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -16,19 +18,20 @@ public sealed class ModelGatewayToolExecutorDeclaredBudgetTests
             Guid.NewGuid(),
             Guid.NewGuid(),
             WellKnownToolKeys.ConexusModelComplete,
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            ToolPayload.FromLegacyDictionary(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["prompt"] = "p",
                 ["modelId"] = "m",
                 ["declaredCostUnits"] = "12.5",
                 ["declaredLatencyMs"] = "900",
-            });
+            }));
 
         await sut.ExecuteAsync(request, CancellationToken.None);
 
         Assert.NotNull(gateway.Last);
-        Assert.Equal(12.5m, gateway.Last!.DeclaredCostUnits);
-        Assert.Equal(900, gateway.Last.DeclaredLatencyMs);
+        var captured = gateway.Last!.Payload.ToPolicyEvaluationDictionary();
+        Assert.Equal("12.5", captured["declaredCostUnits"]);
+        Assert.Equal("900", captured["declaredLatencyMs"]);
     }
 
     private sealed class CapturingGateway : IModelGatewayClient
@@ -38,8 +41,10 @@ public sealed class ModelGatewayToolExecutorDeclaredBudgetTests
         public Task<ModelCallResultDto> CompleteAsync(ModelCallRequestDto request, CancellationToken cancellationToken)
         {
             Last = request;
+            var pm = request.Payload.ToPolicyEvaluationDictionary();
+            var mid = pm.TryGetValue("modelId", out var m) ? m : "m";
             return Task.FromResult(
-                new ModelCallResultDto("ok", "p", request.ModelId, 1, 1, 0m, 1, request.PromptProfileRef, request.ModelProfileRef));
+                ModelCallResultDto.FromLegacy("ok", "p", mid, 1, 1, 0m, 1));
         }
     }
 }

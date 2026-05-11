@@ -137,7 +137,7 @@ public sealed class GovernedSingleToolRunDriver
                 step.Id,
                 toolCall.Id,
                 registration.Executor,
-                new ToolExecutionRequest(run.Id, step.Id, resolvedKey, input),
+                new ToolExecutionRequest(run.Id, step.Id, resolvedKey, ToolPayload.FromLegacyDictionary(input)),
                 cancellationToken).ConfigureAwait(false);
 
             if (pipelineResult.Success)

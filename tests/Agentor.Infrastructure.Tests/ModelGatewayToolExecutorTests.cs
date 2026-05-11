@@ -1,6 +1,5 @@
 using Agentor.Application;
 using Agentor.Application.Abstractions;
-using Agentor.Contracts.Conexus;
 using Agentor.Domain;
 using Agentor.Infrastructure.Conexus;
 using Xunit;
@@ -20,11 +19,12 @@ public sealed class ModelGatewayToolExecutorTests
         {
             ["prompt"] = "Hello from tool."
         };
-        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.ConexusModelComplete, input);
+        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.ConexusModelComplete, ToolPayload.FromLegacyDictionary(input));
         var result = await sut.ExecuteAsync(request, CancellationToken.None);
         Assert.True(result.Success);
-        Assert.Equal(FakeModelGatewayClient.FakeProviderName, result.Output!["providerName"]);
-        Assert.Contains("Hello from tool.", result.Output["completionText"], StringComparison.Ordinal);
+        var flat = result.Output!.ToPolicyEvaluationDictionary();
+        Assert.Equal(FakeModelGatewayClient.FakeProviderName, flat["providerName"]);
+        Assert.Contains("Hello from tool.", flat["completionText"], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -40,10 +40,11 @@ public sealed class ModelGatewayToolExecutorTests
             ["promptProfileRef"] = "profiles/prompt/phase6",
             ["modelProfileRef"] = "profiles/model/staging"
         };
-        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.ConexusModelComplete, input);
+        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.ConexusModelComplete, ToolPayload.FromLegacyDictionary(input));
         var result = await sut.ExecuteAsync(request, CancellationToken.None);
         Assert.True(result.Success);
-        Assert.Equal("profiles/prompt/phase6", result.Output!["promptProfileRef"]);
-        Assert.Equal("profiles/model/staging", result.Output["modelProfileRef"]);
+        var flat = result.Output!.ToPolicyEvaluationDictionary();
+        Assert.Equal("profiles/prompt/phase6", flat["promptProfileRef"]);
+        Assert.Equal("profiles/model/staging", flat["modelProfileRef"]);
     }
 }

@@ -134,6 +134,6 @@ public sealed class CoordinationProfileEvaluationTests
     private sealed class EchoExecutor : IToolExecutor
     {
         public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest request, CancellationToken cancellationToken) =>
-            Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string>(), null));
+            Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()), null));
     }
 }

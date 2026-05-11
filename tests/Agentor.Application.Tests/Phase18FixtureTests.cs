@@ -203,7 +203,7 @@ public sealed class Phase18FixtureTests
         {
             Invocations++;
             return Task.FromResult(new ToolExecutionResult(true,
-                new Dictionary<string, string> { ["result"] = $"ok-{req.ToolKey}" }));
+                ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["result"] = $"ok-{req.ToolKey}" })));
         }
     }
 }

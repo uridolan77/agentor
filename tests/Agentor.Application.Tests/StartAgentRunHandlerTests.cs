@@ -21,7 +21,7 @@ public sealed class StartAgentRunHandlerTests
         public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest request, CancellationToken cancellationToken)
         {
             Invocations++;
-            return Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string>()));
+            return Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>())));
         }
     }
 

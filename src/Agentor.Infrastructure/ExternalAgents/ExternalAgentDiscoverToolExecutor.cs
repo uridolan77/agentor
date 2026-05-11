@@ -2,6 +2,7 @@ using System.Globalization;
 using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Contracts.ExternalAgents;
+using Agentor.Domain;
 
 namespace Agentor.Infrastructure.ExternalAgents;
 
@@ -16,7 +17,7 @@ public sealed class ExternalAgentDiscoverToolExecutor : IToolExecutor
 
     public async Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest request, CancellationToken cancellationToken)
     {
-        var kind = ParseProtocolKind(request.Input);
+        var kind = ParseProtocolKind(request.Input.ToPolicyEvaluationDictionary());
         var caps = await _client.ListCapabilitiesAsync(kind, cancellationToken).ConfigureAwait(false);
 
         var output = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -36,7 +37,7 @@ public sealed class ExternalAgentDiscoverToolExecutor : IToolExecutor
             output[$"capability.{i}.summary"] = c.Summary;
         }
 
-        return new ToolExecutionResult(true, output);
+        return new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(output));
     }
 
     private static ExternalAgentProtocolKind ParseProtocolKind(IReadOnlyDictionary<string, string> input)

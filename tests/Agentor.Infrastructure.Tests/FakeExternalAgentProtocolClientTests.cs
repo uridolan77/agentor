@@ -1,4 +1,5 @@
 using Agentor.Contracts.ExternalAgents;
+using Agentor.Domain;
 using Agentor.Infrastructure.ExternalAgents;
 using Xunit;
 
@@ -37,7 +38,7 @@ public sealed class FakeExternalAgentProtocolClientTests
             ExternalAgentProtocolKind.GenericFake,
             "demo-agent",
             "echo",
-            input);
+            ToolPayload.FromLegacyDictionary(input));
 
         var r1 = await _sut.InvokeAsync(req);
         var r2 = await _sut.InvokeAsync(req);
@@ -45,7 +46,7 @@ public sealed class FakeExternalAgentProtocolClientTests
         Assert.Equal(ExternalAgentInvocationStatus.Succeeded, r1.Status);
         Assert.NotNull(r1.OutputPayload);
         Assert.True(r1.IsNonCanonEvidence);
-        Assert.Equal(r1.OutputPayload!["artifact"], r2.OutputPayload!["artifact"]);
+        Assert.Equal(r1.OutputPayload!.ToPolicyEvaluationDictionary()["artifact"], r2.OutputPayload!.ToPolicyEvaluationDictionary()["artifact"]);
     }
 
     [Fact]
@@ -55,7 +56,7 @@ public sealed class FakeExternalAgentProtocolClientTests
             ExternalAgentProtocolKind.GenericFake,
             " ",
             "echo",
-            new Dictionary<string, string>());
+            ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
 
         var r = await _sut.InvokeAsync(req);
         Assert.Equal(ExternalAgentInvocationStatus.Failed, r.Status);

@@ -12,8 +12,11 @@ public sealed class FakeModelGatewayClient : IModelGatewayClient
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var modelId = string.IsNullOrWhiteSpace(request.ModelId) ? "fake-model" : request.ModelId.Trim();
-        var prompt = request.Prompt ?? string.Empty;
+        var flat = request.Payload.ToPolicyEvaluationDictionary();
+        var modelId = flat.TryGetValue("modelId", out var mid) && !string.IsNullOrWhiteSpace(mid)
+            ? mid.Trim()
+            : "fake-model";
+        var prompt = flat.TryGetValue("prompt", out var pr) ? pr ?? string.Empty : string.Empty;
 
         var promptTokens = EstimateTokens(prompt);
         var completionTokens = Math.Max(1, promptTokens / 8 + 3);
@@ -29,17 +32,20 @@ public sealed class FakeModelGatewayClient : IModelGatewayClient
             6,
             MidpointRounding.AwayFromZero);
 
+        flat.TryGetValue("promptProfileRef", out var promptProfileRef);
+        flat.TryGetValue("modelProfileRef", out var modelProfileRef);
+
         return Task.FromResult(
-            new ModelCallResultDto(
-                CompletionText: completion,
-                ProviderName: FakeProviderName,
-                ModelId: modelId,
-                PromptTokens: promptTokens,
-                CompletionTokens: completionTokens,
-                EstimatedCostUnits: costUnits,
-                LatencyMs: latencyMs,
-                PromptProfileRef: request.PromptProfileRef,
-                ModelProfileRef: request.ModelProfileRef));
+            ModelCallResultDto.FromLegacy(
+                completion,
+                FakeProviderName,
+                modelId,
+                promptTokens,
+                completionTokens,
+                costUnits,
+                latencyMs,
+                promptProfileRef,
+                modelProfileRef));
     }
 
     private static int EstimateTokens(string text)

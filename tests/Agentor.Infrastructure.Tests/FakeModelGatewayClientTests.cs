@@ -1,5 +1,6 @@
 using Agentor.Application.Abstractions;
 using Agentor.Contracts.Conexus;
+using Agentor.Domain;
 using Agentor.Infrastructure.Conexus;
 using Xunit;
 
@@ -11,27 +12,30 @@ public sealed class FakeModelGatewayClientTests
     public async Task CompleteAsync_ReturnsDeterministicEchoAndMetrics_ForSamePrompt()
     {
         IModelGatewayClient sut = new FakeModelGatewayClient();
-        var req = new ModelCallRequestDto("Hello Phase 6.", "test-model");
+        var req = ModelCallRequestDto.FromLegacy("Hello Phase 6.", "test-model");
 
         var r1 = await sut.CompleteAsync(req, CancellationToken.None);
         var r2 = await sut.CompleteAsync(req, CancellationToken.None);
 
-        Assert.Equal(r1.CompletionText, r2.CompletionText);
-        Assert.Equal(r1.PromptTokens, r2.PromptTokens);
-        Assert.Equal(r1.CompletionTokens, r2.CompletionTokens);
-        Assert.Equal(r1.EstimatedCostUnits, r2.EstimatedCostUnits);
-        Assert.Equal(r1.LatencyMs, r2.LatencyMs);
-        Assert.Equal(FakeModelGatewayClient.FakeProviderName, r1.ProviderName);
-        Assert.Equal("test-model", r1.ModelId);
-        Assert.Contains("Hello Phase 6.", r1.CompletionText, StringComparison.Ordinal);
+        var f1 = r1.Payload.ToPolicyEvaluationDictionary();
+        var f2 = r2.Payload.ToPolicyEvaluationDictionary();
+
+        Assert.Equal(f1["completionText"], f2["completionText"]);
+        Assert.Equal(f1["promptTokens"], f2["promptTokens"]);
+        Assert.Equal(f1["completionTokens"], f2["completionTokens"]);
+        Assert.Equal(f1["estimatedCostUnits"], f2["estimatedCostUnits"]);
+        Assert.Equal(f1["latencyMs"], f2["latencyMs"]);
+        Assert.Equal(FakeModelGatewayClient.FakeProviderName, f1["providerName"]);
+        Assert.Equal("test-model", f1["modelId"]);
+        Assert.Contains("Hello Phase 6.", f1["completionText"], StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task CompleteAsync_UsesFallbackModel_WhenModelIdBlank()
     {
         IModelGatewayClient sut = new FakeModelGatewayClient();
-        var result = await sut.CompleteAsync(new ModelCallRequestDto("x", "  "), CancellationToken.None);
+        var result = await sut.CompleteAsync(ModelCallRequestDto.FromLegacy("x", "  "), CancellationToken.None);
 
-        Assert.Equal("fake-model", result.ModelId);
+        Assert.Equal("fake-model", result.Payload.ToPolicyEvaluationDictionary()["modelId"]);
     }
 }

@@ -1,4 +1,6 @@
+using Agentor.Domain;
 using Agentor.Infrastructure.Mcp;
+using Xunit;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -46,10 +48,10 @@ public sealed class FakeMcpRegistryClientTests
         var result = await sut.InvokeToolAsync(
             "demo-server",
             "echo",
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["text"] = "hello" });
+            ToolPayload.FromLegacyDictionary(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["text"] = "hello" }));
 
         Assert.True(result.Success);
-        Assert.Equal("mcp:demo-server:echo:hello", result.Output["result"]);
+        Assert.Equal("mcp:demo-server:echo:hello", result.Output.ToPolicyEvaluationDictionary()["result"]);
     }
 
     [Fact]
@@ -57,7 +59,7 @@ public sealed class FakeMcpRegistryClientTests
     {
         var sut = new FakeMcpRegistryClient();
 
-        var result = await sut.InvokeToolAsync("nope", "echo", new Dictionary<string, string>());
+        var result = await sut.InvokeToolAsync("nope", "echo", ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
 
         Assert.False(result.Success);
         Assert.Contains("Unknown MCP server", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);

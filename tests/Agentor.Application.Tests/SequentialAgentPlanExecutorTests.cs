@@ -516,7 +516,7 @@ public sealed class SequentialAgentPlanExecutorTests
         public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest request, CancellationToken cancellationToken)
         {
             Invocations++;
-            return Task.FromResult(new ToolExecutionResult(false, new Dictionary<string, string>(), "always fail"));
+            return Task.FromResult(new ToolExecutionResult(false, ToolPayload.Empty, "always fail"));
         }
     }
 
@@ -527,7 +527,7 @@ public sealed class SequentialAgentPlanExecutorTests
         public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest request, CancellationToken cancellationToken)
         {
             Invocations++;
-            return Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string> { ["k"] = "v" }));
+            return Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["k"] = "v" })));
         }
     }
 
@@ -540,10 +540,10 @@ public sealed class SequentialAgentPlanExecutorTests
             Invocations++;
             if (Invocations == 1)
             {
-                return Task.FromResult(new ToolExecutionResult(false, new Dictionary<string, string>(), "first fail"));
+                return Task.FromResult(new ToolExecutionResult(false, ToolPayload.Empty, "first fail"));
             }
 
-            return Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string> { ["k"] = "v" }));
+            return Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["k"] = "v" })));
         }
     }
 }

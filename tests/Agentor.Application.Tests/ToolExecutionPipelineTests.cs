@@ -26,10 +26,10 @@ public sealed class ToolExecutionPipelineTests
         var opts = Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions { TimeoutMilliseconds = 30_000, MaxAttempts = 3 });
         var pipeline = new ToolExecutionPipeline(clock, opts);
 
-        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, new Dictionary<string, string>
+        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>
         {
             ["objective"] = "x"
-        });
+        }));
 
         var result = await pipeline.ExecuteAsync(run, step.Id, toolCall.Id, executor, request, CancellationToken.None);
 
@@ -59,7 +59,7 @@ public sealed class ToolExecutionPipelineTests
         });
         var pipeline = new ToolExecutionPipeline(clock, opts);
 
-        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, new Dictionary<string, string>());
+        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
 
         var result = await pipeline.ExecuteAsync(run, step.Id, toolCall.Id, slowExecutor, request, CancellationToken.None);
 
@@ -85,7 +85,7 @@ public sealed class ToolExecutionPipelineTests
             RetryDelayMilliseconds = 0
         });
         var pipeline = new ToolExecutionPipeline(clock, opts);
-        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, new Dictionary<string, string>());
+        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
 
         var result = await pipeline.ExecuteAsync(run, step.Id, toolCall.Id, flaky, request, CancellationToken.None);
 
@@ -110,7 +110,7 @@ public sealed class ToolExecutionPipelineTests
             RetryDelayMilliseconds = 0
         });
         var pipeline = new ToolExecutionPipeline(clock, opts);
-        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, new Dictionary<string, string>());
+        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
 
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(TimeSpan.FromMilliseconds(40));
@@ -135,7 +135,7 @@ public sealed class ToolExecutionPipelineTests
         var slowExecutor = new SlowToolExecutor(TimeSpan.FromSeconds(30));
         var opts = Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions());
         var pipeline = new ToolExecutionPipeline(clock, opts);
-        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, new Dictionary<string, string>());
+        var request = new ToolExecutionRequest(run.Id, step.Id, WellKnownToolKeys.Pr1FakeTool, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
 
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
@@ -160,7 +160,7 @@ public sealed class ToolExecutionPipelineTests
         {
             InvocationCount++;
             await Task.Delay(_delay, cancellationToken);
-            return new ToolExecutionResult(true, new Dictionary<string, string>());
+            return new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
         }
     }
 
@@ -182,13 +182,13 @@ public sealed class ToolExecutionPipelineTests
             if (_failuresEmitted < _failCountBeforeSuccess)
             {
                 _failuresEmitted++;
-                return Task.FromResult(new ToolExecutionResult(false, new Dictionary<string, string>(), "transient"));
+                return Task.FromResult(new ToolExecutionResult(false, ToolPayload.Empty, "transient"));
             }
 
-            return Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            return Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["message"] = "ok"
-            }));
+            })));
         }
     }
 }

@@ -12,7 +12,7 @@ public enum ToolPipelineFailureKind
 
 public sealed record ToolPipelineExecutionResult(
     bool Success,
-    IReadOnlyDictionary<string, string>? Output,
+    ToolPayload? Output,
     string? ErrorMessage,
     ToolPipelineFailureKind FailureKind,
     int AttemptsUsed,

@@ -1,3 +1,5 @@
+using Agentor.Domain;
+
 namespace Agentor.Contracts.ExternalAgents;
 
 public enum ExternalAgentProtocolKind
@@ -23,10 +25,10 @@ public sealed record ExternalAgentInvocationRequestDto(
     ExternalAgentProtocolKind ProtocolKind,
     string AgentKey,
     string CapabilityKey,
-    IReadOnlyDictionary<string, string> Input);
+    ToolPayload Arguments);
 
 public sealed record ExternalAgentInvocationResultDto(
     ExternalAgentInvocationStatus Status,
-    IReadOnlyDictionary<string, string>? OutputPayload,
+    ToolPayload? OutputPayload,
     string? ErrorMessage,
     bool IsNonCanonEvidence);

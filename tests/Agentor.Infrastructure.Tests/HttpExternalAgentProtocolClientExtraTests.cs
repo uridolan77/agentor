@@ -1,10 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using Agentor.Contracts.ExternalAgents;
+using Agentor.Domain;
 using Agentor.Infrastructure.ExternalAgents;
 using Agentor.Infrastructure.Http;
 using Agentor.Infrastructure.Options;
 using Microsoft.Extensions.Options;
+using Xunit;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -55,11 +57,11 @@ public sealed class HttpExternalAgentProtocolClientExtraTests
             ExternalAgentProtocolKind.A2AStyled,
             "ag",
             "cap",
-            new Dictionary<string, string>());
+            ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
 
         var responseBody = new ExternalAgentInvocationResultDto(
             ExternalAgentInvocationStatus.Succeeded,
-            new Dictionary<string, string>(),
+            ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()),
             null,
             true);
 
@@ -127,11 +129,11 @@ public sealed class HttpExternalAgentProtocolClientExtraTests
             ExternalAgentProtocolKind.A2AStyled,
             "ag",
             "cap",
-            new Dictionary<string, string>());
+            ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()));
 
         var responseBody = new ExternalAgentInvocationResultDto(
             ExternalAgentInvocationStatus.Succeeded,
-            new Dictionary<string, string> { ["k"] = "v" },
+            ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["k"] = "v" }),
             null,
             IsNonCanonEvidence: false);
 

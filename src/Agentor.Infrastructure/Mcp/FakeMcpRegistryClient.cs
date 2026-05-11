@@ -1,5 +1,6 @@
 using Agentor.Application.Abstractions;
 using Agentor.Application.Mcp;
+using Agentor.Domain;
 using Agentor.Domain.Enums;
 
 namespace Agentor.Infrastructure.Mcp;
@@ -52,7 +53,7 @@ public sealed class FakeMcpRegistryClient : IMcpRegistryClient
     public Task<McpToolInvocationResult> InvokeToolAsync(
         string serverId,
         string toolName,
-        IReadOnlyDictionary<string, string> input,
+        ToolPayload arguments,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -60,7 +61,7 @@ public sealed class FakeMcpRegistryClient : IMcpRegistryClient
         {
             return Task.FromResult(new McpToolInvocationResult(
                 false,
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                ToolPayload.Empty,
                 $"Unknown MCP server '{serverId}'."));
         }
 
@@ -69,19 +70,20 @@ public sealed class FakeMcpRegistryClient : IMcpRegistryClient
         {
             return Task.FromResult(new McpToolInvocationResult(
                 false,
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                ToolPayload.Empty,
                 $"Tool '{toolName}' is not registered for server '{serverId}'."));
         }
 
         if (string.Equals(toolName, "echo", StringComparison.OrdinalIgnoreCase))
         {
-            var text = input.TryGetValue("text", out var v) ? v : string.Empty;
+            var flat = arguments.ToPolicyEvaluationDictionary();
+            var text = flat.TryGetValue("text", out var v) ? v : string.Empty;
             var output = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["result"] = $"mcp:{serverId}:echo:{text}",
                 ["tool"] = toolName
             };
-            return Task.FromResult(new McpToolInvocationResult(true, output));
+            return Task.FromResult(new McpToolInvocationResult(true, ToolPayload.FromLegacyDictionary(output)));
         }
 
         if (string.Equals(toolName, "stats", StringComparison.OrdinalIgnoreCase))
@@ -91,12 +93,12 @@ public sealed class FakeMcpRegistryClient : IMcpRegistryClient
                 ["serverCount"] = _servers.Count.ToString(),
                 ["toolCount"] = tools.Count.ToString()
             };
-            return Task.FromResult(new McpToolInvocationResult(true, output));
+            return Task.FromResult(new McpToolInvocationResult(true, ToolPayload.FromLegacyDictionary(output)));
         }
 
         return Task.FromResult(new McpToolInvocationResult(
             false,
-            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+            ToolPayload.Empty,
             $"Tool '{toolName}' is not implemented in the fake MCP registry."));
     }
 }

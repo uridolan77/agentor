@@ -1,6 +1,7 @@
 using System.Globalization;
 using Agentor.Application.Abstractions;
 using Agentor.Contracts.Conexus;
+using Agentor.Domain;
 
 namespace Agentor.Infrastructure.Conexus;
 
@@ -17,59 +18,67 @@ public sealed class ModelGatewayToolExecutor : IToolExecutor
         ToolExecutionRequest request,
         CancellationToken cancellationToken)
     {
-        var prompt = ResolvePrompt(request.Input);
+        var flat = request.Input.ToPolicyEvaluationDictionary();
+        var prompt = ResolvePrompt(flat);
         if (string.IsNullOrEmpty(prompt))
         {
             return new ToolExecutionResult(
                 false,
-                new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase),
+                ToolPayload.Empty,
                 "Model call requires non-empty prompt or objective fallback.");
         }
 
-        var modelId = request.Input.TryGetValue("modelId", out var m) ? m : string.Empty;
-        var promptProfileRef = ReadOptionalRef(request.Input, "promptProfileRef");
-        var modelProfileRef = ReadOptionalRef(request.Input, "modelProfileRef");
+        var modelId = flat.TryGetValue("modelId", out var m) ? m : string.Empty;
+        var promptProfileRef = ReadOptionalRef(flat, "promptProfileRef");
+        var modelProfileRef = ReadOptionalRef(flat, "modelProfileRef");
         decimal? declaredCost = null;
-        if (request.Input.TryGetValue("declaredCostUnits", out var dc)
+        if (flat.TryGetValue("declaredCostUnits", out var dc)
             && decimal.TryParse(dc, NumberStyles.Number, CultureInfo.InvariantCulture, out var dcVal))
         {
             declaredCost = dcVal;
         }
 
         int? declaredLatency = null;
-        if (request.Input.TryGetValue("declaredLatencyMs", out var dl)
+        if (flat.TryGetValue("declaredLatencyMs", out var dl)
             && int.TryParse(dl, NumberStyles.Integer, CultureInfo.InvariantCulture, out var dlVal))
         {
             declaredLatency = dlVal;
         }
 
+        var gatewayRequest = ModelCallRequestDto.FromLegacy(prompt, modelId, promptProfileRef, modelProfileRef, declaredCost, declaredLatency);
+
         var result = await _gateway
-            .CompleteAsync(new ModelCallRequestDto(prompt, modelId, promptProfileRef, modelProfileRef, declaredCost, declaredLatency), cancellationToken)
+            .CompleteAsync(gatewayRequest, cancellationToken)
             .ConfigureAwait(false);
+
+        var rflat = result.Payload.ToPolicyEvaluationDictionary();
+
+        static string Pick(IReadOnlyDictionary<string, string> d, string key, string fallback) =>
+            d.TryGetValue(key, out var v) ? v : fallback;
 
         var output = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["completionText"] = result.CompletionText,
-            ["providerName"] = result.ProviderName,
-            ["modelId"] = result.ModelId,
-            ["promptTokens"] = result.PromptTokens.ToString(CultureInfo.InvariantCulture),
-            ["completionTokens"] = result.CompletionTokens.ToString(CultureInfo.InvariantCulture),
-            ["estimatedCostUnits"] = result.EstimatedCostUnits.ToString(CultureInfo.InvariantCulture),
-            ["latencyMs"] = result.LatencyMs.ToString(CultureInfo.InvariantCulture),
+            ["completionText"] = Pick(rflat, "completionText", string.Empty),
+            ["providerName"] = Pick(rflat, "providerName", string.Empty),
+            ["modelId"] = Pick(rflat, "modelId", string.Empty),
+            ["promptTokens"] = Pick(rflat, "promptTokens", "0"),
+            ["completionTokens"] = Pick(rflat, "completionTokens", "0"),
+            ["estimatedCostUnits"] = Pick(rflat, "estimatedCostUnits", "0"),
+            ["latencyMs"] = Pick(rflat, "latencyMs", "0"),
             ["toolKey"] = request.ToolKey
         };
 
-        if (!string.IsNullOrWhiteSpace(result.PromptProfileRef))
+        if (rflat.TryGetValue("promptProfileRef", out var ppr) && !string.IsNullOrWhiteSpace(ppr))
         {
-            output["promptProfileRef"] = result.PromptProfileRef;
+            output["promptProfileRef"] = ppr;
         }
 
-        if (!string.IsNullOrWhiteSpace(result.ModelProfileRef))
+        if (rflat.TryGetValue("modelProfileRef", out var mpr) && !string.IsNullOrWhiteSpace(mpr))
         {
-            output["modelProfileRef"] = result.ModelProfileRef;
+            output["modelProfileRef"] = mpr;
         }
 
-        return new ToolExecutionResult(true, output);
+        return new ToolExecutionResult(true, new ToolPayload(result.Payload.Body, result.Payload.SchemaId, result.Payload.ContentType, output));
     }
 
     private static string ResolvePrompt(IReadOnlyDictionary<string, string> input)

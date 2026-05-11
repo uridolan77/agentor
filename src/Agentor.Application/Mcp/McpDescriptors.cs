@@ -1,3 +1,4 @@
+using Agentor.Domain;
 using Agentor.Domain.Enums;
 
 namespace Agentor.Application.Mcp;
@@ -12,5 +13,5 @@ public sealed record McpToolDescriptor(
 
 public sealed record McpToolInvocationResult(
     bool Success,
-    IReadOnlyDictionary<string, string> Output,
+    ToolPayload Output,
     string? ErrorMessage = null);

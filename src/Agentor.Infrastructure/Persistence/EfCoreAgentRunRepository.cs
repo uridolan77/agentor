@@ -190,8 +190,8 @@ public sealed class EfCoreAgentRunRepository : IAgentRunRepository
                     StepId = domainStep.Id,
                     ToolKey = tc.ToolKey,
                     Status = tc.Status.ToString(),
-                    InputJson = JsonSerializer.Serialize(tc.Input, RecordMapper.RecordJsonOptions),
-                    OutputJson = JsonSerializer.Serialize(tc.Output, RecordMapper.RecordJsonOptions),
+                    InputJson = tc.InputPayload.ToPersistedJson(RecordMapper.RecordJsonOptions),
+                    OutputJson = tc.OutputPayload.ToPersistedJson(RecordMapper.RecordJsonOptions),
                     StartedAt = tc.StartedAt,
                     CompletedAt = tc.CompletedAt,
                     ErrorMessage = tc.ErrorMessage,
@@ -203,8 +203,8 @@ public sealed class EfCoreAgentRunRepository : IAgentRunRepository
             {
                 row.ToolKey = tc.ToolKey;
                 row.Status = tc.Status.ToString();
-                row.InputJson = JsonSerializer.Serialize(tc.Input, RecordMapper.RecordJsonOptions);
-                row.OutputJson = JsonSerializer.Serialize(tc.Output, RecordMapper.RecordJsonOptions);
+                row.InputJson = tc.InputPayload.ToPersistedJson(RecordMapper.RecordJsonOptions);
+                row.OutputJson = tc.OutputPayload.ToPersistedJson(RecordMapper.RecordJsonOptions);
                 row.StartedAt = tc.StartedAt;
                 row.CompletedAt = tc.CompletedAt;
                 row.ErrorMessage = tc.ErrorMessage;

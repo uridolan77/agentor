@@ -1,4 +1,5 @@
 using Agentor.Application.Mcp;
+using Agentor.Domain;
 
 namespace Agentor.Application.Abstractions;
 
@@ -17,6 +18,6 @@ public interface IMcpRegistryClient
     Task<McpToolInvocationResult> InvokeToolAsync(
         string serverId,
         string toolName,
-        IReadOnlyDictionary<string, string> input,
+        ToolPayload arguments,
         CancellationToken cancellationToken = default);
 }

@@ -1,8 +1,11 @@
 using Agentor.Application;
 using Agentor.Application.Abstractions;
+using Agentor.Domain;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.ExternalAgents;
 using Agentor.Infrastructure.Mcp;
+
+using Xunit;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -38,14 +41,14 @@ public sealed class ToolRegistryMcpBindingTests
         Assert.True(registry.TryGetRegistration(key, out var reg));
 
         var result = await reg!.Executor.ExecuteAsync(
-            new ToolExecutionRequest(Guid.NewGuid(), Guid.NewGuid(), key, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            new ToolExecutionRequest(Guid.NewGuid(), Guid.NewGuid(), key, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 ["text"] = "bind-test"
-            }),
+            })),
             CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.Equal("mcp:demo-server:echo:bind-test", result.Output["result"]);
+        Assert.Equal("mcp:demo-server:echo:bind-test", result.Output.ToPolicyEvaluationDictionary()["result"]);
     }
 
     [Fact]

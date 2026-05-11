@@ -292,7 +292,9 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
         runStep.Complete(_clock.UtcNow);
         ps.Status = AgentPlanStepStatus.Completed;
-        var snapshotOutput = SnapshotOutput(ps, lastToolOutput ?? StepInputBinding.Empty.Parameters);
+        var snapshotOutput = SnapshotOutput(
+            ps,
+            ToolPayload.FromLegacyDictionary(lastToolOutput ?? StepInputBinding.Empty.Parameters));
         ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, true, snapshotOutput));
         run.RecordTrace(
             TraceEventKind.SkillInvocationCompleted,
@@ -421,14 +423,14 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             runStep.Id,
             toolCall.Id,
             registration.Executor,
-            new ToolExecutionRequest(run.Id, runStep.Id, toolKey, input),
+            new ToolExecutionRequest(run.Id, runStep.Id, toolKey, ToolPayload.FromLegacyDictionary(input)),
             cancellationToken).ConfigureAwait(false);
 
         if (pipelineResult.Success)
         {
             toolCall.Succeed(pipelineResult.Output!, _clock.UtcNow);
             runStep.AddToolCall(toolCall);
-            return new InnerToolResult(false, false, pipelineResult.AttemptsUsed, policyDecision.Outcome, null, pipelineResult.Output);
+            return new InnerToolResult(false, false, pipelineResult.AttemptsUsed, policyDecision.Outcome, null, pipelineResult.Output?.ToPolicyEvaluationDictionary());
         }
 
         toolCall.Fail(pipelineResult.ErrorMessage ?? "Tool execution failed.", _clock.UtcNow);
@@ -583,7 +585,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             runStep.Id,
             toolCall.Id,
             registration.Executor,
-            new ToolExecutionRequest(run.Id, runStep.Id, toolKey, input),
+            new ToolExecutionRequest(run.Id, runStep.Id, toolKey, ToolPayload.FromLegacyDictionary(input)),
             cancellationToken).ConfigureAwait(false);
 
         if (pipelineResult.Success)
@@ -798,20 +800,22 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         return new AgentPlanExecutionResult(overall, plan.Status, run.Status, stepResults, summary);
     }
 
-    private static IReadOnlyDictionary<string, string>? SnapshotOutput(AgentPlanStep ps, IReadOnlyDictionary<string, string> output)
+    private static IReadOnlyDictionary<string, string>? SnapshotOutput(AgentPlanStep ps, ToolPayload output)
     {
+        var flat = output.ToPolicyEvaluationDictionary();
+
         if (ps.OutputBinding is null)
         {
-            return output;
+            return flat;
         }
 
         var key = ps.OutputBinding.NormalizedKey;
-        if (output.TryGetValue(key, out var single))
+        if (flat.TryGetValue(key, out var single))
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [key] = single };
         }
 
-        return output;
+        return flat;
     }
 
     /// <summary>

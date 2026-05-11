@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Agentor.Application.Abstractions;
 using Agentor.Contracts.ExternalAgents;
+using Agentor.Domain;
 
 namespace Agentor.Infrastructure.ExternalAgents;
 
@@ -69,7 +70,7 @@ public sealed class FakeA2AExternalAgentClient : IExternalAgentProtocolClient
                 IsNonCanonEvidence: true));
         }
 
-        var sorted = request.Input.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToArray();
+        var sorted = request.Arguments.ToPolicyEvaluationDictionary().OrderBy(kv => kv.Key, StringComparer.Ordinal).ToArray();
         var fingerprint = BuildFingerprint(request.AgentKey.Trim(), request.CapabilityKey.Trim(), sorted);
         var meta = new A2AInvocationMetadataDto(request.AgentKey.Trim(), request.CapabilityKey.Trim(), fingerprint);
 
@@ -86,7 +87,7 @@ public sealed class FakeA2AExternalAgentClient : IExternalAgentProtocolClient
 
         return Task.FromResult(new ExternalAgentInvocationResultDto(
             ExternalAgentInvocationStatus.Succeeded,
-            payload,
+            ToolPayload.FromLegacyDictionary(payload),
             null,
             IsNonCanonEvidence: true));
     }

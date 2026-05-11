@@ -1,10 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using Agentor.Contracts.Conexus;
+using Agentor.Domain;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.Http;
 using Agentor.Infrastructure.Options;
 using Microsoft.Extensions.Options;
+using Xunit;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -13,8 +15,8 @@ public sealed class HttpModelGatewayClientTests
     [Fact]
     public async Task CompleteAsync_PostsToV1ModelComplete()
     {
-        var requestDto = new ModelCallRequestDto("hi", "m1");
-        var resultDto = new ModelCallResultDto("ok", "p", "m1", 1, 2, 0m, 3);
+        var requestDto = ModelCallRequestDto.FromLegacy("hi", "m1");
+        var resultDto = ModelCallResultDto.FromLegacy("ok", "p", "m1", 1, 2, 0m, 3);
 
         var handler = new LambdaHandler((req, _) =>
         {
@@ -41,15 +43,16 @@ public sealed class HttpModelGatewayClientTests
 
         var result = await sut.CompleteAsync(requestDto, CancellationToken.None);
 
-        Assert.Equal("ok", result.CompletionText);
-        Assert.Equal("m1", result.ModelId);
+        var rf = result.Payload.ToPolicyEvaluationDictionary();
+        Assert.Equal("ok", rf["completionText"]);
+        Assert.Equal("m1", rf["modelId"]);
     }
 
     [Fact]
     public async Task CompleteAsync_deserializes_full_telemetry_and_profile_refs()
     {
-        var requestDto = new ModelCallRequestDto("hi", "m1", "pp", "mp");
-        var resultDto = new ModelCallResultDto("ok", "prov", "m1", 10, 20, 0.03m, 42, "pp", "mp");
+        var requestDto = ModelCallRequestDto.FromLegacy("hi", "m1", "pp", "mp");
+        var resultDto = ModelCallResultDto.FromLegacy("ok", "prov", "m1", 10, 20, 0.03m, 42, "pp", "mp");
 
         var handler = new LambdaHandler((_, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
@@ -71,18 +74,19 @@ public sealed class HttpModelGatewayClientTests
 
         var result = await sut.CompleteAsync(requestDto, CancellationToken.None);
 
-        Assert.Equal(10, result.PromptTokens);
-        Assert.Equal(20, result.CompletionTokens);
-        Assert.Equal(0.03m, result.EstimatedCostUnits);
-        Assert.Equal(42, result.LatencyMs);
-        Assert.Equal("pp", result.PromptProfileRef);
-        Assert.Equal("mp", result.ModelProfileRef);
+        var rf = result.Payload.ToPolicyEvaluationDictionary();
+        Assert.Equal("10", rf["promptTokens"]);
+        Assert.Equal("20", rf["completionTokens"]);
+        Assert.Equal("0.03", rf["estimatedCostUnits"]);
+        Assert.Equal("42", rf["latencyMs"]);
+        Assert.Equal("pp", rf["promptProfileRef"]);
+        Assert.Equal("mp", rf["modelProfileRef"]);
     }
 
     [Fact]
     public async Task CompleteAsync_posts_declared_budget_json_when_set_on_request()
     {
-        var requestDto = new ModelCallRequestDto("p", "mid", null, null, 1.25m, 500);
+        var requestDto = ModelCallRequestDto.FromLegacy("p", "mid", null, null, 1.25m, 500);
 
         ModelCallRequestDto? parsed = null;
         var handler = new LambdaHandler(async (req, _) =>
@@ -91,7 +95,7 @@ public sealed class HttpModelGatewayClientTests
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = JsonContent.Create(
-                    new ModelCallResultDto("x", "p", "mid", 1, 1, 0m, 1),
+                    ModelCallResultDto.FromLegacy("x", "p", "mid", 1, 1, 0m, 1),
                     options: AgentorHttpJson.Options),
             };
         });
@@ -111,8 +115,9 @@ public sealed class HttpModelGatewayClientTests
         _ = await sut.CompleteAsync(requestDto, CancellationToken.None);
 
         Assert.NotNull(parsed);
-        Assert.Equal(1.25m, parsed!.DeclaredCostUnits);
-        Assert.Equal(500, parsed.DeclaredLatencyMs);
+        var pf = parsed!.Payload.ToPolicyEvaluationDictionary();
+        Assert.Equal("1.25", pf["declaredCostUnits"]);
+        Assert.Equal("500", pf["declaredLatencyMs"]);
     }
 
     [Fact]
@@ -137,7 +142,7 @@ public sealed class HttpModelGatewayClientTests
         var sut = new HttpModelGatewayClient(new StubFactory(httpClient), new StaticMonitor(opts));
 
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() =>
-            sut.CompleteAsync(new ModelCallRequestDto("a", "b"), CancellationToken.None));
+            sut.CompleteAsync(ModelCallRequestDto.FromLegacy("a", "b"), CancellationToken.None));
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         Assert.Contains("503", ex.Message, StringComparison.Ordinal);
@@ -166,7 +171,7 @@ public sealed class HttpModelGatewayClientTests
         var sut = new HttpModelGatewayClient(new StubFactory(httpClient), new StaticMonitor(opts));
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            sut.CompleteAsync(new ModelCallRequestDto("a", "b"), CancellationToken.None));
+            sut.CompleteAsync(ModelCallRequestDto.FromLegacy("a", "b"), CancellationToken.None));
     }
 
     private sealed class StubFactory(HttpClient client) : IHttpClientFactory

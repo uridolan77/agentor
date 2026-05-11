@@ -1,3 +1,5 @@
+using Agentor.Domain;
+
 namespace Agentor.Application.Abstractions;
 
 public interface IToolExecutor
@@ -9,9 +11,9 @@ public sealed record ToolExecutionRequest(
     Guid RunId,
     Guid StepId,
     string ToolKey,
-    IReadOnlyDictionary<string, string> Input);
+    ToolPayload Input);
 
 public sealed record ToolExecutionResult(
     bool Success,
-    IReadOnlyDictionary<string, string> Output,
+    ToolPayload Output,
     string? ErrorMessage = null);

@@ -4,16 +4,16 @@ namespace Agentor.Domain;
 
 public sealed class ToolCall
 {
-    private readonly Dictionary<string, string> _input;
-    private readonly Dictionary<string, string> _output = new();
+    private ToolPayload _inputPayload;
+    private ToolPayload _outputPayload = ToolPayload.Empty;
 
-    private ToolCall(Guid id, Guid runId, Guid stepId, string toolKey, IReadOnlyDictionary<string, string> input, DateTimeOffset startedAt)
+    private ToolCall(Guid id, Guid runId, Guid stepId, string toolKey, ToolPayload inputPayload, DateTimeOffset startedAt)
     {
         Id = id;
         RunId = runId;
         StepId = stepId;
         ToolKey = toolKey;
-        _input = new Dictionary<string, string>(input, StringComparer.OrdinalIgnoreCase);
+        _inputPayload = inputPayload;
         StartedAt = startedAt;
         Status = ToolCallStatus.Running;
     }
@@ -28,9 +28,15 @@ public sealed class ToolCall
 
     public ToolCallStatus Status { get; private set; }
 
-    public IReadOnlyDictionary<string, string> Input => _input;
+    public ToolPayload InputPayload => _inputPayload;
 
-    public IReadOnlyDictionary<string, string> Output => _output;
+    public ToolPayload OutputPayload => _outputPayload;
+
+    /// <summary>Stable flat summary for legacy surfaces (DTOs, traces referencing scalar metadata).</summary>
+    public IReadOnlyDictionary<string, string> Input => _inputPayload.ToLegacySummary();
+
+    /// <summary>Stable flat summary for legacy surfaces.</summary>
+    public IReadOnlyDictionary<string, string> Output => _outputPayload.ToLegacySummary();
 
     public DateTimeOffset StartedAt { get; }
 
@@ -38,25 +44,26 @@ public sealed class ToolCall
 
     public string? ErrorMessage { get; private set; }
 
-    public static ToolCall Start(Guid runId, Guid stepId, string toolKey, IReadOnlyDictionary<string, string> input, DateTimeOffset now)
+    public static ToolCall Start(Guid runId, Guid stepId, string toolKey, IReadOnlyDictionary<string, string> input, DateTimeOffset now) =>
+        Start(runId, stepId, toolKey, ToolPayload.FromLegacyDictionary(input), now);
+
+    public static ToolCall Start(Guid runId, Guid stepId, string toolKey, ToolPayload inputPayload, DateTimeOffset now)
     {
         if (string.IsNullOrWhiteSpace(toolKey))
         {
             throw new ArgumentException("Tool key is required.", nameof(toolKey));
         }
 
-        return new ToolCall(Guid.NewGuid(), runId, stepId, toolKey.Trim(), input, now);
+        return new ToolCall(Guid.NewGuid(), runId, stepId, toolKey.Trim(), inputPayload, now);
     }
 
-    public void Succeed(IReadOnlyDictionary<string, string> output, DateTimeOffset now)
+    public void Succeed(IReadOnlyDictionary<string, string> output, DateTimeOffset now) =>
+        Succeed(ToolPayload.FromLegacyDictionary(output), now);
+
+    public void Succeed(ToolPayload outputPayload, DateTimeOffset now)
     {
         AgentStateMachine.EnsureToolCallCanMutate(this);
-        _output.Clear();
-
-        foreach (var item in output)
-        {
-            _output[item.Key] = item.Value;
-        }
+        _outputPayload = outputPayload;
 
         Status = ToolCallStatus.Succeeded;
         CompletedAt = now;
@@ -114,16 +121,36 @@ public sealed class ToolCall
         IReadOnlyDictionary<string, string> output,
         DateTimeOffset startedAt,
         DateTimeOffset? completedAt,
+        string? errorMessage) =>
+        Reconstitute(
+            id,
+            runId,
+            stepId,
+            toolKey,
+            status,
+            ToolPayload.FromLegacyDictionary(input),
+            ToolPayload.FromLegacyDictionary(output),
+            startedAt,
+            completedAt,
+            errorMessage);
+
+    public static ToolCall Reconstitute(
+        Guid id,
+        Guid runId,
+        Guid stepId,
+        string toolKey,
+        ToolCallStatus status,
+        ToolPayload inputPayload,
+        ToolPayload outputPayload,
+        DateTimeOffset startedAt,
+        DateTimeOffset? completedAt,
         string? errorMessage)
     {
-        var call = new ToolCall(id, runId, stepId, toolKey, input, startedAt);
+        var call = new ToolCall(id, runId, stepId, toolKey, inputPayload, startedAt);
         call.Status = status;
         call.CompletedAt = completedAt;
         call.ErrorMessage = errorMessage;
-        foreach (var kv in output)
-        {
-            call._output[kv.Key] = kv.Value;
-        }
+        call._outputPayload = outputPayload;
 
         return call;
     }

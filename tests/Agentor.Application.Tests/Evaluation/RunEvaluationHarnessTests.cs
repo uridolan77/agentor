@@ -189,7 +189,7 @@ public sealed class RunEvaluationHarnessTests
     {
         public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest request, CancellationToken cancellationToken)
         {
-            return Task.FromResult(new ToolExecutionResult(true, new Dictionary<string, string>(), null));
+            return Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()), null));
         }
     }
 }

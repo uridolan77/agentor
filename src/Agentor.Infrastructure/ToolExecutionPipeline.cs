@@ -285,7 +285,7 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
             ["runId"] = request.RunId.ToString(),
         };
 
-        foreach (var kv in request.Input)
+        foreach (var kv in request.Input.ToPolicyEvaluationDictionary())
         {
             if (string.Equals(kv.Key, "protocolKind", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(kv.Key, "agentKey", StringComparison.OrdinalIgnoreCase)
@@ -308,7 +308,7 @@ public sealed class ToolExecutionPipeline : IToolExecutionPipeline
         var data = ExternalAgentTraceDictionary(request);
         if (result.Output is not null)
         {
-            foreach (var kv in result.Output)
+            foreach (var kv in result.Output.ToPolicyEvaluationDictionary())
             {
                 if (string.Equals(kv.Key, "protocolKind", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(kv.Key, "agentKey", StringComparison.OrdinalIgnoreCase)

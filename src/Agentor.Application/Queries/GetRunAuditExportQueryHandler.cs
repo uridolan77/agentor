@@ -193,8 +193,8 @@ public sealed class GetRunAuditExportQueryHandler
                         t.Id,
                         t.ToolKey,
                         status = t.Status.ToString(),
-                        input = t.Input,
-                        output = t.Output,
+                        input = BuildStructuredToolIo(t.InputPayload),
+                        output = BuildStructuredToolIo(t.OutputPayload),
                         startedAt = t.StartedAt.ToString("O"),
                         completedAt = t.CompletedAt?.ToString("O"),
                         t.ErrorMessage
@@ -267,5 +267,17 @@ public sealed class GetRunAuditExportQueryHandler
         };
 
         return root;
+    }
+
+    private static JsonObject BuildStructuredToolIo(ToolPayload payload)
+    {
+        JsonNode bodyNode = JsonNode.Parse(payload.Body.ToJsonString()) ?? new JsonObject();
+        return new JsonObject
+        {
+            ["body"] = bodyNode,
+            ["summary"] = JsonSerializer.SerializeToNode(payload.ToLegacySummary(), SerializerOptions),
+            ["schemaId"] = payload.SchemaId,
+            ["contentType"] = payload.ContentType
+        };
     }
 }

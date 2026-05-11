@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Nodes;
 using Agentor.Application;
 using Agentor.Application.Options;
 using Agentor.Application.Queries;
@@ -85,6 +86,41 @@ public sealed class GetRunAuditExportQueryHandlerTests
         Assert.DoesNotContain("super-secret", result.CanonicalJson, StringComparison.Ordinal);
         Assert.DoesNotContain("hunter2", result.CanonicalJson, StringComparison.Ordinal);
         Assert.Contains("visible", result.CanonicalJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HandleAsync_RedactsNestedSecrets_InToolStructuredIoBody()
+    {
+        var repo = new InMemoryAgentRunRepository();
+        var clock = new SystemClock();
+        var now = clock.UtcNow;
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Objective", "trace-nested-redact", now);
+        var step = run.StartStep("Step", now);
+        var body = new JsonObject
+        {
+            ["settings"] = new JsonObject { ["apiKey"] = "nested-deep-secret" },
+            ["prompt"] = "hello"
+        };
+        var tool = ToolCall.Start(
+            run.Id,
+            step.Id,
+            WellKnownToolKeys.Pr1FakeTool,
+            new ToolPayload(body, null, null, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["stableSummary"] = "unchanged" }),
+            now);
+        step.AddToolCall(tool);
+        tool.Succeed(ToolPayload.FromLegacyDictionary(new Dictionary<string, string> { ["ok"] = "1" }), now);
+        step.Complete(now);
+        run.Complete(now);
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = new GetRunAuditExportQueryHandler(repo, Microsoft.Extensions.Options.Options.Create(new AuditExportOptions()));
+        var result = await handler.HandleAsync(run.Id, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Contains("[REDACTED]", result!.CanonicalJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("nested-deep-secret", result.CanonicalJson, StringComparison.Ordinal);
+        Assert.Contains("unchanged", result.CanonicalJson, StringComparison.Ordinal);
+        Assert.Contains("hello", result.CanonicalJson, StringComparison.Ordinal);
     }
 
     [Fact]

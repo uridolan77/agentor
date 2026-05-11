@@ -10,6 +10,7 @@ This document states **what the code and HTTP surface actually do today**, so op
 ## Real execution kernel
 
 - **`SequentialAgentPlanExecutor`** is the coordinator for **plan-mode** public starts (and skill-wrapped ephemeral recipes). **Single-tool** public starts still use the same policy and **`IToolExecutionPipeline`** stack as plans, but do not route through the plan executor’s step loop.
+- **Structured tool I/O (Phase 30 / PR121)**: **`ToolPayload`** (**JSON `body`**, optional **`schemaId`/`contentType`**, flat **`summary`**) is the execution envelope for **`ToolExecutionRequest`**/**`ToolCall`** persistence; **`ToolPayload.FromLegacyDictionary`**/**`ToLegacySummary`**/**`ToPolicyEvaluationDictionary`** bridge PR1-style flat maps. Integration DTOs (**`ModelCallRequestDto`/`ModelCallResultDto`**, **`ExternalAgentInvocationRequestDto`**, MCP HTTP invoke) serialize **`ToolPayload`** as JSON; audit export emits **`input`/`output`** objects with **`body`** + **`summary`** (redaction applies to nested JSON).
 
 ## Policy scopes
 

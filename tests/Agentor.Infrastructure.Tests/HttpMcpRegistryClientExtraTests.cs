@@ -1,10 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
+using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Http;
 using Agentor.Infrastructure.Mcp;
 using Agentor.Infrastructure.Options;
 using Microsoft.Extensions.Options;
+using Xunit;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -72,7 +74,7 @@ public sealed class HttpMcpRegistryClientExtraTests
 
         var sut = new HttpMcpRegistryClient(new StubFactory(httpClient), new StaticMonitor(opts));
 
-        var result = await sut.InvokeToolAsync("s1", "t1", new Dictionary<string, string>(), CancellationToken.None);
+        var result = await sut.InvokeToolAsync("s1", "t1", ToolPayload.FromLegacyDictionary(new Dictionary<string, string>()), CancellationToken.None);
 
         Assert.True(result.Success);
     }

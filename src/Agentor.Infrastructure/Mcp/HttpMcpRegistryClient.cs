@@ -1,6 +1,9 @@
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Agentor.Application.Abstractions;
 using Agentor.Application.Mcp;
+using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Http;
 using Agentor.Infrastructure.Options;
@@ -61,13 +64,15 @@ public sealed class HttpMcpRegistryClient(
     public async Task<McpToolInvocationResult> InvokeToolAsync(
         string serverId,
         string toolName,
-        IReadOnlyDictionary<string, string> input,
+        ToolPayload arguments,
         CancellationToken cancellationToken = default)
     {
         EnsureHttpMode();
         var encServer = Uri.EscapeDataString(serverId);
         var encTool = Uri.EscapeDataString(toolName);
-        using var content = JsonContent.Create(new McpInvokeWire(input), options: AgentorHttpJson.Options);
+        var root = JsonNode.Parse(arguments.ToPersistedJson(AgentorHttpJson.Options))
+                   ?? throw new InvalidOperationException("MCP invoke payload could not be serialized.");
+        using var content = JsonContent.Create(root, options: AgentorHttpJson.Options);
         using var response = await Client().PostAsync(
             $"v1/servers/{encServer}/tools/{encTool}/invoke",
             content,
@@ -77,10 +82,14 @@ public sealed class HttpMcpRegistryClient(
         var body = await response.Content.ReadFromJsonAsync<McpInvokeResponseWire>(AgentorHttpJson.Options, cancellationToken);
         if (body is null)
         {
-            return new McpToolInvocationResult(false, new Dictionary<string, string>(), "Empty MCP invoke response.");
+            return new McpToolInvocationResult(false, ToolPayload.Empty, "Empty MCP invoke response.");
         }
 
-        return new McpToolInvocationResult(body.Success, body.Output ?? new Dictionary<string, string>(), body.ErrorMessage);
+        var outputPayload = body.Output is null || body.Output.Value.ValueKind == JsonValueKind.Null
+            ? ToolPayload.Empty
+            : ToolPayload.FromPersistedJson(body.Output.Value.GetRawText(), AgentorHttpJson.Options);
+
+        return new McpToolInvocationResult(body.Success, outputPayload, body.ErrorMessage);
     }
 
     private HttpClient Client()
@@ -104,7 +113,5 @@ public sealed class HttpMcpRegistryClient(
         string Description,
         string NominalRisk);
 
-    private sealed record McpInvokeWire(IReadOnlyDictionary<string, string> Input);
-
-    private sealed record McpInvokeResponseWire(bool Success, Dictionary<string, string>? Output, string? ErrorMessage);
+    private sealed record McpInvokeResponseWire(bool Success, JsonElement? Output, string? ErrorMessage);
 }

@@ -1,4 +1,5 @@
 using Agentor.Application.Abstractions;
+using Agentor.Domain;
 
 namespace Agentor.Infrastructure;
 
@@ -6,7 +7,8 @@ public sealed class FakeToolExecutor : IToolExecutor
 {
     public Task<ToolExecutionResult> ExecuteAsync(ToolExecutionRequest request, CancellationToken cancellationToken)
     {
-        var objective = request.Input.TryGetValue("objective", out var value)
+        var flat = request.Input.ToPolicyEvaluationDictionary();
+        var objective = flat.TryGetValue("objective", out var value)
             ? value
             : "No objective provided.";
 
@@ -17,6 +19,6 @@ public sealed class FakeToolExecutor : IToolExecutor
             ["toolKey"] = request.ToolKey
         };
 
-        return Task.FromResult(new ToolExecutionResult(true, output));
+        return Task.FromResult(new ToolExecutionResult(true, ToolPayload.FromLegacyDictionary(output)));
     }
 }
