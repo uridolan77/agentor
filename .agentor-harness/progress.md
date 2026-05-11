@@ -1,5 +1,24 @@
 # Agentor harness progress
 
+## Phase 35 PR142.5 smoke closeout (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **`IntegrationSmokeTargetValidation`** + CLI **exit 2** on unknown `--target`.
+- **`IntegrationSmokeReportWriter.SanitizeForPersist`**: redact every step **`Detail`** before JSON/Markdown export.
+- **`IntegrationSmokeRunner`**: **`explicitTargetNoWork`** when explicit targets are supplied but no family runs (**`OverallOk`** false).
+- **Docs / handoff**: **`docs/operator/integration-smoke.md`** proof boundaries; **`session-handoff.md`** — active deferred harness rows **0**; future risks called out separately.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **529 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 35 -ExpectedHarnessPass PR142.5`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 36 not started.
+
 ## Phase 35 PR137.5 retro hardening (2026-05-11)
 
 **Status**: Complete (recorded under **Phase 35 / PR142** harness marker; adds **PR137.5-*** acceptance rows + note).

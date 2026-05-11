@@ -1,10 +1,11 @@
 {
     "phase": 35,
     "title": "Phase 35 \u2014 Production integration smoke pack (PR138\u2013PR142)",
-    "harnessPass": "PR142",
+    "harnessPass": "PR142.5",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR142.5 (2026-05-11): Phase 35 smoke closeout \u2014 IntegrationSmokeTargetValidation (unknown --target exit 2); IntegrationSmokeReportWriter.SanitizeForPersist redacts step details on export; IntegrationSmokeRunner explicitTargetNoWork when explicit targets yield zero steps; docs/operator/integration-smoke.md proof boundaries + write gate; session-handoff active deferred harness rows = 0. Verification: dotnet test Agentor.sln \u2014 529 passed; verify-harness ExpectedPhase 35 PR142.5; verify-repo-clean.",
         "PR137.5 (2026-05-11): Phase 34 closeout hardening (applied atop Phase 35 tree) \u2014 JsonFingerprintCanonicalizer + StartAgentRunFingerprint canonical ToolInputPayload for idempotency; StartAgentRunFingerprintTests; ReviewResumeState.HasSkillProcedureContinuation + FromCursor uses HasContinuationWork; PlanResumeCursorTests; ReviewedToolContinuationService PlanExecutionCompleted after tail-less skill resume; MultiStepReviewResumeTests (skill-only plan trace order; inner pipeline fail + ContinueOnFailure/FailFast on skill plan step; chained inner RequiresReview). Verification: dotnet test Agentor.sln \u2014 524 passed; verify-harness ExpectedPhase 35 PR142; verify-repo-clean.",
         "PR142 (2026-05-11): Phase 35 integration smoke \u2014 IntegrationSmokeOptions + SmokeMode + SmokeTarget; IntegrationSmokeConfigurationMerger; IntegrationSmokeRunner + IntegrationSmokeReportWriter + IntegrationFailureRedaction; tools/Agentor.IntegrationSmoke + scripts/run-integration-smoke.ps1; docs/operator/integration-smoke.md; tests IntegrationSmokeTests + REPO_TRUTH. Verification: dotnet test Agentor.sln \u2014 516 passed; verify-harness ExpectedPhase 35 PR142; verify-repo-clean.",
         "PR137 (2026-05-11): Phase 34 skill resume \u2014 Domain SkillResumeCursor + SkillInnerToolCheckpoint + SkillProcedureResumeState + PlanResumeCursor.SkillContinuation/HasContinuationWork; PendingPlanStep invoked skill fields; SequentialAgentPlanExecutor skill continuation + ExecuteResumedSkillPlanStepAsync; PlanResumeOrchestrator + ReviewedToolContinuationService skill path (no double step.Complete); ReviewTraceWriter removed unsupported stub; tests MultiStepReviewResumeTests.Approve_SkillInnerReview_ThenResumesTailPlanStep + Approve_SkillInnerReview_TailDeniedWithContinueOnFailure_ThenCompletesRun + PlanResumeCursorTests; EfCoreAgentRunRepositoryTests.SaveAsync_RoundTripsResumeCursorWithSkillContinuationJson; docs/design/skill-resume.md; fixture tests/Agentor.Application.Tests/fixtures/eval/skill-resume-audit-export.json + registry; Phase18FixtureTests.SkillResumeAuditExport_Fixture_ExistsAndIsValidJson; docs/REPO_TRUTH skill resume bullet. Verification: dotnet test Agentor.sln \u2014 509 passed; verify-harness ExpectedPhase 34 PR137; verify-repo-clean.",
@@ -59,6 +60,13 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR142.5-001",
+                                "pr": 142,
+                                "description": "PR142.5: smoke target validation, zero-step explicit-target failure, report export redaction, docs + handoff wording",
+                                "passes": true,
+                                "evidence": "src/Agentor.Infrastructure/Smoke/IntegrationSmokeTargetValidation.cs; src/Agentor.Infrastructure/Smoke/IntegrationSmokeRunner.cs; src/Agentor.Infrastructure/Smoke/IntegrationSmokeReportWriter.cs; tools/Agentor.IntegrationSmoke/Program.cs; tests/Agentor.Infrastructure.Tests/IntegrationSmokeTests.cs; docs/operator/integration-smoke.md; .agentor-harness/session-handoff.md"
+                            },
                             {
                                 "id": "PR137.5-003",
                                 "pr": 137,

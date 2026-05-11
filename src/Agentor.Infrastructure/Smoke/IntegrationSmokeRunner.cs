@@ -47,7 +47,20 @@ public sealed class IntegrationSmokeRunner(
             await RunExternalAgentsAsync(smoke, report.Steps, cancellationToken).ConfigureAwait(false);
         }
 
-        report.OverallOk = report.Steps.Count == 0 || report.Steps.TrueForAll(s => s.Ok);
+        if (onlyTargets is { Count: > 0 } && report.Steps.Count == 0)
+        {
+            report.Steps.Add(
+                new SmokeStepRecord
+                {
+                    Target = "Cli",
+                    Name = "explicitTargetNoWork",
+                    Ok = false,
+                    Detail =
+                        "No smoke steps executed for the requested targets. Set Agentor:IntegrationSmoke:{Target}:Mode to Fake or Http (not Disabled) for each requested family.",
+                });
+        }
+
+        report.OverallOk = report.Steps.TrueForAll(s => s.Ok);
         return report;
     }
 

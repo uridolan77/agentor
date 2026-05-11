@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Agentor.Infrastructure.Http;
 
 namespace Agentor.Infrastructure.Smoke;
 
@@ -10,15 +11,40 @@ public static class IntegrationSmokeReportWriter
     public static async Task WriteAsync(string outputDirectory, IntegrationSmokeReport report, CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(outputDirectory);
+        var safe = SanitizeForPersist(report);
         var jsonPath = Path.Combine(outputDirectory, "integration-smoke-report.json");
         await File.WriteAllTextAsync(
                 jsonPath,
-                JsonSerializer.Serialize(report, JsonOptions),
+                JsonSerializer.Serialize(safe, JsonOptions),
                 cancellationToken)
             .ConfigureAwait(false);
 
         var mdPath = Path.Combine(outputDirectory, "integration-smoke-report.md");
-        await File.WriteAllTextAsync(mdPath, BuildMarkdown(report), cancellationToken).ConfigureAwait(false);
+        await File.WriteAllTextAsync(mdPath, BuildMarkdown(safe), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Defense in depth: redact free-text <see cref="SmokeStepRecord.Detail"/> before writing reports
+    /// (even if callers forgot to redact upstream).
+    /// </summary>
+    public static IntegrationSmokeReport SanitizeForPersist(IntegrationSmokeReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        return new IntegrationSmokeReport
+        {
+            GeneratedAtUtc = report.GeneratedAtUtc,
+            OverallOk = report.OverallOk,
+            Steps = report.Steps.Select(static s => new SmokeStepRecord
+            {
+                Target = s.Target,
+                Name = s.Name,
+                Ok = s.Ok,
+                HttpStatus = s.HttpStatus,
+                Detail = string.IsNullOrEmpty(s.Detail)
+                    ? s.Detail
+                    : IntegrationFailureRedaction.RedactAndTruncate(s.Detail),
+            }).ToList(),
+        };
     }
 
     private static string BuildMarkdown(IntegrationSmokeReport report)

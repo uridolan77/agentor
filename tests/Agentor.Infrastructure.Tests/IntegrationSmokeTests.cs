@@ -10,6 +10,30 @@ using Xunit;
 
 namespace Agentor.Infrastructure.Tests;
 
+public sealed class IntegrationSmokeTargetValidationTests
+{
+    [Fact]
+    public void Validate_accepts_empty_list()
+    {
+        IntegrationSmokeTargetValidation.Validate([]);
+    }
+
+    [Fact]
+    public void Validate_accepts_known_targets_case_insensitive()
+    {
+        IntegrationSmokeTargetValidation.Validate(["athanor", "Conexus", "MCP", "externalagents"]);
+    }
+
+    [Fact]
+    public void Validate_throws_on_unknown_target()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            IntegrationSmokeTargetValidation.Validate(["NotARealTarget"]));
+        Assert.Contains("NotARealTarget", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("Unknown smoke target", ex.Message, StringComparison.Ordinal);
+    }
+}
+
 public sealed class IntegrationSmokeConfigurationMergerTests
 {
     [Fact]
@@ -76,6 +100,41 @@ public sealed class IntegrationSmokeFakeRunnerTests
         Assert.NotEmpty(report.Steps);
     }
 
+    [Fact]
+    public async Task Runner_explicit_target_with_all_smoke_disabled_fails_with_cli_diagnostic()
+    {
+        var keys = new Dictionary<string, string?>
+        {
+            ["Agentor:IntegrationSmoke:Athanor:Mode"] = nameof(SmokeMode.Disabled),
+            ["Agentor:IntegrationSmoke:Conexus:Mode"] = nameof(SmokeMode.Disabled),
+            ["Agentor:IntegrationSmoke:Mcp:Mode"] = nameof(SmokeMode.Disabled),
+            ["Agentor:IntegrationSmoke:ExternalAgents:Mode"] = nameof(SmokeMode.Disabled),
+        };
+
+        var boot = new ConfigurationBuilder().AddInMemoryCollection(keys).Build();
+        var smokePreview = boot.GetSection(IntegrationSmokeOptions.SectionName).Get<IntegrationSmokeOptions>()!;
+        foreach (var kv in IntegrationSmokeConfigurationMerger.BuildIntegrationModePatches(smokePreview))
+        {
+            keys[kv.Key] = kv.Value;
+        }
+
+        var hb = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
+        hb.Configuration.AddInMemoryCollection(keys);
+        hb.Services.Configure<IntegrationSmokeOptions>(hb.Configuration.GetSection(IntegrationSmokeOptions.SectionName));
+        hb.Services.AddAgentorInfrastructure(hb.Configuration);
+        hb.Services.AddSingleton<IntegrationSmokeRunner>();
+
+        using var host = hb.Build();
+        var runner = host.Services.GetRequiredService<IntegrationSmokeRunner>();
+        var report = await runner.RunAsync(new HashSet<string>(["Athanor"], StringComparer.OrdinalIgnoreCase), CancellationToken.None);
+
+        Assert.False(report.OverallOk);
+        var cli = Assert.Single(report.Steps);
+        Assert.Equal("Cli", cli.Target);
+        Assert.Equal("explicitTargetNoWork", cli.Name);
+        Assert.False(cli.Ok);
+    }
+
     private static void SeedFakeAthanor(FakeKnowledgeStateClient fake, IntegrationSmokeOptions smoke)
     {
         var pid = smoke.AthanorProjectId;
@@ -125,6 +184,50 @@ public sealed class IntegrationSmokeReportWriterTests
 
             Assert.True(File.Exists(Path.Combine(dir, "integration-smoke-report.json")));
             Assert.True(File.Exists(Path.Combine(dir, "integration-smoke-report.md")));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(dir, true);
+            }
+            catch
+            {
+                // best-effort cleanup on temp
+            }
+        }
+    }
+
+    [Fact]
+    public async Task WriteAsync_redacts_raw_bearer_in_detail_on_disk()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "agentor-int-smoke-redact-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var report = new IntegrationSmokeReport
+            {
+                GeneratedAtUtc = DateTimeOffset.UtcNow,
+                OverallOk = false,
+                Steps =
+                [
+                    new SmokeStepRecord
+                    {
+                        Target = "Test",
+                        Name = "rawDetail",
+                        Ok = false,
+                        Detail = "Authorization: Bearer ultra-secret-token-999",
+                    },
+                ],
+            };
+
+            await IntegrationSmokeReportWriter.WriteAsync(dir, report);
+
+            var json = await File.ReadAllTextAsync(Path.Combine(dir, "integration-smoke-report.json"));
+            var md = await File.ReadAllTextAsync(Path.Combine(dir, "integration-smoke-report.md"));
+            Assert.DoesNotContain("ultra-secret-token-999", json, StringComparison.Ordinal);
+            Assert.DoesNotContain("ultra-secret-token-999", md, StringComparison.Ordinal);
+            Assert.Contains("REDACTED", json, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("REDACTED", md, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

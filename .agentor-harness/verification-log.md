@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 35 PR142.5 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 35 -ExpectedHarnessPass PR142.5
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **529 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=35`, `ExpectedHarnessPass=PR142.5`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 87 / Total 87
+- Agentor.Application.Tests: Passed 177 / Total 177
+- Agentor.Contracts.Tests: Passed 14 / Total 14
+- Agentor.Infrastructure.Tests: Passed 123 / Total 123
+- Agentor.Api.Tests: Passed 128 / Total 128
+
+Scope:
+
+- completed: PR142.5 — smoke target validation, report export redaction, explicit-target zero-step failure, docs + handoff
+- not started: Phase 36+
+
 ## Phase 35 PR137.5 hardening (2026-05-11)
 
 ```powershell

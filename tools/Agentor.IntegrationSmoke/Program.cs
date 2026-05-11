@@ -14,7 +14,16 @@ public static class Program
 {
     public static async Task<int> Main(string[] args)
     {
-        var parsed = ParseArgs(args);
+        ParsedArgs parsed;
+        try
+        {
+            parsed = ParseArgs(args);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return 2;
+        }
 
         var builder = Host.CreateApplicationBuilder(
             new HostApplicationBuilderSettings
@@ -103,6 +112,8 @@ public static class Program
                 targets.Add(args[++i]);
             }
         }
+
+        IntegrationSmokeTargetValidation.Validate(targets);
 
         var dir = string.IsNullOrWhiteSpace(output)
             ? Path.Combine(Environment.CurrentDirectory, "artifacts", "integration-smoke")
