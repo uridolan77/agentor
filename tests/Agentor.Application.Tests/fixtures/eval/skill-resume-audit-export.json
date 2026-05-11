@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 5,
+  "kind": "ReviewResumeAuditExport",
+  "description": "Phase 34 PR137 — Audit narrative for plan → skill (inner tool RequiresReview) → human approval → skill procedure completion → tail plan steps. Skill continuation is serialized on PlanResumeCursor; approval re-evaluates policy only in resume context; tail steps use the same PlanResumeOrchestrator failure policies as Phase 18.",
+  "auditSequence": [
+    {
+      "event": "RunStarted",
+      "description": "Run starts for a sequential plan with a skill step whose first inner tool requires review."
+    },
+    {
+      "event": "PlanExecutionStarted",
+      "description": "Sequential plan execution begins."
+    },
+    {
+      "event": "PlanExecutionStepStarted",
+      "data": { "sourceStepId": "s1" },
+      "description": "First plan tool step executes and completes."
+    },
+    {
+      "event": "SkillInvocationStarted",
+      "description": "Skill plan step begins; inner tools are governed individually."
+    },
+    {
+      "event": "SkillProcedureSegmentRecorded",
+      "data": { "procedureStepId": "p1" },
+      "description": "Inner tool at p1 is policy-evaluated; RequiresReview suspends the run inside the skill."
+    },
+    {
+      "event": "PlanExecutionRequiresReview",
+      "description": "Plan execution suspended pending human review on the inner tool call."
+    },
+    {
+      "event": "RunRequiresReview",
+      "description": "Run status RequiresReview."
+    },
+    {
+      "event": "PlanResumeCursorRecorded",
+      "data": {
+        "blockedAtSourceStepId": "s2",
+        "remainingSteps": 1,
+        "skillContinuation": true
+      },
+      "description": "Resume cursor records remaining tail plan step(s) and SkillContinuation (inner checkpoint + non-canon procedure scratch state)."
+    },
+    {
+      "event": "HumanReviewDecisionRecorded",
+      "data": {
+        "kind": "Approve",
+        "resolution": "ResolvedApproved"
+      },
+      "description": "Human approves the blocked inner tool; decision is audit evidence only (no Athanor canonization)."
+    },
+    {
+      "event": "RunResumedAfterHumanReview",
+      "description": "Run returns to Running to finish the approved inner tool execution."
+    },
+    {
+      "event": "PolicyEvaluated",
+      "data": { "outcome": "Allow", "context": "ResumeAfterApprovedHumanReview=true" },
+      "description": "Post-approval policy for the blocked inner tool: Allow in resume context only."
+    },
+    {
+      "event": "ToolCallStarted",
+      "description": "Blocked inner tool executes after approval."
+    },
+    {
+      "event": "ToolCallCompleted",
+      "description": "Inner tool completes; executor merges outputs into procedure state (evidence)."
+    },
+    {
+      "event": "SkillProcedureSegmentRecorded",
+      "data": { "procedureStepId": "p2" },
+      "description": "Remaining inner procedure steps run in order with fresh policy checks."
+    },
+    {
+      "event": "SkillInvocationCompleted",
+      "description": "Skill plan step completes; plan-level skill step is completed once."
+    },
+    {
+      "event": "StepCompleted",
+      "description": "Trace marks the skill wrapper step completed after review-driven continuation."
+    },
+    {
+      "event": "PlanResumeCursorCleared",
+      "description": "Stored cursor cleared before tail plan resume (SkillContinuation stripped for orchestrator)."
+    },
+    {
+      "event": "MultiStepPlanResumed",
+      "data": { "remainingSteps": 1 },
+      "description": "Tail plan segment resumes under PlanResumeOrchestrator (same semantics as Phase 18)."
+    },
+    {
+      "event": "PlanExecutionStepCompleted",
+      "data": { "sourceStepId": "s3" },
+      "description": "Resumed tail steps complete according to each step's FailureHandlingPolicy."
+    },
+    {
+      "event": "PlanExecutionCompleted",
+      "description": "Plan completes after tail segment."
+    },
+    {
+      "event": "RunCompleted",
+      "description": "Run reaches Completed when no further review or failures stop the plan."
+    }
+  ],
+  "auditInvariants": [
+    "No Athanor canonization events appear in this trace.",
+    "HumanReviewDecisionRecorded states non-canonization where applicable.",
+    "SkillContinuation is cleared before MultiStepPlanResumed for the tail segment.",
+    "ResumeAfterApprovedHumanReview applies to the approved inner tool only; later inner tools are fully re-evaluated.",
+    "RunCompleted is terminal when the plan finishes successfully."
+  ]
+}

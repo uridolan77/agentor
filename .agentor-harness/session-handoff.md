@@ -1,31 +1,30 @@
-# Session handoff — Phase 33 PR132
+# Session handoff — Phase 34 PR137
 
 ## Completed
 
-- **PR128**: **`RunQueuePayloadVersion`**, **`RunQueuePayloadSerialization`** (shared **`JsonOptions`** with API mapping).
-- **PR129**: EF migration **`20260512100000_Phase33QueueStructuredToolPayload`** + **`RunQueueItemRecord.ToolPayloadJson`** / snapshot; **`EfRunQueueStore`** writes **`tool_payload_json`** and legacy **`tool_input_json`**; loads legacy-only rows; prefers structured column when present.
-- **PR130**: **`StartAgentRunRequestDto.toolInputPayload`**, **`StartAgentRunRequestMapping`** (structured overrides flattened **`input`**), **`StartAgentRunFingerprint`** extended.
-- **PR131**: **`GovernedSingleToolRunDriver`** structured **`ToolPayload`** path; **`RunQueueHostedServiceEfSqliteScopeTests`** structured MCP echo; **`AgentRunOrchestrationApiTests`** **`POST /agent-runs/queued`** + audit export assertion.
-- **PR132**: **`docs/operator/queue-payloads.md`**, fixture **`tests/Agentor.Application.Tests/fixtures/eval/queued-structured-toolpayload.json`**, **`docs/REPO_TRUTH.md`** queue columns; CI **`verify-harness`** **Phase 33 / PR132**.
+- **PR133**: **`docs/design/skill-resume.md`** + domain types in **`ReviewResumeCursor.cs`** ( **`SkillResumeCursor`**, checkpoints, **`HasContinuationWork`** ).
+- **PR134–PR135**: **`SequentialAgentPlanExecutor`** / **`IAgentPlanExecutor`** skill continuation and **`PlanResumeOrchestrator`** resumed skill execution; **`ReviewedToolContinuationService`** clears **`SkillContinuation`** and resumes tail without calling **`step.Complete`** twice after skill wrapper completion.
+- **PR136**: Tail plan segment after skill honors **`FailureHandlingPolicy`** on **`PendingPlanStep`** ( **`Approve_SkillInnerReview_TailDeniedWithContinueOnFailure_ThenCompletesRun`** ); inner-procedure failure paths remain shared with existing skill/plan executor behavior (see **`MultiStepReviewResumeTests`** / **`PlanResumeOrchestrator`** ).
+- **PR137**: Fixture **`tests/Agentor.Application.Tests/fixtures/eval/skill-resume-audit-export.json`**, **`registry.json`**, **`Phase18FixtureTests.SkillResumeAuditExport_Fixture_ExistsAndIsValidJson`**; **`EvaluationFixtureRegistryTests`** entry count **5**; **`docs/REPO_TRUTH.md`**; CI **`verify-harness`** **Phase 34 / PR137**.
 
 ## Verification
 
 - `dotnet restore Agentor.sln` succeeded
 - `dotnet build Agentor.sln --no-restore` succeeded
-- `dotnet test Agentor.sln --no-build` succeeded (**504 passed, 0 failed**)
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 33 -ExpectedHarnessPass PR132` succeeded
+- `dotnet test Agentor.sln --no-build` succeeded (**509 passed, 0 failed**)
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 34 -ExpectedHarnessPass PR137` succeeded
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
-Per-assembly test totals (latest run): Domain **85**, Application **170**, Contracts **14**, Infrastructure **110**, Api **125**.
+Per-assembly test totals (latest run): Domain **86**, Application **173**, Contracts **14**, Infrastructure **111**, Api **125**.
 
 ## What is next
 
-- **Phase 34** — skill resume support — **not started**.
+- **Phase 35** — production integration smoke pack — **not started**.
 
 ## What was explicitly not started
 
-- **Phase 34+** skill resume / plan resume expansions beyond this queue payload scope.
+- **Phase 35+** (integration smoke configuration, real HTTP smoke scripts, etc.).
 
 ## Remaining risks / false acceptance
 
-- None for Phase 33 acceptance rows; deferred product items unchanged where not touched (**SCOPE-001** remains per repo deferred list).
+- **PR136 inner skill procedure** failure-policy matrix (every combination inside **`ExecuteSkillInnerToolAsync`** after a prior inner approval) is not exhaustively enumerated in new tests; tail-segment policy behavior is covered by **`PlanResumeOrchestrator`** plus the new tail **ContinueOnFailure** test after skill. Deferred product items unchanged where not touched (**SCOPE-001** remains per repo deferred list).

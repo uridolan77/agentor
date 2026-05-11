@@ -22,6 +22,11 @@
       "id": "review-resume-audit-export",
       "fileName": "review-resume-audit-export.json",
       "description": "Phase 18 PR90: Audit export showing trace event sequence for multi-step review suspension and resume; schema 5."
+    },
+    {
+      "id": "skill-resume-audit-export",
+      "fileName": "skill-resume-audit-export.json",
+      "description": "Phase 34 PR137: Audit narrative for skill inner-tool review, SkillContinuation on PlanResumeCursor, and tail plan resume; schema 5."
     }
   ]
 }

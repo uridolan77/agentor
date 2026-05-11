@@ -418,6 +418,74 @@ public sealed class EfCoreAgentRunRepositoryTests
     }
 
     [Fact]
+    public async Task SaveAsync_RoundTripsResumeCursorWithSkillContinuationJson()
+    {
+        await using var ctx = CreateContext("resume-cursor-skill-test");
+        await ctx.Database.EnsureCreatedAsync();
+        var repo = new EfCoreAgentRunRepository(ctx);
+
+        var now = DateTimeOffset.UtcNow;
+        var planId = Guid.NewGuid();
+        var blockedPlanStepId = Guid.NewGuid();
+        var skillPlanStepId = Guid.NewGuid();
+        var skillPlanStep = new PendingPlanStep(
+            skillPlanStepId,
+            "s-skill",
+            1,
+            "tool.inner",
+            RecipeStepKind.Skill,
+            FailureHandlingPolicy.FailFast,
+            null,
+            null,
+            "skill.demo",
+            AgentRecipeVersion.Parse("1.0.0"));
+        var skillContinuation = new SkillResumeCursor(
+            skillPlanStep,
+            new SkillInnerToolCheckpoint("proc-step-1", "tool.inner", 0),
+            new SkillProcedureResumeState(new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["k"] = "v" }));
+        var cursor = new PlanResumeCursor(
+            planId,
+            blockedPlanStepId,
+            "s-blocked",
+            "tool.blocked",
+            [],
+            [],
+            now,
+            skillContinuation);
+
+        var run = AgentRun.Reconstitute(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            "Agent",
+            "Objective",
+            "resume-skill-trace",
+            AgentRunStatus.RequiresReview,
+            now.AddMinutes(-1),
+            null,
+            "pending",
+            [],
+            [],
+            null,
+            null,
+            null,
+            null,
+            null,
+            [],
+            cursor);
+
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var loaded = await repo.GetAsync(run.Id, CancellationToken.None);
+        Assert.NotNull(loaded);
+        Assert.NotNull(loaded!.ResumeCursor);
+        Assert.NotNull(loaded.ResumeCursor!.SkillContinuation);
+        Assert.Equal("skill.demo", loaded.ResumeCursor.SkillContinuation!.SkillPlanStep.InvokedSkillKey);
+        Assert.Equal("1.0.0", loaded.ResumeCursor.SkillContinuation.SkillPlanStep.InvokedSkillVersion!.Value);
+        Assert.Equal("proc-step-1", loaded.ResumeCursor.SkillContinuation.BlockedAtInnerTool.ProcedureStepId);
+        Assert.Equal("v", loaded.ResumeCursor.SkillContinuation.State.LastInnerToolOutput!["k"]);
+    }
+
+    [Fact]
     public async Task SaveAsync_HumanReviewDecisionOrder_IsStableAcrossRoundTrip()
     {
         await using var ctx = CreateContext("hr-order-test");

@@ -13,6 +13,7 @@ public sealed class PlanResumeOrchestrator(
     IToolRegistry toolRegistry,
     ReviewPolicyReevaluationService policyReevaluation,
     IToolExecutionPipeline toolExecutionPipeline,
+    IAgentPlanExecutor planExecutor,
     IClock clock,
     ReviewTraceWriter traceWriter)
 {
@@ -78,22 +79,8 @@ public sealed class PlanResumeOrchestrator(
     {
         if (pending.Kind == RecipeStepKind.Skill)
         {
-            traceWriter.RecordSkillResumeNotSupported(run, cursor, pending);
-
-            if (pending.OnFailure is FailureHandlingPolicy.ContinueOnFailure or FailureHandlingPolicy.MarkForCompensation)
-            {
-                ctx.History.Add(new PlanStepExecutionSnapshot(pending.PlanStepId, pending.SourceStepId, AgentPlanStepStatus.Failed, false, null));
-                return true;
-            }
-
-            if (pending.OnFailure == FailureHandlingPolicy.SkipRemaining)
-            {
-                ctx.History.Add(new PlanStepExecutionSnapshot(pending.PlanStepId, pending.SourceStepId, AgentPlanStepStatus.Failed, false, null));
-                return false;
-            }
-
-            run.Fail("Skill step resume is not supported.", clock.UtcNow);
-            return false;
+            var stop = await planExecutor.ExecuteResumedSkillPlanStepAsync(run, cursor, pending, ctx, cancellationToken);
+            return !stop && run.Status == AgentRunStatus.Running;
         }
 
         var input = BuildResumedStepInput(run, pending);
@@ -238,14 +225,19 @@ public sealed class PlanResumeOrchestrator(
             .Select(h => new PlanStepResumeSnapshot(h.PlanStepId, h.SourceStepId, h.Status, h.ToolSucceeded, h.ToolOutput))
             .ToList();
 
+        var blockedToolKey = blockedStep.Kind == RecipeStepKind.Skill
+            ? (blockedStep.InvokedSkillKey ?? blockedStep.ToolKey)
+            : blockedStep.ToolKey;
+
         var newCursor = new PlanResumeCursor(
             originalCursor.PlanId,
             blockedStep.PlanStepId,
             blockedStep.SourceStepId,
-            blockedStep.ToolKey,
+            blockedToolKey,
             newRemaining,
             newHistory,
-            clock.UtcNow);
+            clock.UtcNow,
+            SkillContinuation: null);
 
         run.RecordPlanResumeCursor(newCursor, clock.UtcNow);
     }

@@ -6,6 +6,10 @@ using Agentor.Domain.Governance;
 
 namespace Agentor.Application.Coordination;
 
+public sealed record SkillAfterApprovalContinuationResult(
+    bool SuspendedAgainForReview,
+    ToolPayload? SkillPlanStepOutputForTailResume);
+
 public sealed record PlanStepResult(
     Guid PlanStepId,
     string SourceStepId,
@@ -35,6 +39,19 @@ public sealed record AgentPlanExecutionResult(
 public interface IAgentPlanExecutor
 {
     Task<AgentPlanExecutionResult> ExecuteAsync(AgentRun run, AgentPlan plan, CancellationToken cancellationToken);
+
+    Task<SkillAfterApprovalContinuationResult> ContinueSkillProcedureAfterInnerToolApprovalAsync(
+        AgentRun run,
+        PlanResumeCursor cursor,
+        ToolPayload approvedBlockedInnerOutput,
+        CancellationToken cancellationToken);
+
+    Task<bool> ExecuteResumedSkillPlanStepAsync(
+        AgentRun run,
+        PlanResumeCursor cursor,
+        PendingPlanStep pending,
+        PlanExecutionContext ctx,
+        CancellationToken cancellationToken);
 }
 
 internal sealed class PlanExecutorLoopState
@@ -134,7 +151,18 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
             if (ps.Kind == RecipeStepKind.Skill)
             {
-                if (await ExecuteSkillPlanStepAsync(run, plan, ps, runStep, input, stepResults, ctx, state, cancellationToken).ConfigureAwait(false))
+                if (await ExecuteSkillPlanStepAsync(
+                        run,
+                        plan.Id,
+                        plan,
+                        ps,
+                        runStep,
+                        input,
+                        stepResults,
+                        ctx,
+                        state,
+                        innerReviewRecorder: null,
+                        cancellationToken).ConfigureAwait(false))
                 {
                     plan.RefreshDerivedStatus();
                     return Finalize(plan, run, stepResults, state.PrimaryFailure, state.Escalation);
@@ -167,13 +195,15 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
     /// <summary>Returns true when the executor must return immediately (terminal failure / review).</summary>
     private async Task<bool> ExecuteSkillPlanStepAsync(
         AgentRun run,
-        AgentPlan plan,
+        Guid planTraceId,
+        AgentPlan? planForRemainingSteps,
         AgentPlanStep ps,
         AgentStep runStep,
         IReadOnlyDictionary<string, string> input,
         List<PlanStepResult> stepResults,
         PlanExecutionContext ctx,
         PlanExecutorLoopState state,
+        Action<SkillProcedureStepDefinition, string, IReadOnlyDictionary<string, string>?>? innerReviewRecorder,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(ps.InvokedSkillKey) || ps.InvokedSkillVersion is null)
@@ -187,7 +217,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 TraceEventKind.PlanExecutionFailed,
                 "Plan execution failed (invalid skill metadata).",
                 _clock.UtcNow,
-                TraceData(run, plan, ps));
+                TraceData(run, planTraceId, ps));
             stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, PolicyDecisionOutcome.Deny, 0, new StepFailureSummary(fr, RetryDisposition.None), EscalationDisposition.None));
             return true;
         }
@@ -206,7 +236,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 TraceEventKind.PlanExecutionFailed,
                 "Plan execution failed (unknown skill).",
                 _clock.UtcNow,
-                TraceData(run, plan, ps, "skillKey", ps.InvokedSkillKey, "skillVersion", ps.InvokedSkillVersion.Value));
+                TraceData(run, planTraceId, ps, "skillKey", ps.InvokedSkillKey, "skillVersion", ps.InvokedSkillVersion.Value));
             stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, PolicyDecisionOutcome.Deny, 0, new StepFailureSummary(fr, RetryDisposition.None), EscalationDisposition.None));
             return true;
         }
@@ -215,7 +245,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             TraceEventKind.SkillInvocationStarted,
             $"Skill invocation started: {skill.SkillKey}@{skill.Version.Value}.",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "skillKey", skill.SkillKey, "skillVersion", skill.Version.Value));
+            TraceData(run, planTraceId, ps, "skillKey", skill.SkillKey, "skillVersion", skill.Version.Value));
 
         IReadOnlyDictionary<string, string>? lastToolOutput = null;
         var totalAttempts = 0;
@@ -231,7 +261,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                     TraceEventKind.SkillProcedureSegmentRecorded,
                     $"Skill segment: {proc.Name}.",
                     _clock.UtcNow,
-                    TraceData(run, plan, ps, "procedureStepId", proc.StepId, "segmentName", proc.Name));
+                    TraceData(run, planTraceId, ps, "procedureStepId", proc.StepId, "segmentName", proc.Name));
                 continue;
             }
 
@@ -242,7 +272,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
             var inner = await ExecuteSkillInnerToolAsync(
                 run,
-                plan,
+                planTraceId,
                 ps,
                 runStep,
                 proc.ToolKey.Trim(),
@@ -256,17 +286,28 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
             if (inner.ReturnFromExecutor)
             {
-                // Record a resume cursor if review was triggered with remaining plan steps.
                 if (inner.BlockedToolKeyForCursor is not null)
                 {
-                    RecordResumeCursorIfNeeded(run, plan, ps, inner.BlockedToolKeyForCursor, ctx);
+                    if (innerReviewRecorder is not null)
+                    {
+                        innerReviewRecorder(proc, inner.BlockedToolKeyForCursor, lastToolOutput);
+                    }
+                    else
+                    {
+                        if (planForRemainingSteps is null)
+                        {
+                            throw new InvalidOperationException("Plan is required to record a skill inner-tool resume cursor.");
+                        }
+
+                        RecordSkillInnerResumeCursor(run, planForRemainingSteps, ps, proc, inner.BlockedToolKeyForCursor, lastToolOutput, ctx);
+                    }
                 }
 
                 run.RecordTrace(
                     TraceEventKind.SkillInvocationCompleted,
                     "Skill invocation ended (terminal state).",
                     _clock.UtcNow,
-                    TraceData(run, plan, ps, "skillKey", skill.SkillKey));
+                    TraceData(run, planTraceId, ps, "skillKey", skill.SkillKey));
                 stepResults.Add(
                     new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, lastPolicy, totalAttempts, inner.Failure, state.Escalation));
                 return true;
@@ -278,7 +319,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                     TraceEventKind.SkillInvocationCompleted,
                     "Skill invocation ended (procedure aborted).",
                     _clock.UtcNow,
-                    TraceData(run, plan, ps, "skillKey", skill.SkillKey, "planStepStatus", ps.Status.ToString()));
+                    TraceData(run, planTraceId, ps, "skillKey", skill.SkillKey, "planStepStatus", ps.Status.ToString()));
                 ctx.History.Add(new PlanStepExecutionSnapshot(ps.Id, ps.SourceStepId, ps.Status, false, null));
                 stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, lastPolicy, totalAttempts, inner.Failure, state.Escalation));
                 return false;
@@ -300,12 +341,12 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             TraceEventKind.SkillInvocationCompleted,
             $"Skill invocation completed: {skill.SkillKey}@{skill.Version.Value}.",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "skillKey", skill.SkillKey));
+            TraceData(run, planTraceId, ps, "skillKey", skill.SkillKey));
         run.RecordTrace(
             TraceEventKind.PlanExecutionStepCompleted,
             $"Plan step completed: {ps.SourceStepId}.",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "attemptsUsed", totalAttempts.ToString()));
+            TraceData(run, planTraceId, ps, "attemptsUsed", totalAttempts.ToString()));
         stepResults.Add(new PlanStepResult(ps.Id, ps.SourceStepId, ps.Status, lastPolicy, totalAttempts, null, EscalationDisposition.None));
 
         return false;
@@ -322,7 +363,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
     private async Task<InnerToolResult> ExecuteSkillInnerToolAsync(
         AgentRun run,
-        AgentPlan plan,
+        Guid planId,
         AgentPlanStep ps,
         AgentStep runStep,
         string toolKey,
@@ -342,7 +383,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 TraceEventKind.PlanExecutionFailed,
                 "Plan execution failed (unknown tool during skill).",
                 _clock.UtcNow,
-                TraceData(run, plan, ps, "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
+                TraceData(run, planId, ps, "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
             return new InnerToolResult(true, false, 0, PolicyDecisionOutcome.Deny, new StepFailureSummary(fr, RetryDisposition.None), null);
         }
 
@@ -355,7 +396,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             TraceEventKind.PolicyEvaluated,
             "Tool policy evaluated (skill inner).",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "outcome", policyDecision.Outcome.ToString(), "reasonCode", policyDecision.ReasonCode, "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
+            TraceData(run, planId, ps, "outcome", policyDecision.Outcome.ToString(), "reasonCode", policyDecision.ReasonCode, "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
 
         var toolCall = ToolCall.Start(run.Id, runStep.Id, toolKey, input, _clock.UtcNow);
 
@@ -367,7 +408,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                     TraceEventKind.ExternalAgentInvocationDenied,
                     "External-agent tool denied by policy (not executed).",
                     _clock.UtcNow,
-                    TraceData(run, plan, ps, "toolKey", toolKey, "reasonCode", policyDecision.ReasonCode));
+                    TraceData(run, planId, ps, "toolKey", toolKey, "reasonCode", policyDecision.ReasonCode));
             }
             toolCall.Deny(policyDecision.Reason, _clock.UtcNow);
             runStep.AddToolCall(toolCall);
@@ -376,7 +417,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             state.PrimaryFailure ??= fr;
             var skip = state.SkipRemaining;
             var esc = state.Escalation;
-            var handled = ApplyFailurePolicyCore(run, plan, ps, runStep, new StepFailureSummary(fr, RetryDisposition.None), ref skip, ref esc);
+            var handled = ApplyFailurePolicyCore(run, planId, ps, runStep, new StepFailureSummary(fr, RetryDisposition.None), ref skip, ref esc);
             state.SkipRemaining = skip;
             state.Escalation = esc;
 
@@ -396,7 +437,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                     TraceEventKind.ExternalAgentInvocationRequiresReview,
                     "External-agent tool requires review (not executed).",
                     _clock.UtcNow,
-                    TraceData(run, plan, ps, "toolKey", toolKey, "reasonCode", policyDecision.ReasonCode));
+                    TraceData(run, planId, ps, "toolKey", toolKey, "reasonCode", policyDecision.ReasonCode));
             }
             toolCall.MarkRequiresReview(policyDecision.Reason, _clock.UtcNow);
             runStep.AddToolCall(toolCall);
@@ -408,7 +449,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 TraceEventKind.PlanExecutionRequiresReview,
                 "Plan execution requires review (policy during skill).",
                 _clock.UtcNow,
-                TraceData(run, plan, ps, "procedureStepId", skillProcedureStepId, "toolKey", toolKey));
+                TraceData(run, planId, ps, "procedureStepId", skillProcedureStepId, "toolKey", toolKey));
             return new InnerToolResult(true, false, 0, policyDecision.Outcome, null, null, BlockedToolKeyForCursor: toolKey);
         }
 
@@ -416,7 +457,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             TraceEventKind.ToolCallStarted,
             "Tool call started (skill inner).",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "toolCallId", toolCall.Id.ToString(), "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
+            TraceData(run, planId, ps, "toolCallId", toolCall.Id.ToString(), "toolKey", toolKey, "procedureStepId", skillProcedureStepId));
 
         var pipelineResult = await _pipeline.ExecuteAsync(
             run,
@@ -448,11 +489,11 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             TraceEventKind.PlanFailureDecisionRecorded,
             "Skill inner tool failure recorded.",
             _clock.UtcNow,
-            TraceData(run, plan, ps, "onFailure", ps.OnFailure.ToString(), "retryDisposition", failure.RetryDisposition.ToString(), "procedureStepId", skillProcedureStepId));
+                TraceData(run, planId, ps, "onFailure", ps.OnFailure.ToString(), "retryDisposition", failure.RetryDisposition.ToString(), "procedureStepId", skillProcedureStepId));
 
         var skip2 = state.SkipRemaining;
         var esc2 = state.Escalation;
-        var handledFailure = ApplyToolFailureOutcomeCore(run, plan, ps, runStep, failure, ref skip2, ref esc2);
+        var handledFailure = ApplyToolFailureOutcomeCore(run, planId, ps, runStep, failure, ref skip2, ref esc2);
         state.SkipRemaining = skip2;
         state.Escalation = esc2;
 
@@ -574,11 +615,11 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             return true;
         }
 
-        run.RecordTrace(
-            TraceEventKind.ToolCallStarted,
-            "Tool call started (plan step).",
-            _clock.UtcNow,
-            TraceData(run, plan, ps, "toolCallId", toolCall.Id.ToString()));
+            run.RecordTrace(
+                TraceEventKind.ToolCallStarted,
+                "Tool call started (plan step).",
+                _clock.UtcNow,
+                TraceData(run, plan, ps, "toolCallId", toolCall.Id.ToString()));
 
         var pipelineResult = await _pipeline.ExecuteAsync(
             run,
@@ -661,7 +702,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         _ = cancellationToken;
         var skip = state.SkipRemaining;
         var esc = state.Escalation;
-        var r = ApplyFailurePolicyCore(run, plan, ps, runStep, failure, ref skip, ref esc);
+        var r = ApplyFailurePolicyCore(run, plan.Id, ps, runStep, failure, ref skip, ref esc);
         state.SkipRemaining = skip;
         state.Escalation = esc;
         return Task.FromResult(r);
@@ -669,7 +710,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
     private bool ApplyFailurePolicyCore(
         AgentRun run,
-        AgentPlan plan,
+        Guid planId,
         AgentPlanStep ps,
         AgentStep runStep,
         StepFailureSummary failure,
@@ -689,7 +730,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                         TraceEventKind.CompensationHookRecorded,
                         "Compensation hook recorded (metadata only).",
                         _clock.UtcNow,
-                        TraceData(run, plan, ps, "hookId", ps.CompensationHook.HookId));
+                        TraceData(run, planId, ps, "hookId", ps.CompensationHook.HookId));
                 }
 
                 runStep.Complete(_clock.UtcNow);
@@ -709,7 +750,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             default:
                 runStep.Fail(_clock.UtcNow);
                 run.Fail(failure.Reason.Message, _clock.UtcNow);
-                run.RecordTrace(TraceEventKind.PlanExecutionFailed, "Plan execution failed (policy deny).", _clock.UtcNow, TraceData(run, plan, ps));
+                run.RecordTrace(TraceEventKind.PlanExecutionFailed, "Plan execution failed (policy deny).", _clock.UtcNow, TraceData(run, planId, ps));
                 return false;
         }
     }
@@ -726,7 +767,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         _ = cancellationToken;
         var skip = state.SkipRemaining;
         var esc = state.Escalation;
-        var r = ApplyToolFailureOutcomeCore(run, plan, ps, runStep, failure, ref skip, ref esc);
+        var r = ApplyToolFailureOutcomeCore(run, plan.Id, ps, runStep, failure, ref skip, ref esc);
         state.SkipRemaining = skip;
         state.Escalation = esc;
         return Task.FromResult(r);
@@ -734,7 +775,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
 
     private bool ApplyToolFailureOutcomeCore(
         AgentRun run,
-        AgentPlan plan,
+        Guid planId,
         AgentPlanStep ps,
         AgentStep runStep,
         StepFailureSummary failure,
@@ -756,7 +797,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                         TraceEventKind.CompensationHookRecorded,
                         "Compensation hook recorded (metadata only).",
                         _clock.UtcNow,
-                        TraceData(run, plan, ps, "hookId", ps.CompensationHook.HookId));
+                        TraceData(run, planId, ps, "hookId", ps.CompensationHook.HookId));
                 }
 
                 runStep.Complete(_clock.UtcNow);
@@ -778,7 +819,7 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 ps.Status = AgentPlanStepStatus.Failed;
                 runStep.Fail(_clock.UtcNow);
                 run.Fail(failure.Reason.Message, _clock.UtcNow);
-                run.RecordTrace(TraceEventKind.PlanExecutionFailed, "Plan execution failed (tool).", _clock.UtcNow, TraceData(run, plan, ps));
+                run.RecordTrace(TraceEventKind.PlanExecutionFailed, "Plan execution failed (tool).", _clock.UtcNow, TraceData(run, planId, ps));
                 return false;
         }
     }
@@ -798,6 +839,208 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
             primaryFailure,
             escalation);
         return new AgentPlanExecutionResult(overall, plan.Status, run.Status, stepResults, summary);
+    }
+
+    private static IReadOnlyDictionary<string, string>? MergeSkillOutputs(
+        IReadOnlyDictionary<string, string>? prior,
+        IReadOnlyDictionary<string, string>? next)
+    {
+        if (prior is null || prior.Count == 0)
+        {
+            return next;
+        }
+
+        if (next is null || next.Count == 0)
+        {
+            return prior;
+        }
+
+        var d = new Dictionary<string, string>(prior, StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in next)
+        {
+            d[kv.Key] = kv.Value;
+        }
+
+        return d;
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildResumedPlanInput(AgentRun run, PendingPlanStep pending)
+    {
+        var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["objective"] = run.Objective,
+            ["agentName"] = run.AgentName
+        };
+
+        if (pending.StaticInputParameters is not null)
+        {
+            foreach (var kv in pending.StaticInputParameters)
+            {
+                d[kv.Key] = kv.Value;
+            }
+        }
+
+        foreach (var kv in run.SessionMemory)
+        {
+            d["session:" + kv.Key] = kv.Value;
+        }
+
+        return d;
+    }
+
+    public async Task<bool> ExecuteResumedSkillPlanStepAsync(
+        AgentRun run,
+        PlanResumeCursor cursor,
+        PendingPlanStep pending,
+        PlanExecutionContext ctx,
+        CancellationToken cancellationToken)
+    {
+        var ps = PendingPlanStepFactory.ToAgentPlanStep(pending);
+        var runStep = run.StartStep($"PlanResume:{cursor.PlanId:N}:{pending.SourceStepId}", _clock.UtcNow);
+        var input = BuildResumedPlanInput(run, pending);
+        var stepResults = new List<PlanStepResult>();
+        var state = new PlanExecutorLoopState();
+
+        var remainingTail = cursor.RemainingSteps.Where(s => s.OrderIndex > pending.OrderIndex).ToList();
+        var historySnapshots = ctx.History
+            .Where(h => h.ToolSucceeded)
+            .Select(h => new PlanStepResumeSnapshot(h.PlanStepId, h.SourceStepId, h.Status, h.ToolSucceeded, h.ToolOutput))
+            .ToList();
+
+        return await ExecuteSkillPlanStepAsync(
+            run,
+            cursor.PlanId,
+            planForRemainingSteps: null,
+            ps,
+            runStep,
+            input,
+            stepResults,
+            ctx,
+            state,
+            innerReviewRecorder: (proc, blockedKey, lastOut) =>
+                RecordSkillInnerResumeState(run, cursor.PlanId, ps, remainingTail, historySnapshots, proc, blockedKey, lastOut),
+            cancellationToken);
+    }
+
+    public async Task<SkillAfterApprovalContinuationResult> ContinueSkillProcedureAfterInnerToolApprovalAsync(
+        AgentRun run,
+        PlanResumeCursor cursor,
+        ToolPayload approvedBlockedInnerOutput,
+        CancellationToken cancellationToken)
+    {
+        var sc = cursor.SkillContinuation
+            ?? throw new InvalidOperationException("Expected skill continuation on resume cursor.");
+
+        if (string.IsNullOrWhiteSpace(sc.SkillPlanStep.InvokedSkillKey) || sc.SkillPlanStep.InvokedSkillVersion is null)
+        {
+            run.Fail("Skill continuation is missing invoked skill metadata.", _clock.UtcNow);
+            return new SkillAfterApprovalContinuationResult(false, null);
+        }
+
+        if (!_skills.TryGet(sc.SkillPlanStep.InvokedSkillKey, sc.SkillPlanStep.InvokedSkillVersion, out var skill) || skill is null)
+        {
+            run.Fail($"Skill '{sc.SkillPlanStep.InvokedSkillKey}' is not registered.", _clock.UtcNow);
+            return new SkillAfterApprovalContinuationResult(false, null);
+        }
+
+        var ps = PendingPlanStepFactory.ToAgentPlanStep(sc.SkillPlanStep);
+        var runStep = run.Steps.LastOrDefault(s => s.Status == AgentStepStatus.Running);
+        if (runStep is null)
+        {
+            run.Fail("No active step for skill continuation.", _clock.UtcNow);
+            return new SkillAfterApprovalContinuationResult(false, null);
+        }
+
+        var input = PlanInputBuilder.BuildToolStepInput(run, ps);
+        var state = new PlanExecutorLoopState();
+        IReadOnlyDictionary<string, string>? rolling = MergeSkillOutputs(
+            sc.State.LastInnerToolOutput,
+            approvedBlockedInnerOutput.ToPolicyEvaluationDictionary());
+        PolicyDecisionOutcome? lastPolicy = null;
+        var totalAttempts = 0;
+
+        foreach (var proc in skill.ProcedureSteps.OrderBy(s => s.OrderIndex))
+        {
+            if (proc.OrderIndex <= sc.BlockedAtInnerTool.ProcedureOrderIndex)
+            {
+                continue;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (proc.Kind == SkillProcedureStepKind.Segment)
+            {
+                run.RecordTrace(
+                    TraceEventKind.SkillProcedureSegmentRecorded,
+                    $"Skill segment (after inner approval): {proc.Name}.",
+                    _clock.UtcNow,
+                    TraceData(run, cursor.PlanId, ps, "procedureStepId", proc.StepId, "segmentName", proc.Name));
+                continue;
+            }
+
+            if (proc.Kind != SkillProcedureStepKind.ToolRef || string.IsNullOrWhiteSpace(proc.ToolKey))
+            {
+                continue;
+            }
+
+            var inner = await ExecuteSkillInnerToolAsync(
+                run,
+                cursor.PlanId,
+                ps,
+                runStep,
+                proc.ToolKey.Trim(),
+                proc.StepId,
+                input,
+                state,
+                cancellationToken).ConfigureAwait(false);
+
+            totalAttempts += inner.PipelineAttempts;
+            lastPolicy = inner.PolicyOutcome;
+
+            if (inner.ReturnFromExecutor)
+            {
+                if (inner.BlockedToolKeyForCursor is not null)
+                {
+                    RecordSkillInnerResumeState(
+                        run,
+                        cursor.PlanId,
+                        ps,
+                        cursor.RemainingSteps,
+                        cursor.CompletedStepHistory,
+                        proc,
+                        inner.BlockedToolKeyForCursor,
+                        rolling);
+                }
+
+                return new SkillAfterApprovalContinuationResult(true, null);
+            }
+
+            if (inner.AbortProcedure)
+            {
+                return new SkillAfterApprovalContinuationResult(false, null);
+            }
+
+            if (inner.Output is not null)
+            {
+                rolling = inner.Output;
+            }
+        }
+
+        runStep.Complete(_clock.UtcNow);
+        ps.Status = AgentPlanStepStatus.Completed;
+        var skillPayload = ToolPayload.FromLegacyDictionary(rolling ?? StepInputBinding.Empty.Parameters);
+        var snapshotDict = SnapshotOutput(ps, skillPayload);
+        run.RecordTrace(
+            TraceEventKind.SkillInvocationCompleted,
+            $"Skill invocation completed after inner approval: {skill.SkillKey}@{skill.Version.Value}.",
+            _clock.UtcNow,
+            TraceData(run, cursor.PlanId, ps, "skillKey", skill.SkillKey));
+
+        var tailPayload = snapshotDict is not null
+            ? ToolPayload.FromLegacyDictionary(snapshotDict)
+            : skillPayload;
+
+        return new SkillAfterApprovalContinuationResult(false, tailPayload);
     }
 
     private static IReadOnlyDictionary<string, string>? SnapshotOutput(AgentPlanStep ps, ToolPayload output)
@@ -840,7 +1083,9 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
                 s.Kind,
                 s.OnFailure,
                 s.InputBinding?.Parameters,
-                s.OutputBinding))
+                s.OutputBinding,
+                s.InvokedSkillKey,
+                s.InvokedSkillVersion))
             .ToList();
 
         if (remaining.Count == 0)
@@ -866,12 +1111,77 @@ public sealed class SequentialAgentPlanExecutor : IAgentPlanExecutor
         run.RecordPlanResumeCursor(cursor, _clock.UtcNow);
     }
 
-    private static Dictionary<string, string> TraceData(AgentRun run, AgentPlan plan, AgentPlanStep? step = null, params string[] extraPairs)
+    private void RecordSkillInnerResumeCursor(
+        AgentRun run,
+        AgentPlan plan,
+        AgentPlanStep blockedSkillStep,
+        SkillProcedureStepDefinition proc,
+        string blockedInnerToolKey,
+        IReadOnlyDictionary<string, string>? lastToolOutputBeforeBlocked,
+        PlanExecutionContext ctx)
+    {
+        var remaining = plan.Steps
+            .Where(s => s.OrderIndex > blockedSkillStep.OrderIndex)
+            .OrderBy(s => s.OrderIndex)
+            .Select(PendingPlanStepFactory.FromAgentPlanStep)
+            .ToList();
+
+        var history = ctx.History
+            .Where(h => h.ToolSucceeded)
+            .Select(h => new PlanStepResumeSnapshot(h.PlanStepId, h.SourceStepId, h.Status, h.ToolSucceeded, h.ToolOutput))
+            .ToList();
+
+        RecordSkillInnerResumeState(
+            run,
+            plan.Id,
+            blockedSkillStep,
+            remaining,
+            history,
+            proc,
+            blockedInnerToolKey,
+            lastToolOutputBeforeBlocked);
+    }
+
+    private void RecordSkillInnerResumeState(
+        AgentRun run,
+        Guid planId,
+        AgentPlanStep blockedSkillStep,
+        IReadOnlyList<PendingPlanStep> remainingAfterBlockedPlanStep,
+        IReadOnlyList<PlanStepResumeSnapshot> completedPlanStepHistory,
+        SkillProcedureStepDefinition proc,
+        string blockedInnerToolKey,
+        IReadOnlyDictionary<string, string>? lastToolOutputBeforeBlocked)
+    {
+        var skillContinuation = new SkillResumeCursor(
+            PendingPlanStepFactory.FromAgentPlanStep(blockedSkillStep),
+            new SkillInnerToolCheckpoint(proc.StepId, blockedInnerToolKey.Trim(), proc.OrderIndex),
+            new SkillProcedureResumeState(lastToolOutputBeforeBlocked));
+
+        var cursor = new PlanResumeCursor(
+            planId,
+            blockedSkillStep.Id,
+            blockedSkillStep.SourceStepId,
+            blockedInnerToolKey,
+            remainingAfterBlockedPlanStep,
+            completedPlanStepHistory,
+            _clock.UtcNow,
+            skillContinuation);
+
+        run.RecordPlanResumeCursor(cursor, _clock.UtcNow);
+    }
+
+    private static Dictionary<string, string> TraceData(AgentRun run, AgentPlan plan, AgentPlanStep? step = null, params string[] extraPairs) =>
+        TraceData(run, plan.Id, step, extraPairs);
+
+    private static Dictionary<string, string> TraceData(AgentRun run, AgentPlan plan) =>
+        TraceData(run, plan.Id, null);
+
+    private static Dictionary<string, string> TraceData(AgentRun run, Guid planId, AgentPlanStep? step = null, params string[] extraPairs)
     {
         var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["runId"] = run.Id.ToString(),
-            ["planId"] = plan.Id.ToString()
+            ["planId"] = planId.ToString()
         };
 
         if (step is not null)

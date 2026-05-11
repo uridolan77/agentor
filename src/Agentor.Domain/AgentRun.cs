@@ -478,9 +478,11 @@ public sealed class AgentRun
             throw new InvalidOperationException($"A plan resume cursor can only be recorded while the run requires review. Current status: {Status}");
         }
 
-        if (!cursor.HasRemainingSteps)
+        if (!cursor.HasContinuationWork)
         {
-            throw new ArgumentException("Cursor must have at least one remaining step.", nameof(cursor));
+            throw new ArgumentException(
+                "Cursor must have at least one remaining plan step or an active skill continuation.",
+                nameof(cursor));
         }
 
         ResumeCursor = cursor;

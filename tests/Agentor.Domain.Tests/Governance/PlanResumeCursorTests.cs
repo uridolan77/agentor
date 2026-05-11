@@ -103,7 +103,7 @@ public sealed class PlanResumeCursorTests
     }
 
     [Fact]
-    public void RecordPlanResumeCursor_ThrowsWhenCursorHasNoRemainingSteps()
+    public void RecordPlanResumeCursor_ThrowsWhenCursorHasNoContinuationWork()
     {
         var now = Now;
         var run = CreateRunInRequiresReview(now);
@@ -114,6 +114,41 @@ public sealed class PlanResumeCursorTests
             SuspendedAt: now);
 
         Assert.Throws<ArgumentException>(() => run.RecordPlanResumeCursor(emptyCursor, now));
+    }
+
+    [Fact]
+    public void RecordPlanResumeCursor_AcceptsSkillContinuation_WhenNoRemainingPlanSteps()
+    {
+        var now = Now;
+        var run = CreateRunInRequiresReview(now);
+        var skillStep = new PendingPlanStep(
+            Guid.NewGuid(),
+            "s2",
+            2,
+            string.Empty,
+            RecipeStepKind.Skill,
+            FailureHandlingPolicy.FailFast,
+            null,
+            null,
+            InvokedSkillKey: "k",
+            InvokedSkillVersion: AgentRecipeVersion.Parse("1.0"));
+        var sc = new SkillResumeCursor(
+            skillStep,
+            new SkillInnerToolCheckpoint("p1", "tool.review", 1),
+            new SkillProcedureResumeState(null));
+        var cursor = new PlanResumeCursor(
+            Guid.NewGuid(),
+            skillStep.PlanStepId,
+            "s2",
+            "tool.review",
+            RemainingSteps: [],
+            CompletedStepHistory: [],
+            SuspendedAt: now,
+            SkillContinuation: sc);
+
+        run.RecordPlanResumeCursor(cursor, now);
+        Assert.NotNull(run.ResumeCursor);
+        Assert.NotNull(run.ResumeCursor!.SkillContinuation);
     }
 
     [Fact]

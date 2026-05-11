@@ -14,6 +14,7 @@ namespace Agentor.Application.Tests;
 
 /// <summary>
 /// PR90 Phase 18 — validates the deterministic evaluation fixtures for multi-step review resume.
+/// Phase 34 PR137 — skill inner-tool resume audit fixture.
 /// Closes PR53-005: multi-step plan executor resume semantics.
 /// </summary>
 public sealed class Phase18FixtureTests
@@ -114,6 +115,36 @@ public sealed class Phase18FixtureTests
         Assert.True(cursorRecordedIdx < resumeIdx, "Cursor recorded before resume");
         Assert.True(cursorClearedIdx < resumeIdx, "Cursor cleared before resume event");
         Assert.True(resumeIdx < completedIdx, "MultiStepPlanResumed before RunCompleted");
+    }
+
+    [Fact]
+    public void SkillResumeAuditExport_Fixture_ExistsAndIsValidJson()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "fixtures", "eval", "skill-resume-audit-export.json");
+        Assert.True(File.Exists(path), $"Fixture not found: {path}");
+
+        var json = File.ReadAllText(path);
+        var doc = JsonDocument.Parse(json);
+        Assert.Equal("ReviewResumeAuditExport", doc.RootElement.GetProperty("kind").GetString());
+        Assert.Equal(5, doc.RootElement.GetProperty("schemaVersion").GetInt32());
+
+        var sequence = doc.RootElement.GetProperty("auditSequence");
+        Assert.True(sequence.GetArrayLength() > 10, "Skill resume audit export should have >10 events");
+
+        var events = sequence.EnumerateArray()
+            .Select(e => e.GetProperty("event").GetString())
+            .ToList();
+
+        Assert.Contains("SkillInvocationStarted", events);
+        Assert.Contains("PlanResumeCursorRecorded", events);
+        var resumeIdx = events.IndexOf("MultiStepPlanResumed");
+        var cursorRecordedIdx = events.IndexOf("PlanResumeCursorRecorded");
+        var cursorClearedIdx = events.IndexOf("PlanResumeCursorCleared");
+        var completedIdx = events.IndexOf("RunCompleted");
+
+        Assert.True(cursorRecordedIdx < resumeIdx, "Cursor recorded before tail MultiStepPlanResumed");
+        Assert.True(cursorClearedIdx < resumeIdx, "Cursor cleared before tail resume");
+        Assert.True(resumeIdx < completedIdx, "Tail resume before RunCompleted");
     }
 
     // ───────────────────────────────────────────────────────────────────────

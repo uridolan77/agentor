@@ -77,20 +77,6 @@ public sealed class ReviewTraceWriter(IClock clock)
             new Dictionary<string, string> { ["planId"] = planId.ToString("D") });
     }
 
-    public void RecordSkillResumeNotSupported(AgentRun run, PlanResumeCursor cursor, PendingPlanStep pending)
-    {
-        run.RecordTrace(
-            TraceEventKind.PlanExecutionFailed,
-            $"Resumed plan step '{pending.SourceStepId}' cannot execute: skill step resume is not supported in this runtime version.",
-            clock.UtcNow,
-            new Dictionary<string, string>
-            {
-                ["planId"] = cursor.PlanId.ToString("D"),
-                ["sourceStepId"] = pending.SourceStepId,
-                ["reasonCode"] = "SKILL_RESUME_NOT_SUPPORTED"
-            });
-    }
-
     public void RecordResumedStepPolicyEvaluated(
         AgentRun run,
         PlanResumeCursor cursor,

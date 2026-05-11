@@ -1,5 +1,6 @@
 using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
+using Agentor.Application.Coordination;
 using Agentor.Application.HumanReview;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
@@ -83,8 +84,9 @@ public sealed class HumanReviewExtractedServicesTests
         var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
         var traceWriter = new ReviewTraceWriter(clock);
         var policyReeval = new ReviewPolicyReevaluationService(policy);
-        var planResume = new PlanResumeOrchestrator(registry, policyReeval, pipeline, clock, traceWriter);
-        var continuation = new ReviewedToolContinuationService(registry, policyReeval, pipeline, clock, traceWriter, planResume);
+        var planExecutor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock);
+        var planResume = new PlanResumeOrchestrator(registry, policyReeval, pipeline, planExecutor, clock, traceWriter);
+        var continuation = new ReviewedToolContinuationService(registry, policyReeval, pipeline, clock, traceWriter, planResume, planExecutor);
         var applicator = new HumanReviewDecisionApplicator(clock, new FixedActorAccessor());
 
         applicator.Apply(run, new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null));
@@ -133,7 +135,8 @@ public sealed class HumanReviewExtractedServicesTests
         var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
         var traceWriter = new ReviewTraceWriter(clock);
         var policyReeval = new ReviewPolicyReevaluationService(policy);
-        var orchestrator = new PlanResumeOrchestrator(registry, policyReeval, pipeline, clock, traceWriter);
+        var planExecutor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock);
+        var orchestrator = new PlanResumeOrchestrator(registry, policyReeval, pipeline, planExecutor, clock, traceWriter);
 
         await orchestrator.ResumeRemainingPlanStepsAsync(
             run,
@@ -193,7 +196,8 @@ public sealed class HumanReviewExtractedServicesTests
         var pipeline = new ToolExecutionPipeline(clock, Microsoft.Extensions.Options.Options.Create(new ToolExecutionOptions()));
         var traceWriter = new ReviewTraceWriter(clock);
         var policyReeval = new ReviewPolicyReevaluationService(policy);
-        var orchestrator = new PlanResumeOrchestrator(registry, policyReeval, pipeline, clock, traceWriter);
+        var planExecutor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock);
+        var orchestrator = new PlanResumeOrchestrator(registry, policyReeval, pipeline, planExecutor, clock, traceWriter);
 
         await orchestrator.ResumeRemainingPlanStepsAsync(
             run,

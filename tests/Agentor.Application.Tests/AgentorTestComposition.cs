@@ -100,14 +100,16 @@ internal static class AgentorTestComposition
         IToolRegistry toolRegistry,
         IClock clock,
         ICurrentActorAccessor actorAccessor,
-        ToolExecutionOptions? toolExecutionOptions = null)
+        ToolExecutionOptions? toolExecutionOptions = null,
+        ISkillPackageCatalog? skillCatalog = null)
     {
         var opts = Microsoft.Extensions.Options.Options.Create(toolExecutionOptions ?? new ToolExecutionOptions());
         var pipeline = new ToolExecutionPipeline(clock, opts);
         var traceWriter = new ReviewTraceWriter(clock);
         var policyReeval = new ReviewPolicyReevaluationService(policyEvaluator);
-        var planResume = new PlanResumeOrchestrator(toolRegistry, policyReeval, pipeline, clock, traceWriter);
-        var continuation = new ReviewedToolContinuationService(toolRegistry, policyReeval, pipeline, clock, traceWriter, planResume);
+        var planExecutor = CreateSequentialPlanExecutor(toolRegistry, policyEvaluator, clock, toolExecutionOptions, skillCatalog: skillCatalog);
+        var planResume = new PlanResumeOrchestrator(toolRegistry, policyReeval, pipeline, planExecutor, clock, traceWriter);
+        var continuation = new ReviewedToolContinuationService(toolRegistry, policyReeval, pipeline, clock, traceWriter, planResume, planExecutor);
         var applicator = new HumanReviewDecisionApplicator(clock, actorAccessor);
         return new ApplyHumanReviewDecisionHandler(repository, applicator, continuation);
     }

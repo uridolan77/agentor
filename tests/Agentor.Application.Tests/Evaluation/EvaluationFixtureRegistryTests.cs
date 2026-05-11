@@ -27,11 +27,12 @@ public sealed class EvaluationFixtureRegistryTests
     {
         var (dir, regPath) = Paths();
         var reg = EvaluationFixtureRegistry.Load(regPath, dir);
-        Assert.Equal(4, reg.Entries.Count); // Phase 18 added review-gated-multistep-plan and review-resume-audit-export
+        Assert.Equal(5, reg.Entries.Count); // Phase 18 + Phase 34 skill-resume-audit-export
         Assert.Contains(reg.Entries, e => e.Id == "one-step-fake-tool");
         Assert.Contains(reg.Entries, e => e.Id == "external-agent-one-call");
         Assert.Contains(reg.Entries, e => e.Id == "review-gated-multistep-plan");
         Assert.Contains(reg.Entries, e => e.Id == "review-resume-audit-export");
+        Assert.Contains(reg.Entries, e => e.Id == "skill-resume-audit-export");
     }
 
     [Fact]

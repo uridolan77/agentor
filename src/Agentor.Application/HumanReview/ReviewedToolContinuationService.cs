@@ -1,4 +1,5 @@
 using Agentor.Application.Abstractions;
+using Agentor.Application.Coordination;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Domain.Governance;
@@ -14,7 +15,8 @@ public sealed class ReviewedToolContinuationService(
     IToolExecutionPipeline toolExecutionPipeline,
     IClock clock,
     ReviewTraceWriter traceWriter,
-    PlanResumeOrchestrator planResumeOrchestrator)
+    PlanResumeOrchestrator planResumeOrchestrator,
+    IAgentPlanExecutor planExecutor)
 {
     public async Task ContinueApprovedToolExecutionAsync(AgentRun run, CancellationToken cancellationToken)
     {
@@ -84,10 +86,55 @@ public sealed class ReviewedToolContinuationService(
                 pipelineResult.AttemptsUsed,
                 pipelineResult.TotalDuration);
 
+            var cursor = run.ResumeCursor;
+            if (cursor?.SkillContinuation is not null)
+            {
+                var skillResult = await planExecutor.ContinueSkillProcedureAfterInnerToolApprovalAsync(
+                    run,
+                    cursor,
+                    pipelineResult.Output!,
+                    cancellationToken);
+
+                if (skillResult.SuspendedAgainForReview)
+                {
+                    return;
+                }
+
+                if (run.Status != AgentRunStatus.Running)
+                {
+                    return;
+                }
+
+                traceWriter.RecordStepCompletedAfterReview(run, step.Id);
+                run.ClearResumeCursor(clock.UtcNow);
+
+                var tailCursor = new PlanResumeCursor(
+                    cursor.PlanId,
+                    cursor.BlockedAtPlanStepId,
+                    cursor.BlockedAtSourceStepId,
+                    cursor.BlockedAtToolKey,
+                    cursor.RemainingSteps,
+                    cursor.CompletedStepHistory,
+                    clock.UtcNow,
+                    SkillContinuation: null);
+
+                if (tailCursor.HasRemainingSteps)
+                {
+                    await planResumeOrchestrator.ResumeRemainingPlanStepsAsync(
+                        run,
+                        tailCursor,
+                        skillResult.SkillPlanStepOutputForTailResume,
+                        cancellationToken);
+                    return;
+                }
+
+                run.Complete(clock.UtcNow);
+                return;
+            }
+
             step.Complete(clock.UtcNow);
             traceWriter.RecordStepCompletedAfterReview(run, step.Id);
 
-            var cursor = run.ResumeCursor;
             if (cursor is { HasRemainingSteps: true })
             {
                 run.ClearResumeCursor(clock.UtcNow);

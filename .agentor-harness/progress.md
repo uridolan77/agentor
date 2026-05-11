@@ -1,5 +1,24 @@
 # Agentor harness progress
 
+## Phase 34 PR137 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **Domain**: **`SkillInnerToolCheckpoint`**, **`SkillProcedureResumeState`**, **`SkillResumeCursor`**; **`PlanResumeCursor.SkillContinuation`**, **`HasContinuationWork`**; **`PendingPlanStep`** optional **`InvokedSkillKey` / `InvokedSkillVersion`**.
+- **Application**: **`SequentialAgentPlanExecutor`** skill resume + continuation; **`PlanResumeOrchestrator.ExecuteResumedSkillPlanStepAsync`**; **`ReviewedToolContinuationService`** skill branch without double **`step.Complete`**; removed **`ReviewTraceWriter.RecordSkillResumeNotSupported`**.
+- **Persistence**: EF **`resume_cursor_json`** round-trip with **`SkillContinuation`** (**`EfCoreAgentRunRepositoryTests.SaveAsync_RoundTripsResumeCursorWithSkillContinuationJson`**).
+- **Tests/docs**: **`MultiStepReviewResumeTests`** (skill inner approve + tail; tail **ContinueOnFailure** after skill), **`PlanResumeCursorTests`**, **`Phase18FixtureTests`** + **`skill-resume-audit-export.json`** + **`registry.json`**; **`docs/design/skill-resume.md`**; **`docs/REPO_TRUTH.md`**.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **509 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 34 -ExpectedHarnessPass PR137`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 35 not started.
+
 ## Phase 33 PR132 (2026-05-11)
 
 **Status**: Complete.

@@ -19,7 +19,32 @@ public sealed record PendingPlanStep(
     RecipeStepKind Kind,
     FailureHandlingPolicy OnFailure,
     IReadOnlyDictionary<string, string>? StaticInputParameters,
-    StepOutputBinding? OutputBinding);
+    StepOutputBinding? OutputBinding,
+    string? InvokedSkillKey = null,
+    AgentRecipeVersion? InvokedSkillVersion = null);
+
+/// <summary>
+/// Identifies an inner tool invocation inside a skill procedure when execution suspends for review mid-procedure.
+/// </summary>
+public sealed record SkillInnerToolCheckpoint(
+    string ProcedureStepId,
+    string ToolKey,
+    int ProcedureOrderIndex);
+
+/// <summary>
+/// Non-canon scratch state carried across skill procedure suspension points (tool outputs are evidence only).
+/// </summary>
+public sealed record SkillProcedureResumeState(
+    IReadOnlyDictionary<string, string>? LastInnerToolOutput);
+
+/// <summary>
+/// Resume coordinates for a partially executed skill plan step. Approval resumes the blocked inner tool only;
+/// it does not grant license to skip policy checks on subsequent inner tools.
+/// </summary>
+public sealed record SkillResumeCursor(
+    PendingPlanStep SkillPlanStep,
+    SkillInnerToolCheckpoint BlockedAtInnerTool,
+    SkillProcedureResumeState State);
 
 /// <summary>
 /// Cursor recorded on a run when a sequential plan suspends mid-execution pending human review.
@@ -32,10 +57,14 @@ public sealed record PlanResumeCursor(
     string BlockedAtToolKey,
     IReadOnlyList<PendingPlanStep> RemainingSteps,
     IReadOnlyList<PlanStepResumeSnapshot> CompletedStepHistory,
-    DateTimeOffset SuspendedAt)
+    DateTimeOffset SuspendedAt,
+    SkillResumeCursor? SkillContinuation = null)
 {
-    /// <summary>True when there are unexecuted steps after the blocked step that require resumed execution.</summary>
+    /// <summary>True when there are unexecuted plan steps after the blocked step.</summary>
     public bool HasRemainingSteps => RemainingSteps.Count > 0;
+
+    /// <summary>True when either remaining plan steps exist or a skill procedure must continue after an inner-tool approval.</summary>
+    public bool HasContinuationWork => RemainingSteps.Count > 0 || SkillContinuation is not null;
 }
 
 /// <summary>Describes the review resume disposition for a run awaiting human review.</summary>

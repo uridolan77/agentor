@@ -134,12 +134,13 @@ public sealed class MultiStepReviewResumeTests
         IAgentRunRepository repo,
         IPolicyEvaluator policy,
         IToolExecutor? toolExecutor = null,
-        ActorRole actorRole = ActorRole.HumanOperator)
+        ActorRole actorRole = ActorRole.HumanOperator,
+        ISkillPackageCatalog? skillCatalog = null)
     {
         var registry = MakeRegistry(toolExecutor);
         var clock = new SystemClock();
         return AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
-            repo, policy, registry, clock, new FixedActorAccessor(actorRole));
+            repo, policy, registry, clock, new FixedActorAccessor(actorRole), skillCatalog: skillCatalog);
     }
 
     // ───────────────────────────────────────────────────────────────────────
@@ -246,6 +247,171 @@ public sealed class MultiStepReviewResumeTests
         Assert.Contains(result.Trace, e => e.Kind == TraceEventKind.MultiStepPlanResumed);
         Assert.Contains(result.Trace, e => e.Kind == TraceEventKind.PlanResumeCursorCleared);
         Assert.Contains(result.Trace, e => e.Kind == TraceEventKind.PlanExecutionCompleted);
+    }
+
+    [Fact]
+    public async Task Approve_SkillInnerReview_ThenResumesTailPlanStep()
+    {
+        const string skillKey = "harness.resume-skill";
+        var skillVersion = AgentRecipeVersion.Parse("1.0");
+        var okSkill = SkillPackage.TryCreate(
+            Guid.NewGuid(),
+            skillKey,
+            skillVersion,
+            "Resume skill",
+            "Review then fake inner tools.",
+            [
+                new SkillProcedureStepDefinition("p1", 1, "review", SkillProcedureStepKind.ToolRef, ReviewTool),
+                new SkillProcedureStepDefinition("p2", 2, "fake", SkillProcedureStepKind.ToolRef, FakeTool)
+            ],
+            out var skillPkg,
+            out var skillVal);
+        Assert.True(okSkill);
+        Assert.NotNull(skillPkg);
+        Assert.True(skillVal.IsValid);
+
+        var catalog = new InMemorySkillPackageCatalog();
+        catalog.Register(skillPkg!);
+
+        var clock = new SystemClock();
+        var counting = new CountingExecutor();
+        var policy = new StubPolicyEvaluator(reviewKeys: [ReviewTool]);
+        var registry = MakeRegistry(counting);
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock, skillCatalog: catalog);
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Obj", "trace-skill-ms", clock.UtcNow);
+
+        var okRecipe = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "skill-mid-review",
+            AgentRecipeVersion.Parse("1.0"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition("s1", 1, RecipeStepKind.Tool, FakeTool),
+                new RecipeStepDefinition(
+                    "s2",
+                    2,
+                    RecipeStepKind.Skill,
+                    string.Empty,
+                    InvokedSkillKey: skillKey,
+                    InvokedSkillVersion: skillVersion),
+                new RecipeStepDefinition("s3", 3, RecipeStepKind.Tool, FakeTool)
+            ],
+            null,
+            out var recipe,
+            out var recipeVal);
+        Assert.True(okRecipe);
+        Assert.True(recipeVal.IsValid);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+
+        var execResult = await executor.ExecuteAsync(run, plan, CancellationToken.None);
+        Assert.False(execResult.Success);
+        Assert.Equal(AgentRunStatus.RequiresReview, run.Status);
+        Assert.NotNull(run.ResumeCursor);
+        Assert.NotNull(run.ResumeCursor!.SkillContinuation);
+        Assert.Single(run.ResumeCursor.RemainingSteps);
+        Assert.Equal("s3", run.ResumeCursor.RemainingSteps[0].SourceStepId);
+        Assert.Equal(1, counting.Invocations);
+
+        var repo = new InMemoryAgentRunRepository();
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = MakeHandler(repo, policy, counting, skillCatalog: catalog);
+        var done = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(done);
+        Assert.Equal(AgentRunStatus.Completed, done!.Status);
+        Assert.Null(done.ResumeCursor);
+        Assert.Equal(4, counting.Invocations);
+    }
+
+    [Fact]
+    public async Task Approve_SkillInnerReview_TailDeniedWithContinueOnFailure_ThenCompletesRun()
+    {
+        const string skillKey = "harness.resume-skill-cof";
+        var skillVersion = AgentRecipeVersion.Parse("1.0");
+        var okSkill = SkillPackage.TryCreate(
+            Guid.NewGuid(),
+            skillKey,
+            skillVersion,
+            "Resume skill",
+            "Review then fake inner tools.",
+            [
+                new SkillProcedureStepDefinition("p1", 1, "review", SkillProcedureStepKind.ToolRef, ReviewTool),
+                new SkillProcedureStepDefinition("p2", 2, "fake", SkillProcedureStepKind.ToolRef, FakeTool)
+            ],
+            out var skillPkg,
+            out var skillVal);
+        Assert.True(okSkill);
+        Assert.NotNull(skillPkg);
+        Assert.True(skillVal.IsValid);
+
+        var catalog = new InMemorySkillPackageCatalog();
+        catalog.Register(skillPkg!);
+
+        var deniedResumedTool = "tool.denied-after-skill-tail";
+        var clock = new SystemClock();
+        var counting = new CountingExecutor();
+        var policy = new StubPolicyEvaluator(
+            reviewKeys: [ReviewTool],
+            denyKeys: [deniedResumedTool]);
+        var registry = MakeRegistry(counting);
+        registry.Register(new ToolDefinition(deniedResumedTool, "Denied", "desc", ToolRiskLevel.Low), counting);
+
+        var executor = AgentorTestComposition.CreateSequentialPlanExecutor(registry, policy, clock, skillCatalog: catalog);
+        var run = AgentRun.Start(Guid.NewGuid(), "Agent", "Obj", "trace-skill-cof", clock.UtcNow);
+
+        var okRecipe = AgentRecipe.TryCreate(
+            Guid.NewGuid(),
+            "skill-tail-cof",
+            AgentRecipeVersion.Parse("1.0"),
+            CoordinationTopology.SequentialPipeline,
+            [
+                new RecipeStepDefinition("s1", 1, RecipeStepKind.Tool, FakeTool),
+                new RecipeStepDefinition(
+                    "s2",
+                    2,
+                    RecipeStepKind.Skill,
+                    string.Empty,
+                    InvokedSkillKey: skillKey,
+                    InvokedSkillVersion: skillVersion),
+                new RecipeStepDefinition("s3", 3, RecipeStepKind.Tool, deniedResumedTool,
+                    OnFailure: FailureHandlingPolicy.ContinueOnFailure),
+                new RecipeStepDefinition("s4", 4, RecipeStepKind.Tool, FakeTool)
+            ],
+            null,
+            out var recipe,
+            out var recipeVal);
+        Assert.True(okRecipe);
+        Assert.True(recipeVal.IsValid);
+        var plan = AgentPlan.Instantiate(recipe!, Guid.NewGuid(), clock.UtcNow);
+
+        var execResult = await executor.ExecuteAsync(run, plan, CancellationToken.None);
+        Assert.False(execResult.Success);
+        Assert.Equal(AgentRunStatus.RequiresReview, run.Status);
+        Assert.NotNull(run.ResumeCursor);
+        Assert.NotNull(run.ResumeCursor!.SkillContinuation);
+        Assert.Equal(2, run.ResumeCursor.RemainingSteps.Count);
+        Assert.Equal("s3", run.ResumeCursor.RemainingSteps[0].SourceStepId);
+        Assert.Equal("s4", run.ResumeCursor.RemainingSteps[1].SourceStepId);
+        Assert.Equal(1, counting.Invocations);
+
+        var repo = new InMemoryAgentRunRepository();
+        await repo.SaveAsync(run, CancellationToken.None);
+
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor(), skillCatalog: catalog);
+        var done = await handler.HandleAsync(
+            new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
+            CancellationToken.None);
+
+        Assert.NotNull(done);
+        Assert.Equal(AgentRunStatus.Completed, done!.Status);
+        Assert.Null(done.ResumeCursor);
+        Assert.Equal(4, counting.Invocations);
+        Assert.Contains(done.Trace, e => e.Kind == TraceEventKind.MultiStepPlanResumed);
+        Assert.Contains(done.Trace, e => e.Kind == TraceEventKind.PlanExecutionCompleted);
     }
 
     [Fact]
