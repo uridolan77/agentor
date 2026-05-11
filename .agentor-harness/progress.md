@@ -1,5 +1,25 @@
 # Agentor harness progress
 
+## Phase 39 PR159–PR163 performance and stress baseline (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- Benchmark suite: `Phase39RuntimeBenchmarks` (single-tool, plan, policy, audit export, timeline, EF save, queue claim, diagnostics); `BenchmarkEntry` entry point; `Agentor.Api` + Sqlite package on benchmarks project.
+- Load smoke: `scripts/load-smoke.ps1` (parallel POST `/api/v1/agent-runs`, optional queued runs, optional `-StartHost`).
+- Persistence stress: `EfPersistenceStressTests` (many traces, tools + policy rows, large resume cursor, audit export on heavy run, in-memory queue volume).
+- Performance CI artifacts: `PerformanceReportGenerator`, `PerformanceCiArtifactsTests`, `AGENTOR_PERF_CI_OUT` in `generate-evaluation-ci-artifacts.ps1`.
+- Docs: `docs/developer/performance-baseline.md`; `REPO_TRUTH` performance triple; benchmarks README.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **595 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 39 -ExpectedHarnessPass PR163`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 40 not started.
+
 ## Phase 38 PR154–PR158 security hardening final pass (2026-05-11)
 
 **Status**: Complete.
@@ -17,7 +37,7 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 38 -ExpectedHarnessPass PR158`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 39 not started.
+**Scope guard**: Phase 39 completed in PR163 (see Phase 39 section above).
 
 ## Phase 37 PR149–PR153 observability and operator readiness (2026-05-11)
 
@@ -35,7 +55,7 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 37 -ExpectedHarnessPass PR153`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 39 not started (Phase 38 completed in PR158).
+**Scope guard**: Phase 39 completed in PR163.
 
 ## Phase 36 PR148.5 RC closeout polish (2026-05-11)
 

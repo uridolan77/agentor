@@ -1,5 +1,9 @@
 using BenchmarkDotNet.Running;
 
-BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
+namespace Agentor.Benchmarks;
 
-public partial class Program { }
+internal static class BenchmarkEntry
+{
+    private static void Main(string[] args) =>
+        BenchmarkSwitcher.FromAssembly(typeof(BenchmarkEntry).Assembly).Run(args);
+}

@@ -5,6 +5,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <StartupObject>Agentor.Benchmarks.BenchmarkEntry</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Agentor.Api\Agentor.Api.csproj" />
     <ProjectReference Include="..\..\src\Agentor.Application\Agentor.Application.csproj" />
     <ProjectReference Include="..\..\src\Agentor.Infrastructure\Agentor.Infrastructure.csproj" />
   </ItemGroup>

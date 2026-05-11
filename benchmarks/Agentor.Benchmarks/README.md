@@ -1,6 +1,6 @@
 # Agentor.Benchmarks
 
-BenchmarkDotNet harness for Phase 15 performance baselines.
+BenchmarkDotNet harness for Phase 15 and Phase 39 runtime micro-benchmarks.
 
 ## CI vs local
 
@@ -13,10 +13,16 @@ BenchmarkDotNet harness for Phase 15 performance baselines.
 pwsh ./scripts/run-benchmarks.ps1 -- --filter '*'
 ```
 
+Phase 39 slice:
+
+```powershell
+pwsh ./scripts/run-benchmarks.ps1 -- --filter '*Phase39*'
+```
+
 Equivalent manual command:
 
 ```powershell
 dotnet run -c Release --project benchmarks/Agentor.Benchmarks/Agentor.Benchmarks.csproj -- --filter '*'
 ```
 
-See `docs/developer/phase15-performance-baselines.md`.
+See `docs/developer/performance-baseline.md` (Phase 39) and `docs/developer/phase15-performance-baselines.md`.

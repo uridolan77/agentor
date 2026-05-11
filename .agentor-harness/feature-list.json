@@ -1,10 +1,11 @@
 {
-    "phase": 38,
-    "title": "Phase 38 \u2014 Security hardening final pass (PR154\u2013PR158)",
-    "harnessPass": "PR158",
+    "phase": 39,
+    "title": "Phase 39 \u2014 Performance and stress baseline (PR159\u2013PR163)",
+    "harnessPass": "PR163",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR163 (2026-05-11): Phase 39 performance/stress baseline \u2014 PR159 Phase39RuntimeBenchmarks + Agentor.Api benchmark reference + BenchmarkEntry startup; PR160 scripts/load-smoke.ps1; PR161 EfPersistenceStressTests; PR162 PerformanceReportGenerator + PerformanceCiArtifactsTests + generate-evaluation-ci-artifacts sets AGENTOR_PERF_CI_OUT; PR163 docs/developer/performance-baseline.md + REPO_TRUTH + benchmarks README + CI verify-harness Phase 39 PR163. Verification: dotnet test Agentor.sln \u2014 595 passed; verify-harness ExpectedPhase 39 PR163; verify-repo-clean.",
         "PR158 (2026-05-11): Phase 38 security hardening \u2014 PR154 ObservabilityRedactionTests expansion + IntegrationEndpointsTests diagnostics markdown redaction; PR155 AuthorizationMatrixApiTests + AuthorizationMatrixApiFixture + AuthorizationMatrixUnauthenticatedApiTests + AUTHORIZATION_MATRIX automated coverage; PR156 deployment-threat-notes + auth-boundary + SECURITY_RELEASE_CHECKLIST; PR157 ProductionAuthSafeDefaultsApiTests; PR158 docs/security/v1-security-review.md. CI verify-harness ExpectedPhase 38 PR158. Verification: dotnet test Agentor.sln \u2014 589 passed; verify-harness ExpectedPhase 38 PR158; verify-repo-clean.",
         "PR153 (2026-05-11): Phase 37 observability end-to-end \u2014 Application observability primitives (AgentorEventIds, AgentorLogFields, SafeLogContext, ObservabilityRedaction, AgentorCorrelationContext, IRuntimeMetricsRecorder); Infrastructure AgentorRuntimeMetricsRecorder (Agentor.Runtime meter + IServiceScopeFactory for scoped queue/outbox gauges); GovernedSingleToolRunDriver/SequentialAgentPlanExecutor/RuntimePolicyEvaluator/ToolExecutionPipeline/OutboxDispatcher/RunQueueHostedService/IntegrationSurfaceService structured logs + metrics; CorrelationHeadersDelegatingHandler + RequestTracingMiddleware Push; IntegrationHttpError correlation suffix; POST /agent-runs X-Agentor-Run-Trace-Id; GET /api/v1/ops/diagnostics-report (JSON + format=markdown) via OperatorDiagnosticsService; docs/operator/observability.md; docs/OBSERVABILITY.md; AUTHORIZATION_MATRIX diagnostics row; openapi snapshot; tests ObservabilityTests, IntegrationEndpointsTests.GetOpsDiagnosticsReport_ReturnsRedactedSchemaJson, IntegrationHttpErrorTests correlation, ObservabilityRedactionTests, IntegrationSurfaceServiceTests ctor; AddLogging in AddAgentorInfrastructure. Verification: dotnet test Agentor.sln \u2014 544 passed; verify-harness ExpectedPhase 37 PR153; verify-repo-clean.",
         "PR148.5 (2026-05-11): Phase 36 RC closeout polish \u2014 IntegrationSmokeCommandLine (rejects unknown flags + missing --target/--output values with InvalidOperationException; CLI exit code 2); tools/Agentor.IntegrationSmoke/Program.cs delegates to IntegrationSmokeCommandLine.Parse; IntegrationSmokeCommandLineTests in tests/Agentor.Infrastructure.Tests (9 new tests covering missing values, unknown flags, target validation); scripts/release-smoke.ps1 optional -OutputDirectory writes release-smoke-report.json/.md; docs/operator/release-smoke.md report section; docs/developer/MIGRATION_AND_UPGRADE.md drops stale PR75.6 note; harness phase 36 / harnessPass PR148.5; CI verify-harness ExpectedPhase 36 PR148.5. Verification: dotnet test Agentor.sln \u2014 539 passed; verify-harness ExpectedPhase 36 PR148.5; verify-repo-clean.",
@@ -64,6 +65,41 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR163-001",
+                                "pr": 163,
+                                "description": "PR163 performance baseline documentation: docs/developer/performance-baseline.md + REPO_TRUTH + benchmarks README",
+                                "passes": true,
+                                "evidence": "docs/developer/performance-baseline.md; docs/REPO_TRUTH.md; benchmarks/Agentor.Benchmarks/README.md"
+                            },
+                            {
+                                "id": "PR162-001",
+                                "pr": 162,
+                                "description": "PR162 performance CI artifacts: PerformanceReportGenerator + PerformanceCiArtifactsTests + generate-evaluation-ci-artifacts.ps1 AGENTOR_PERF_CI_OUT",
+                                "passes": true,
+                                "evidence": "src/Agentor.Application/Evaluation/PerformanceReportGenerator.cs; tests/Agentor.Application.Tests/Evaluation/PerformanceCiArtifactsTests.cs; scripts/generate-evaluation-ci-artifacts.ps1"
+                            },
+                            {
+                                "id": "PR161-001",
+                                "pr": 161,
+                                "description": "PR161 persistence stress tests: EfPersistenceStressTests (traces, tools+policy, resume cursor, audit export, queue list)",
+                                "passes": true,
+                                "evidence": "tests/Agentor.Infrastructure.Tests/EfPersistenceStressTests.cs"
+                            },
+                            {
+                                "id": "PR160-001",
+                                "pr": 160,
+                                "description": "PR160 load smoke script: scripts/load-smoke.ps1 (-runCount -queueCount -concurrency -workload -outputDirectory -StartHost)",
+                                "passes": true,
+                                "evidence": "scripts/load-smoke.ps1"
+                            },
+                            {
+                                "id": "PR159-001",
+                                "pr": 159,
+                                "description": "PR159 benchmark suite update: Phase39RuntimeBenchmarks (single-tool, plan, policy, audit, timeline, EF save, queue claim, diagnostics)",
+                                "passes": true,
+                                "evidence": "benchmarks/Agentor.Benchmarks/Phase39RuntimeBenchmarks.cs; benchmarks/Agentor.Benchmarks/Agentor.Benchmarks.csproj; benchmarks/Agentor.Benchmarks/Program.cs"
+                            },
                             {
                                 "id": "PR158-001",
                                 "pr": 158,

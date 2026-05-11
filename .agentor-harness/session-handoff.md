@@ -1,32 +1,32 @@
-# Session handoff — Phase 38 PR154–PR158 (security hardening final pass)
+# Session handoff — Phase 39 PR159–PR163 (performance and stress baseline)
 
 ## Completed
 
-- **PR154** — Secret leak / redaction regression: expanded `ObservabilityRedactionTests`; `IntegrationEndpointsTests.GetOpsDiagnosticsReport_MarkdownFormat_ExcludesConnectionStringsAndSecrets` (existing JSON diagnostics test retained).
-- **PR155** — Authorization matrix: `AuthorizationMatrixApiFixture` seeds completed + requires-review runs; `AuthorizationMatrixApiTests` table-drives `Service` forbidden (17) and allowed read (19) routes + `HumanGovernanceApprover` / `System` samples; `AuthorizationMatrixUnauthenticatedApiTests` Header mode 401 on `/api/v1/agent-runs`, `/api/v1/integrations/status`, `/api/v1/ops/queue` (readiness `/ready` excluded from Header unauthenticated assertions — see `docs/security/v1-security-review.md` / `auth-boundary.md`).
-- **PR156** — Threat-model docs: `deployment-threat-notes.md` (items 8–12), `auth-boundary.md` (readiness note + review doc link), `SECURITY_RELEASE_CHECKLIST.md` Phase 38 evidence table.
-- **PR157** — `ProductionAuthSafeDefaultsApiTests` (Production + Fake without override fails options validation on host build).
-- **PR158** — `docs/security/v1-security-review.md`; `AUTHORIZATION_MATRIX.md` automated coverage section.
+- **PR159** — BenchmarkDotNet: `Phase39RuntimeBenchmarks` (single-tool driver, two-step plan, policy evaluation, audit export, timeline, EF save, queue claim paths, operator diagnostics build); `BenchmarkEntry` + `StartupObject`; benchmarks project references `Agentor.Api` and `Microsoft.EntityFrameworkCore.Sqlite`.
+- **PR160** — `scripts/load-smoke.ps1`: parallel `POST /api/v1/agent-runs`, optional `POST /api/v1/agent-runs/queued`, workloads `fake|review|required|mixed`, `-StartHost` optional API spawn (PowerShell 7+).
+- **PR161** — `EfPersistenceStressTests`: many traces, many tool calls + policy decisions, large `PlanResumeCursor`, audit export on heavy run, in-memory durable queue list volume.
+- **PR162** — `PerformanceReportGenerator` + `PerformanceCiArtifactsTests`; `generate-evaluation-ci-artifacts.ps1` sets `AGENTOR_PERF_CI_OUT` and runs the performance artifact test after evaluation artifacts.
+- **PR163** — `docs/developer/performance-baseline.md`; `docs/REPO_TRUTH.md` performance triple; `benchmarks/Agentor.Benchmarks/README.md`; CI `verify-harness` ExpectedPhase 39 / PR163.
 
 ## Verification
 
 - `dotnet restore Agentor.sln` succeeded
 - `dotnet build Agentor.sln --no-restore` succeeded
-- `dotnet test Agentor.sln --no-build` succeeded (**589 passed, 0 failed**)
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 38 -ExpectedHarnessPass PR158` succeeded
+- `dotnet test Agentor.sln --no-build` succeeded (**595 passed, 0 failed**)
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 39 -ExpectedHarnessPass PR163` succeeded
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
-Per-assembly test totals (latest run): Domain **87**, Application **180**, Contracts **14**, Infrastructure **133**, Api **175**.
+Per-assembly test totals (latest run): Domain **87**, Application **181**, Contracts **14**, Infrastructure **138**, Api **175**.
 
 ## What is next
 
-- **Phase 39** — performance and stress baseline — **not started**.
+- **Phase 40** — v1 release closure — **not started**.
 
 ## What was explicitly not started
 
-- **Phase 39+** (per `docs/planning/pr76-125/Phase 32 - 40.md` refined Phase 39): benchmarks update, load smoke, persistence stress, evaluation performance report, performance docs.
+- **Phase 40+** (final deferred-item audit, CHANGELOG, deployment guides, runbook, final RC verification per planning doc).
 
 ## Deferred harness rows / product risks
 
-- **Active deferred harness rows (`passes: false` in `feature-list.json`)**: **0** for Phase 38 acceptance slice; **SCOPE-001** remains the canonical product deferral (`docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`).
-- **Residual**: authorization matrix tests are explicit tables — new routes require doc + test updates together.
+- **Active deferred harness rows (`passes: false` in `feature-list.json`)**: **0** for Phase 39 acceptance slice; **SCOPE-001** remains the canonical product deferral where applicable (`docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`).
+- **Residual**: `load-smoke.ps1` is best-effort local tooling; Header/Jwt deployments may require `-ActorHeaderValue` / different base URLs than Fake defaults.
