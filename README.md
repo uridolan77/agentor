@@ -24,12 +24,11 @@ See `AGENTS.md` for contributor rules and `docs/ARCHITECTURE.md` for layer bound
 
 ## Current limitations
 
-For **ground truth** on gaps (public run path vs executor, policy scope enforcement, persistence shape, Jwt assumptions), read **`docs/REPO_TRUTH.md`**. Highlights:
+For **ground truth** on behavior (public run routing, policy scopes, persistence, Jwt assumptions), read **`docs/REPO_TRUTH.md`**. Highlights:
 
-- Public **`POST /api/v1/agent-runs`** now routes through **`IAgentRunOrchestrator`** (plan / recipe / skill / single-tool / explicit legacy). Default **implicit legacy** remains available via **`Agentor:PublicRuns:TreatMissingExecutionSelectorAsLegacyFakeTool`** (see `appsettings.json`); turn it off in production to force explicit selectors. Durable **queue** rows still persist only the original narrow command fields (orchestration selectors on queued work are Phase 25+ unless extended).  
-- **Policy rule scopes** are modeled but **not** fully enforced on evaluation (SCOPE-001).  
-- **EF aggregate save** is not yet append-only / concurrency-hardened for audit immutability.  
-- **Jwt** mode assumes an already-authenticated principal unless you add bearer validation.
+- Public **`POST /api/v1/agent-runs`** routes through **`IAgentRunOrchestrator`**. Default **implicit legacy** remains available via **`Agentor:PublicRuns:TreatMissingExecutionSelectorAsLegacyFakeTool`** (see `appsettings.json`); turn it off in production to force explicit selectors.  
+- **Durable queue** persistence replays orchestration selectors and structured **`ToolPayload`** (`tool_payload_json`) per **`EfRunQueueStore`** — see **`docs/operator/queue-payloads.md`**.  
+- **Jwt** without **`JwtAuthority`** is only for **`JwtAcceptUnvalidatedBearerTokens`** lab paths; see **`docs/security/auth-boundary.md`** and **`docs/security/SECURITY_RELEASE_CHECKLIST.md`**.
 
 ## Quickstart
 
@@ -52,6 +51,8 @@ Health check (with defaults, after the app listens):
 ```powershell
 pwsh ./scripts/smoke.ps1 -BaseUrl http://localhost:8080
 ```
+
+Release-oriented smoke (health, readiness, integrations, start run, trace, audit export, operator dashboard) — **`scripts/release-smoke.ps1`** (see **`docs/operator/release-smoke.md`**). OpenAPI and DTO contract snapshots — **`docs/api/API_CONTRACT_SNAPSHOT.md`**.
 
 Docker and CI expectations are described in `docs/` and `.github/workflows/ci.yml`.
 
@@ -128,7 +129,7 @@ Acceptance and verification state live under **`.agentor-harness/`** (`feature-l
 
 ## Roadmap
 
-High-level PR phases: `docs/ROADMAP.md`. Consolidation plan (public kernel, queue lifetimes, policy scope, persistence, auth matrix): **`docs/planning/pr111-pr120.md`**.
+High-level PR phases: `docs/ROADMAP.md`. Mid-term planning packs: **`docs/planning/pr76-125/Phase 23 - 31.md`**, **`docs/planning/pr76-125/Phase 32 - 40.md`**.
 
 ## History
 

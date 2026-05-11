@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 36 PR148 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 36 -ExpectedHarnessPass PR148
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **530 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=36`, `ExpectedHarnessPass=PR148`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 87 / Total 87
+- Agentor.Application.Tests: Passed 177 / Total 177
+- Agentor.Contracts.Tests: Passed 14 / Total 14
+- Agentor.Infrastructure.Tests: Passed 123 / Total 123
+- Agentor.Api.Tests: Passed 129 / Total 129
+
+Scope:
+
+- completed: Phase 36 PR143–PR148 — RC consolidation (docs, OpenAPI snapshot + drift test, release smoke script, security checklist, harness + CI)
+- not started: Phase 37+
+
 ## Phase 35 PR142.5 (2026-05-11)
 
 ```powershell

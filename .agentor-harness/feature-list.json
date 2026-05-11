@@ -1,10 +1,11 @@
 {
-    "phase": 35,
-    "title": "Phase 35 \u2014 Production integration smoke pack (PR138\u2013PR142)",
-    "harnessPass": "PR142.5",
+    "phase": 36,
+    "title": "Phase 36 \u2014 Release candidate consolidation (PR143\u2013PR148)",
+    "harnessPass": "PR148",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR148 (2026-05-11): Phase 36 release candidate consolidation \u2014 README + REPO_TRUTH + docs/RELEASE/v1.0-RC.md + docs/security/SECURITY_RELEASE_CHECKLIST.md + docs/operator/release-smoke.md; docs/developer/MIGRATION_AND_UPGRADE.md migration inventory + provider boundaries; docs/api/API_CONTRACT_SNAPSHOT.md + docs/api/openapi-v1.snapshot.json + OpenApiContractSnapshotTests/OpenApiJsonCanonicalizer; scripts/release-smoke.ps1; auth-boundary cross-link; CI verify-harness ExpectedPhase 36 PR148. Verification: dotnet test Agentor.sln \u2014 530 passed; verify-harness ExpectedPhase 36 PR148; verify-repo-clean.",
         "PR142.5 (2026-05-11): Phase 35 smoke closeout \u2014 IntegrationSmokeTargetValidation (unknown --target exit 2); IntegrationSmokeReportWriter.SanitizeForPersist redacts step details on export; IntegrationSmokeRunner explicitTargetNoWork when explicit targets yield zero steps; docs/operator/integration-smoke.md proof boundaries + write gate; session-handoff active deferred harness rows = 0. Verification: dotnet test Agentor.sln \u2014 529 passed; verify-harness ExpectedPhase 35 PR142.5; verify-repo-clean.",
         "PR137.5 (2026-05-11): Phase 34 closeout hardening (applied atop Phase 35 tree) \u2014 JsonFingerprintCanonicalizer + StartAgentRunFingerprint canonical ToolInputPayload for idempotency; StartAgentRunFingerprintTests; ReviewResumeState.HasSkillProcedureContinuation + FromCursor uses HasContinuationWork; PlanResumeCursorTests; ReviewedToolContinuationService PlanExecutionCompleted after tail-less skill resume; MultiStepReviewResumeTests (skill-only plan trace order; inner pipeline fail + ContinueOnFailure/FailFast on skill plan step; chained inner RequiresReview). Verification: dotnet test Agentor.sln \u2014 524 passed; verify-harness ExpectedPhase 35 PR142; verify-repo-clean.",
         "PR142 (2026-05-11): Phase 35 integration smoke \u2014 IntegrationSmokeOptions + SmokeMode + SmokeTarget; IntegrationSmokeConfigurationMerger; IntegrationSmokeRunner + IntegrationSmokeReportWriter + IntegrationFailureRedaction; tools/Agentor.IntegrationSmoke + scripts/run-integration-smoke.ps1; docs/operator/integration-smoke.md; tests IntegrationSmokeTests + REPO_TRUTH. Verification: dotnet test Agentor.sln \u2014 516 passed; verify-harness ExpectedPhase 35 PR142; verify-repo-clean.",
@@ -60,6 +61,48 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR148-001",
+                                "pr": 148,
+                                "description": "PR148 RC harness reconciliation: phase 36 harnessPass PR148; CI verify-harness aligned; passes:false = 0",
+                                "passes": true,
+                                "evidence": ".agentor-harness/feature-list.json; .agentor-harness/current-pr.md; .github/workflows/ci.yml; .agentor-harness/verification-log.md"
+                            },
+                            {
+                                "id": "PR147-001",
+                                "pr": 147,
+                                "description": "PR147 security checklist: auth modes, dangerous JWT unvalidated path, header limits, redaction/OpenAPI evidence",
+                                "passes": true,
+                                "evidence": "docs/security/SECURITY_RELEASE_CHECKLIST.md; docs/security/auth-boundary.md; tests/Agentor.Application.Tests/Redaction/JsonRedactionTests.cs; tests/Agentor.Infrastructure.Tests/IntegrationHttpErrorTests.cs; tests/Agentor.Api.Tests/OpenApiExposureApiTests.cs"
+                            },
+                            {
+                                "id": "PR146-001",
+                                "pr": 146,
+                                "description": "PR146 release smoke script: /health /ready integrations POST+GET agent-runs trace audit-export operator dashboard",
+                                "passes": true,
+                                "evidence": "scripts/release-smoke.ps1; docs/operator/release-smoke.md"
+                            },
+                            {
+                                "id": "PR145-001",
+                                "pr": 145,
+                                "description": "PR145 API contract snapshot: OpenAPI drift test + checked-in openapi-v1.snapshot.json + matrix + DTO compatibility refs",
+                                "passes": true,
+                                "evidence": "docs/api/API_CONTRACT_SNAPSHOT.md; docs/api/openapi-v1.snapshot.json; tests/Agentor.Api.Tests/OpenApiContractSnapshotTests.cs; tests/Agentor.Api.Tests/OpenApiJsonCanonicalizer.cs; docs/security/AUTHORIZATION_MATRIX.md; tests/Agentor.Contracts.Tests/ContractDtoCompatibilityTests.cs"
+                            },
+                            {
+                                "id": "PR144-001",
+                                "pr": 144,
+                                "description": "PR144 migration audit: ordered EF inventory + PostgreSQL/SQLite/SQL Server boundaries; migrations list in CI",
+                                "passes": true,
+                                "evidence": "docs/developer/MIGRATION_AND_UPGRADE.md; src/Agentor.Infrastructure/Persistence/Migrations; .github/workflows/ci.yml (dotnet ef migrations list)"
+                            },
+                            {
+                                "id": "PR143-001",
+                                "pr": 143,
+                                "description": "PR143 repo truth reconciliation: README + REPO_TRUTH + RC release notes + security/operator cross-links",
+                                "passes": true,
+                                "evidence": "README.md; docs/REPO_TRUTH.md; docs/RELEASE/v1.0-RC.md; docs/security/auth-boundary.md; docs/operator/release-smoke.md"
+                            },
                             {
                                 "id": "PR142.5-001",
                                 "pr": 142,

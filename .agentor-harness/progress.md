@@ -1,5 +1,26 @@
 # Agentor harness progress
 
+## Phase 36 PR148 release candidate consolidation (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **PR143**: `README.md`, `docs/REPO_TRUTH.md`, `docs/RELEASE/v1.0-RC.md`, security/operator cross-links (no stale `pr111-pr120` pointer).
+- **PR144**: `docs/developer/MIGRATION_AND_UPGRADE.md` — ordered EF migration inventory + PostgreSQL/SQLite/SQL Server boundaries.
+- **PR145**: `docs/api/API_CONTRACT_SNAPSHOT.md`, `docs/api/openapi-v1.snapshot.json`, `OpenApiContractSnapshotTests` + `OpenApiJsonCanonicalizer` (canonical JSON drift); matrix/DTO evidence references.
+- **PR146**: `scripts/release-smoke.ps1`, `docs/operator/release-smoke.md`.
+- **PR147**: `docs/security/SECURITY_RELEASE_CHECKLIST.md`; `auth-boundary.md` checklist link; redaction/OpenAPI test citations.
+- **PR148**: `feature-list.json` phase **36** / harnessPass **PR148** + six acceptance rows; `.github/workflows/ci.yml` verify-harness **36**/**PR148**.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **530 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 36 -ExpectedHarnessPass PR148`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 37 not started.
+
 ## Phase 35 PR142.5 smoke closeout (2026-05-11)
 
 **Status**: Complete.

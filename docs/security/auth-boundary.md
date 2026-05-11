@@ -2,7 +2,7 @@
 
 This document defines the production identity and authorization boundary: **ASP.NET authentication** (who is signed in) plus **Agentor permissions** (what they may do via `ICurrentActorAccessor` + `IAuthorizationDecisionService`).
 
-See also: **[AUTHORIZATION_MATRIX.md](./AUTHORIZATION_MATRIX.md)** (route → permission → roles).
+See also: **[AUTHORIZATION_MATRIX.md](./AUTHORIZATION_MATRIX.md)** (route → permission → roles) and **[SECURITY_RELEASE_CHECKLIST.md](./SECURITY_RELEASE_CHECKLIST.md)** (Phase 36 RC security consolidation).
 
 ## Goals
 

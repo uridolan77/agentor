@@ -1,0 +1,1726 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Agentor.Api | v1",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Liveness probe; does not evaluate downstream integrations.",
+        "operationId": "GetHealth",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Readiness probe; reports persistence and configured integration adapters.",
+        "operationId": "GetReady",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/status": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Integration modes and dependency readiness without exposing secrets.",
+        "operationId": "GetIntegrationsStatus",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs": {
+      "get": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Lists agent runs with stable ordering (newest first) and pagination.",
+        "operationId": "ListAgentRuns",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Starts a new deterministic agent run. Optional Idempotency-Key replays identical payloads to the same run; mismatched payloads return 409.",
+        "operationId": "StartAgentRun",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartAgentRunRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}": {
+      "get": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Returns an agent run by ID.",
+        "operationId": "GetAgentRun",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/trace": {
+      "get": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Returns execution trace events for an agent run.",
+        "operationId": "GetAgentRunTrace",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/steps": {
+      "get": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Returns steps for an agent run.",
+        "operationId": "GetAgentRunSteps",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/tool-calls": {
+      "get": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Returns tool calls for an agent run (flattened across steps, ordered by step then occurrence).",
+        "operationId": "GetAgentRunToolCalls",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/manifest": {
+      "get": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Returns the run manifest for a completed agent run.",
+        "operationId": "GetRunManifest",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/queued": {
+      "post": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Accepts run work for background execution when RunQueue:ExecutionMode is InMemoryBackground; runs inline when mode is Inline (tests).",
+        "operationId": "EnqueueAgentRunQueued",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartAgentRunRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/queued/{workItemId}": {
+      "get": {
+        "tags": [
+          "AgentRuns"
+        ],
+        "summary": "Polls status for work enqueued via POST /agent-runs/queued.",
+        "operationId": "GetQueuedAgentRunStatus",
+        "parameters": [
+          {
+            "name": "workItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/ops/queue": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Read-only operational queue status for recent queued runs.",
+        "operationId": "GetOpsQueue",
+        "parameters": [
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/ops/outbox": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Read-only operational status for outbox messages.",
+        "operationId": "GetOpsOutbox",
+        "parameters": [
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/ops/leases": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Read-only operational status for active execution leases.",
+        "operationId": "GetOpsLeases",
+        "parameters": [
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/athanor/latest-snapshot": {
+      "get": {
+        "tags": [
+          "Athanor"
+        ],
+        "summary": "Returns the latest Athanor canonical snapshot for the run\u0027s project (read-only).",
+        "operationId": "GetAthanorLatestSnapshotForRun",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/athanor/canonical": {
+      "get": {
+        "tags": [
+          "Athanor"
+        ],
+        "summary": "Looks up a canonical state entry by key query parameter for the run\u0027s project (read-only).",
+        "operationId": "LookupAthanorCanonicalForRun",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/athanor/evidence-provenance": {
+      "post": {
+        "tags": [
+          "Athanor"
+        ],
+        "summary": "Runs an Athanor evidence search and records result identifiers on the run trace as provenance (non-canon).",
+        "operationId": "AttachAthanorEvidenceProvenance",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachEvidenceProvenanceRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/athanor/candidates": {
+      "post": {
+        "tags": [
+          "Athanor"
+        ],
+        "summary": "Submits a non-canon candidate payload to Athanor and records the submission on the run trace.",
+        "operationId": "SubmitAthanorCandidate",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitAthanorCandidateRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/athanor/review-queue": {
+      "post": {
+        "tags": [
+          "Athanor"
+        ],
+        "summary": "Queues a candidate for Athanor human review and records the queue item on the run trace (non-canon). ActorId may be omitted when X-Agentor-Actor-Id is present.",
+        "operationId": "QueueAthanorReview",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueAthanorReviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/human-review": {
+      "post": {
+        "tags": [
+          "Governance"
+        ],
+        "summary": "Records a human review decision. Approve resumes execution for a pending RequiresReview tool (does not canonize knowledge). Deny cannot be converted from a prior policy Deny outcome.",
+        "operationId": "ApplyHumanReviewDecision",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyHumanReviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/agent-runs/{runId}/audit-export": {
+      "get": {
+        "tags": [
+          "Governance"
+        ],
+        "summary": "Deterministic JSON audit export with PR55 redaction boundaries. Query format=canonical|pretty|redactionReport|hashOnly; X-Agentor-Audit-Content-SHA256 always hashes canonical minified audit JSON.",
+        "operationId": "GetRunAuditExport",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/policy-bundles": {
+      "get": {
+        "tags": [
+          "Policy"
+        ],
+        "summary": "Lists all policy bundles (published and draft). Does not activate any bundle.",
+        "operationId": "ListPolicyBundles",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Policy"
+        ],
+        "summary": "Creates and publishes a versioned policy bundle. Creating a bundle does NOT activate it.",
+        "operationId": "CreatePolicyBundle",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePolicyBundleRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/policy-bundles/{id}": {
+      "get": {
+        "tags": [
+          "Policy"
+        ],
+        "summary": "Returns the full policy bundle including all rules.",
+        "operationId": "GetPolicyBundle",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/policy-profiles/{id}/activate": {
+      "post": {
+        "tags": [
+          "Policy"
+        ],
+        "summary": "Activates a policy profile bound to a specific published bundle version. Explicit activation is audited.",
+        "operationId": "ActivatePolicyProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivatePolicyProfileRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/recipes": {
+      "get": {
+        "tags": [
+          "Management"
+        ],
+        "summary": "Lists declarative recipes registered in the operator artifact store (no execution).",
+        "operationId": "ListRecipes",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Management"
+        ],
+        "summary": "Registers a validated recipe. Does not execute coordination.",
+        "operationId": "CreateRecipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecipeRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/recipes/{recipeId}": {
+      "get": {
+        "tags": [
+          "Management"
+        ],
+        "operationId": "GetRecipe",
+        "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/plans": {
+      "get": {
+        "tags": [
+          "Management"
+        ],
+        "operationId": "ListPlans",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Management"
+        ],
+        "summary": "Instantiates a plan from a stored recipe. Does not execute the plan.",
+        "operationId": "CreatePlanFromRecipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlanFromRecipeRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{planId}": {
+      "get": {
+        "tags": [
+          "Management"
+        ],
+        "operationId": "GetPlan",
+        "parameters": [
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/skills": {
+      "get": {
+        "tags": [
+          "Management"
+        ],
+        "operationId": "ListSkillPackages",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Management"
+        ],
+        "summary": "Registers a skill package in the catalog. Does not invoke procedures.",
+        "operationId": "CreateSkillPackage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSkillPackageRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/skills/{skillKey}/{version}": {
+      "get": {
+        "tags": [
+          "Management"
+        ],
+        "operationId": "GetSkillPackage",
+        "parameters": [
+          {
+            "name": "skillKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/policy-profiles": {
+      "get": {
+        "tags": [
+          "Management"
+        ],
+        "operationId": "ListPolicyProfiles",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Management"
+        ],
+        "summary": "Stores a policy profile artifact for operators (does not change runtime ActiveProfile).",
+        "operationId": "CreatePolicyProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePolicyProfileRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/policy-profiles/{profileId}": {
+      "get": {
+        "tags": [
+          "Management"
+        ],
+        "operationId": "GetPolicyProfile",
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}/timeline": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Deterministic ordered trace; skill invocation spans plus timeline v2 groups (plan steps, skill blocks, policy decisions, review decisions). Indices reference orderedEvents.",
+        "operationId": "GetRunTimeline",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}/coordination-view": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "operationId": "GetRunCoordinationView",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}/audit-packet": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Deterministic JSON audit views for a run (canonical minified default). Query format=canonical|pretty|redactionReport|hashOnly; SHA-256 header always matches canonical audit JSON.",
+        "operationId": "GetRunAuditPacket",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/operator/dashboard": {
+      "get": {
+        "tags": [
+          "Operator"
+        ],
+        "summary": "Read-only dashboard DTO (requires OpsRead): links and operational aggregates; same permission family as /api/v1/ops/*.",
+        "operationId": "GetOperatorDashboard",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/pending": {
+      "get": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Lists runs in RequiresReview (inbox).",
+        "operationId": "ListPendingHumanReviews",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/{runId}/decisions": {
+      "post": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Alias of POST /agent-runs/{id}/human-review; requires actor context (X-Agentor-Actor-Id).",
+        "operationId": "ApplyReviewDecision",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyHumanReviewRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivatePolicyProfileRequestDto": {
+        "required": [
+          "bundleId",
+          "bundleVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "bundleId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bundleVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "ApplyHumanReviewRequestDto": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ReviewDecisionKind"
+          },
+          "note": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "relatedPriorActorId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "AttachEvidenceProvenanceRequestDto": {
+        "required": [
+          "query"
+        ],
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        }
+      },
+      "CoordinationProfileRefRequestDto": {
+        "required": [
+          "profileKey",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "profileKey": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "default": null,
+        "nullable": true
+      },
+      "CoordinationTopology": {
+        "enum": [
+          "SequentialPipeline"
+        ]
+      },
+      "CreatePlanFromRecipeRequestDto": {
+        "required": [
+          "recipeId"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "CreatePolicyBundleRequestDto": {
+        "required": [
+          "name",
+          "version",
+          "rules"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreatePolicyRuleDto"
+            }
+          }
+        }
+      },
+      "CreatePolicyProfileRequestDto": {
+        "required": [
+          "name",
+          "rules"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/PolicyProfileRulesDto"
+          }
+        }
+      },
+      "CreatePolicyRuleDto": {
+        "required": [
+          "kind",
+          "scope",
+          "effect"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/PolicyRuleKind"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/PolicyRuleScope"
+          },
+          "effect": {
+            "$ref": "#/components/schemas/PolicyRuleEffect"
+          },
+          "targetKey": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "thresholdValue": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "default": ""
+          },
+          "scopeTenantId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "scopeWorkspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "scopeProjectId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "scopeKnowledgeScopeId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "CreateRecipeRequestDto": {
+        "required": [
+          "name",
+          "version",
+          "topology",
+          "steps"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "topology": {
+            "$ref": "#/components/schemas/CoordinationTopology"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeStepRequestDto"
+            }
+          },
+          "planFailureHandling": {
+            "$ref": "#/components/schemas/FailureHandlingPolicy"
+          },
+          "profileRef": {
+            "$ref": "#/components/schemas/CoordinationProfileRefRequestDto"
+          }
+        }
+      },
+      "CreateSkillPackageRequestDto": {
+        "required": [
+          "skillKey",
+          "version",
+          "name",
+          "purpose",
+          "procedureSteps"
+        ],
+        "type": "object",
+        "properties": {
+          "skillKey": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "procedureSteps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SkillProcedureStepRequestDto"
+            }
+          }
+        }
+      },
+      "FailureHandlingPolicy": {
+        "enum": [
+          "FailFast",
+          "ContinueOnFailure",
+          "SkipRemaining",
+          "EscalateToReview",
+          "RetryViaToolPipelineOnly",
+          "MarkForCompensation"
+        ],
+        "default": "FailFast"
+      },
+      "NullableOfRunExecutionMode": {
+        "enum": [
+          "LegacyFakeTool",
+          "SingleTool",
+          "Plan",
+          "Recipe",
+          "Skill",
+          "ModelCall",
+          "McpTool",
+          "ExternalAgent",
+          null
+        ],
+        "default": null,
+        "nullable": true
+      },
+      "PolicyProfileRulesDto": {
+        "type": "object",
+        "properties": {
+          "allowedToolKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "deniedToolKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "maxAutoApproveRisk": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "maxDeclaredModelCallCostUnits": {
+            "type": "number",
+            "format": "double",
+            "default": null,
+            "nullable": true
+          },
+          "maxDeclaredModelCallLatencyMs": {
+            "type": "integer",
+            "format": "int32",
+            "default": null,
+            "nullable": true
+          },
+          "mcpDeniedToolKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "externalAgentDeniedToolKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "PolicyRuleEffect": {
+        "enum": [
+          "Allow",
+          "Deny",
+          "RequiresReview"
+        ]
+      },
+      "PolicyRuleKind": {
+        "enum": [
+          "ToolAccess",
+          "ModelBudget",
+          "McpToolAccess",
+          "ExternalAgentAccess"
+        ]
+      },
+      "PolicyRuleScope": {
+        "enum": [
+          "Global",
+          "Tenant",
+          "Workspace",
+          "Project",
+          "KnowledgeScope"
+        ]
+      },
+      "QueueAthanorReviewRequestDto": {
+        "required": [
+          "candidateId"
+        ],
+        "type": "object",
+        "properties": {
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actorId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "RecipeStepKind": {
+        "enum": [
+          "Tool",
+          "Skill"
+        ]
+      },
+      "RecipeStepRequestDto": {
+        "required": [
+          "stepId",
+          "orderIndex",
+          "kind",
+          "toolKey"
+        ],
+        "type": "object",
+        "properties": {
+          "stepId": {
+            "type": "string"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RecipeStepKind"
+          },
+          "toolKey": {
+            "type": "string"
+          },
+          "guard": {
+            "$ref": "#/components/schemas/StepGuardRequestDto"
+          },
+          "inputParameters": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": null,
+            "nullable": true
+          },
+          "outputKey": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "onFailure": {
+            "$ref": "#/components/schemas/FailureHandlingPolicy"
+          },
+          "compensationHookId": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "compensationDescription": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "invokedSkillKey": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "invokedSkillVersion": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "ReviewDecisionKind": {
+        "enum": [
+          "Approve",
+          "Reject",
+          "RequestChanges",
+          "Escalate"
+        ]
+      },
+      "SkillProcedureStepKind": {
+        "enum": [
+          "Segment",
+          "ToolRef"
+        ]
+      },
+      "SkillProcedureStepRequestDto": {
+        "required": [
+          "stepId",
+          "orderIndex",
+          "name",
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "stepId": {
+            "type": "string"
+          },
+          "orderIndex": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SkillProcedureStepKind"
+          },
+          "toolKey": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          }
+        }
+      },
+      "StartAgentRunRequestDto": {
+        "required": [
+          "agentName",
+          "objective"
+        ],
+        "type": "object",
+        "properties": {
+          "agentName": {
+            "type": "string"
+          },
+          "objective": {
+            "type": "string"
+          },
+          "traceId": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "knowledgeScopeId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "mode": {
+            "$ref": "#/components/schemas/NullableOfRunExecutionMode"
+          },
+          "recipeId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "default": null,
+            "nullable": true
+          },
+          "toolKey": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "skillKey": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "input": {
+            "type": "object",
+            "default": null,
+            "nullable": true
+          },
+          "toolInputPayload": {
+            "default": null
+          }
+        }
+      },
+      "StepGuardKind": {
+        "enum": [
+          "Always",
+          "PreviousStepSucceeded",
+          "PreviousStepFailed",
+          "PreviousStepOutputExists",
+          "PreviousStepOutputEquals",
+          "AllPreviousStepsSucceeded"
+        ]
+      },
+      "StepGuardRequestDto": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/StepGuardKind"
+          },
+          "referenceStepId": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "expectedOutputValue": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          },
+          "outputKey": {
+            "type": "string",
+            "default": null,
+            "nullable": true
+          }
+        },
+        "default": null,
+        "nullable": true
+      },
+      "SubmitAthanorCandidateRequestDto": {
+        "required": [
+          "summary",
+          "payloadJson"
+        ],
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "string"
+          },
+          "payloadJson": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "System"
+    },
+    {
+      "name": "AgentRuns"
+    },
+    {
+      "name": "Athanor"
+    },
+    {
+      "name": "Governance"
+    },
+    {
+      "name": "Policy"
+    },
+    {
+      "name": "Management"
+    },
+    {
+      "name": "Runs"
+    },
+    {
+      "name": "Operator"
+    },
+    {
+      "name": "Reviews"
+    }
+  ]
+}
