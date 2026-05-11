@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using Agentor.Domain;
 using Agentor.Domain.Enums;
 
 namespace Agentor.Application.Orchestration;
@@ -18,4 +20,5 @@ public sealed record RunOrchestrationRequest(
     Guid? PlanId,
     string? ToolKey,
     string? SkillKey,
-    IReadOnlyDictionary<string, string>? ToolInput);
+    IReadOnlyDictionary<string, string>? ToolInput,
+    ToolPayload? ToolInputPayload = null);

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Agentor.Domain;
 using Agentor.Domain.Enums;
 
 namespace Agentor.Application.Commands;
@@ -16,4 +17,6 @@ public sealed record StartAgentRunCommand(
     Guid? PlanId = null,
     string? ToolKey = null,
     string? SkillKey = null,
-    IReadOnlyDictionary<string, string>? ToolInput = null);
+    IReadOnlyDictionary<string, string>? ToolInput = null,
+    /// <summary>When set, takes precedence over <see cref="ToolInput"/> for execution and queue persistence (v2 payload).</summary>
+    ToolPayload? ToolInputPayload = null);

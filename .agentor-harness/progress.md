@@ -1,5 +1,25 @@
 # Agentor harness progress
 
+## Phase 33 PR132 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **Structured queue payloads**: **`RunQueuePayloadVersion`** + **`RunQueuePayloadSerialization`**; **`tool_payload_json`** column (**migration `20260512100000_Phase33QueueStructuredToolPayload`**) + **`EfRunQueueStore`** v2 serialize/deserialize with legacy **`tool_input_json`** preserved.
+- **Command/API**: **`StartAgentRunCommand`** / **`RunOrchestrationRequest`** **`ToolInputPayload`**; **`StartAgentRunRequestDto.toolInputPayload`**; **`StartAgentRunFingerprint`** includes structured JSON segment.
+- **Execution**: **`GovernedSingleToolRunDriver`** merges **`ToolPayload`** for policy (**`ToPolicyEvaluationDictionary`**), **`ToolCall.Start`**, and **`ToolExecutionRequest`**.
+- **Docs/fixtures**: **`docs/operator/queue-payloads.md`**, **`tests/Agentor.Application.Tests/fixtures/eval/queued-structured-toolpayload.json`**, **`docs/REPO_TRUTH.md`** queue bullet.
+- **Tests**: **`EfRunQueueStoreTests`**, **`RunQueueHostedServiceEfSqliteScopeTests`**, **`GovernedSingleToolRunDriverStructuredPayloadTests`**, **`AgentRunOrchestrationApiTests`** queued structured, **`ContractDtoCompatibilityTests`** **`toolInputPayload`**.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **504 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 33 -ExpectedHarnessPass PR132`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 34 not started.
+
 ## Phase 32 PR127 (2026-05-11)
 
 **Status**: Complete.

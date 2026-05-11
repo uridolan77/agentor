@@ -16,4 +16,5 @@ public sealed record StartAgentRunRequestDto(
     Guid? PlanId = null,
     string? ToolKey = null,
     string? SkillKey = null,
-    Dictionary<string, JsonElement>? Input = null);
+    Dictionary<string, JsonElement>? Input = null,
+    JsonElement? ToolInputPayload = null);

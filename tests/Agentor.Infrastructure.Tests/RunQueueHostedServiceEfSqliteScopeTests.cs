@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using System.Text.Json.Nodes;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -45,6 +46,20 @@ public sealed class RunQueueHostedServiceEfSqliteScopeTests
             "efq-mcp",
             ToolKey: echoKey,
             ToolInput: new Dictionary<string, string> { ["text"] = "queued-ping" }));
+    }
+
+    [Fact]
+    public async Task TryProcessSingleAsync_EnqueuedMcpEcho_StructuredToolPayload_Completes()
+    {
+        var echoKey = McpToolKeys.Format("demo-server", "echo");
+        var body = JsonNode.Parse("""{"text":"queued-structured"}""")!.AsObject();
+        var payload = new ToolPayload(body, "urn:agentor:worker:test", "application/json", null);
+        await DrainAndAssertCompletedAsync(new StartAgentRunCommand(
+            "MCP structured worker",
+            "Queue-stored MCP echo with ToolPayload.",
+            "efq-mcp-struct",
+            ToolKey: echoKey,
+            ToolInputPayload: payload));
     }
 
     [Fact]

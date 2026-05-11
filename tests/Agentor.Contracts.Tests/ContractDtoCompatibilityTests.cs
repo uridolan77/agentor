@@ -24,6 +24,29 @@ public sealed class ContractDtoCompatibilityTests
     }
 
     [Fact]
+    public void StartAgentRunRequestDto_round_trips_toolInputPayload_json()
+    {
+        var toolInputPayload = JsonSerializer.SerializeToElement(new
+        {
+            body = new { text = "fixture-text" },
+            schemaId = "urn:test",
+            contentType = "application/json",
+            summary = new Dictionary<string, string> { ["k"] = "v" },
+        });
+        var original = new StartAgentRunRequestDto(
+            "Agent",
+            "Goal",
+            ToolKey: "tool.key",
+            ToolInputPayload: toolInputPayload);
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var back = JsonSerializer.Deserialize<StartAgentRunRequestDto>(json, JsonOptions);
+        Assert.NotNull(back);
+        Assert.NotNull(back!.ToolInputPayload);
+        Assert.Equal(JsonValueKind.Object, back.ToolInputPayload.Value.ValueKind);
+        Assert.Contains("\"fixture-text\"", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void StartAgentRunRequestDto_round_trips_json()
     {
         var original = new StartAgentRunRequestDto("Agent", "Goal", "tid", Guid.Parse("11111111-1111-1111-1111-111111111111"));

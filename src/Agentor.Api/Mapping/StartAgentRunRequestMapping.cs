@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Agentor.Application.Commands;
+using Agentor.Application.RunQueue;
 using Agentor.Contracts;
+using Agentor.Domain;
 
 namespace Agentor.Api.Mapping;
 
@@ -9,8 +11,18 @@ internal static class StartAgentRunRequestMapping
 {
     public static StartAgentRunCommand ToCommand(StartAgentRunRequestDto dto, string? traceIdOverride)
     {
+        ToolPayload? structured = null;
+        if (dto.ToolInputPayload is not null
+            && dto.ToolInputPayload.Value.ValueKind != JsonValueKind.Undefined
+            && dto.ToolInputPayload.Value.ValueKind != JsonValueKind.Null)
+        {
+            structured = ToolPayload.FromPersistedJson(
+                dto.ToolInputPayload.Value.GetRawText(),
+                RunQueuePayloadSerialization.JsonOptions);
+        }
+
         IReadOnlyDictionary<string, string>? toolInput = null;
-        if (dto.Input is { Count: > 0 })
+        if (structured is null && dto.Input is { Count: > 0 })
         {
             var d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in dto.Input)
@@ -34,7 +46,8 @@ internal static class StartAgentRunRequestMapping
             dto.PlanId,
             dto.ToolKey,
             dto.SkillKey,
-            toolInput);
+            toolInput,
+            structured);
     }
 
     private static string JsonElementToScalarString(JsonElement e) =>

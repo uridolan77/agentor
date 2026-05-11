@@ -1,9 +1,12 @@
 using Agentor.Application.Commands;
 using Agentor.Application.RunQueue;
+using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Persistence;
+using Agentor.Infrastructure.Persistence.Records;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Nodes;
 
 namespace Agentor.Infrastructure.Tests;
 
@@ -147,4 +150,73 @@ public sealed class EfRunQueueStoreTests
         Assert.Equal("hi", cmd.ToolInput!["text"]);
     }
 
+    [Fact]
+    public async Task EnqueueAsync_RoundTripsStructuredToolPayload_InToolPayloadJsonColumn()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await using var ctx = await CreateSqliteContextAsync(connection);
+        var store = new EfRunQueueStore(ctx);
+
+        var body = JsonNode.Parse("""{"text":"structured-queue"}""")!.AsObject();
+        var payload = new ToolPayload(
+            body,
+            schemaId: "urn:agentor:test:queue-payload",
+            contentType: "application/json",
+            summary: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["tier"] = "gold" });
+
+        var workItem = new RunWorkItem(
+            Guid.NewGuid(),
+            new StartAgentRunCommand(
+                "Structured Agent",
+                "Persist ToolPayload v2.",
+                "queue-v2-trace",
+                ToolKey: "mcp.demo-server.echo",
+                ToolInputPayload: payload));
+
+        await store.EnqueueAsync(workItem, DateTimeOffset.UtcNow, CancellationToken.None);
+
+        var row = await ctx.RunQueueItems.AsNoTracking()
+            .SingleAsync(r => r.WorkItemId == workItem.WorkItemId);
+
+        Assert.NotNull(row.ToolPayloadJson);
+        Assert.Contains("urn:agentor:test:queue-payload", row.ToolPayloadJson, StringComparison.Ordinal);
+        Assert.Contains("structured-queue", row.ToolPayloadJson, StringComparison.Ordinal);
+
+        var loaded = await store.GetAsync(workItem.WorkItemId, CancellationToken.None);
+        Assert.NotNull(loaded);
+        Assert.Null(loaded!.Command.ToolInput);
+        Assert.NotNull(loaded.Command.ToolInputPayload);
+        Assert.Equal("structured-queue", loaded.Command.ToolInputPayload.Body["text"]!.GetValue<string>());
+        Assert.Equal("gold", loaded.Command.ToolInputPayload.Summary["tier"]);
+    }
+
+    [Fact]
+    public async Task GetAsync_LegacyRowsWithoutToolPayloadJson_UseToolInputOnly()
+    {
+        await using var connection = new SqliteConnection("DataSource=:memory:");
+        await using var ctx = await CreateSqliteContextAsync(connection);
+
+        var id = Guid.NewGuid();
+        ctx.RunQueueItems.Add(new RunQueueItemRecord
+        {
+            WorkItemId = id,
+            AgentName = "Legacy-only queue row",
+            Objective = "Obj",
+            Status = DurableRunQueueStatus.Pending.ToString(),
+            EnqueuedAtUtc = DateTimeOffset.UtcNow,
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+            ToolKey = "tool.key",
+            ToolInputJson = """{"text":"legacy-row"}""",
+            ToolPayloadJson = null,
+        });
+        await ctx.SaveChangesAsync();
+
+        var store = new EfRunQueueStore(ctx);
+        var loaded = await store.GetAsync(id, CancellationToken.None);
+
+        Assert.NotNull(loaded);
+        Assert.Null(loaded!.Command.ToolInputPayload);
+        Assert.NotNull(loaded.Command.ToolInput);
+        Assert.Equal("legacy-row", loaded.Command.ToolInput["text"]);
+    }
 }

@@ -1,0 +1,16 @@
+{
+  "agentName": "fixture-queue-agent",
+  "objective": "Demonstrate structured ToolPayload on POST /api/v1/agent-runs/queued.",
+  "traceId": "fixture-queued-structured",
+  "toolKey": "mcp.demo-server.echo",
+  "toolInputPayload": {
+    "body": {
+      "text": "fixture-queued-body"
+    },
+    "schemaId": "urn:agentor:fixture:queued-toolpayload",
+    "contentType": "application/json",
+    "summary": {
+      "lane": "fixture-lane"
+    }
+  }
+}

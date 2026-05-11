@@ -2,6 +2,7 @@ using System.Text.Json;
 using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Application.RunQueue;
+using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Infrastructure.Persistence.Records;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +37,8 @@ public sealed class EfRunQueueStore : IDurableRunQueue
             PlanId = item.Command.PlanId,
             ToolKey = item.Command.ToolKey,
             SkillKey = item.Command.SkillKey,
-            ToolInputJson = SerializeToolInput(item.Command.ToolInput),
+            ToolInputJson = BuildToolInputJsonColumn(item.Command),
+            ToolPayloadJson = BuildToolPayloadJsonColumn(item.Command),
             Status = DurableRunQueueStatus.Pending.ToString(),
             EnqueuedAtUtc = now,
             UpdatedAtUtc = now,
@@ -221,6 +223,22 @@ public sealed class EfRunQueueStore : IDurableRunQueue
         return rows.Select(ToRecord).ToList();
     }
 
+    private static string? BuildToolPayloadJsonColumn(StartAgentRunCommand command) =>
+        command.ToolInputPayload is null
+            ? null
+            : RunQueuePayloadSerialization.SerializeStructuredColumn(command.ToolInputPayload);
+
+    private static string? BuildToolInputJsonColumn(StartAgentRunCommand command)
+    {
+        if (command.ToolInputPayload is not null)
+        {
+            var summary = command.ToolInputPayload.ToLegacySummary();
+            return SerializeToolInput(summary.Count > 0 ? summary : null);
+        }
+
+        return SerializeToolInput(command.ToolInput);
+    }
+
     private static string? SerializeToolInput(IReadOnlyDictionary<string, string>? input)
     {
         if (input is null || input.Count == 0)
@@ -254,8 +272,16 @@ public sealed class EfRunQueueStore : IDurableRunQueue
         return Enum.TryParse<RunExecutionMode>(stored, ignoreCase: false, out var mode) ? mode : null;
     }
 
-    private static RunQueueRecord ToRecord(RunQueueItemRecord row) =>
-        new(
+    private static RunQueueRecord ToRecord(RunQueueItemRecord row)
+    {
+        var hasStructuredColumn = !string.IsNullOrWhiteSpace(row.ToolPayloadJson);
+        var structuredPayload = hasStructuredColumn
+            ? ToolPayload.FromPersistedJson(row.ToolPayloadJson!, RunQueuePayloadSerialization.JsonOptions)
+            : null;
+
+        var legacyToolInput = DeserializeToolInput(row.ToolInputJson);
+
+        return new RunQueueRecord(
             row.WorkItemId,
             new StartAgentRunCommand(
                 row.AgentName,
@@ -270,11 +296,13 @@ public sealed class EfRunQueueStore : IDurableRunQueue
                 PlanId: row.PlanId,
                 ToolKey: row.ToolKey,
                 SkillKey: row.SkillKey,
-                ToolInput: DeserializeToolInput(row.ToolInputJson)),
+                ToolInput: hasStructuredColumn ? null : legacyToolInput,
+                ToolInputPayload: structuredPayload),
             Enum.Parse<DurableRunQueueStatus>(row.Status),
             row.EnqueuedAtUtc,
             row.ClaimedBy,
             row.LeaseExpiresAtUtc,
             row.AgentRunId,
             row.Error);
+    }
 }

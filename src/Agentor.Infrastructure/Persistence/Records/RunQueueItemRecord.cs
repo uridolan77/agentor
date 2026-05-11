@@ -43,6 +43,9 @@ public sealed class RunQueueItemRecord
 
     public string? SkillKey { get; set; }
 
-    /// <summary>JSON object of string key/value pairs for tool input.</summary>
+    /// <summary>JSON object of string key/value pairs for legacy tool input (pre–structured payload).</summary>
     public string? ToolInputJson { get; set; }
+
+    /// <summary>Optional persisted structured ToolPayload JSON (v2 body/schema/summary).</summary>
+    public string? ToolPayloadJson { get; set; }
 }

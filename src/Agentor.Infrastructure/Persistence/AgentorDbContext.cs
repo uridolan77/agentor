@@ -180,6 +180,7 @@ public sealed class AgentorDbContext : DbContext
             entity.Property(r => r.ToolKey).HasColumnName("tool_key").HasMaxLength(200);
             entity.Property(r => r.SkillKey).HasColumnName("skill_key").HasMaxLength(200);
             entity.Property(r => r.ToolInputJson).HasColumnName("tool_input_json").HasColumnType("text");
+            entity.Property(r => r.ToolPayloadJson).HasColumnName("tool_payload_json").HasColumnType("text");
 
             entity.HasIndex(r => new { r.Status, r.EnqueuedAtUtc });
         });

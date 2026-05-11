@@ -58,19 +58,21 @@ public sealed class GovernedSingleToolRunDriver
         {
             var step = run.StartStep(stepSummary, _clock.UtcNow);
 
-            var input = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            var basePayload = request.ToolInputPayload ?? ToolPayload.FromLegacyDictionary(request.ToolInput);
+
+            var mergedSummary = new Dictionary<string, string>(basePayload.ToLegacySummary(), StringComparer.OrdinalIgnoreCase)
             {
                 ["objective"] = request.Objective,
-                ["agentName"] = profile.Name
+                ["agentName"] = profile.Name,
             };
 
-            if (request.ToolInput is not null)
-            {
-                foreach (var kv in request.ToolInput)
-                {
-                    input[kv.Key] = kv.Value;
-                }
-            }
+            var mergedPayload = new ToolPayload(
+                basePayload.Body,
+                basePayload.SchemaId,
+                basePayload.ContentType,
+                mergedSummary);
+
+            var policyInput = mergedPayload.ToPolicyEvaluationDictionary();
 
             if (!_toolRegistry.TryGetRegistration(toolKey, out var registration) || registration is null)
             {
@@ -92,7 +94,7 @@ public sealed class GovernedSingleToolRunDriver
             var resolvedKey = registration.Definition.Key;
 
             var policyDecision = await _policyEvaluator.EvaluateToolCallAsync(
-                new PolicyEvaluationRequest(run.Id, step.Id, resolvedKey, input, null, run.ToPolicyScope()),
+                new PolicyEvaluationRequest(run.Id, step.Id, resolvedKey, policyInput, null, run.ToPolicyScope()),
                 cancellationToken).ConfigureAwait(false);
 
             step.AddPolicyDecision(policyDecision);
@@ -103,7 +105,7 @@ public sealed class GovernedSingleToolRunDriver
                 ["reasonCode"] = policyDecision.ReasonCode
             });
 
-            var toolCall = ToolCall.Start(run.Id, step.Id, resolvedKey, input, _clock.UtcNow);
+            var toolCall = ToolCall.Start(run.Id, step.Id, resolvedKey, mergedPayload, _clock.UtcNow);
 
             if (policyDecision.Outcome == PolicyDecisionOutcome.Deny)
             {
@@ -137,7 +139,7 @@ public sealed class GovernedSingleToolRunDriver
                 step.Id,
                 toolCall.Id,
                 registration.Executor,
-                new ToolExecutionRequest(run.Id, step.Id, resolvedKey, ToolPayload.FromLegacyDictionary(input)),
+                new ToolExecutionRequest(run.Id, step.Id, resolvedKey, mergedPayload),
                 cancellationToken).ConfigureAwait(false);
 
             if (pipelineResult.Success)

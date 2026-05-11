@@ -32,6 +32,14 @@ public static class StartAgentRunFingerprint
             inputTok = string.Join(",", sorted);
         }
 
+        var structuredTok = "";
+        if (dto.ToolInputPayload is not null
+            && dto.ToolInputPayload.Value.ValueKind != System.Text.Json.JsonValueKind.Undefined
+            && dto.ToolInputPayload.Value.ValueKind != System.Text.Json.JsonValueKind.Null)
+        {
+            structuredTok = dto.ToolInputPayload.Value.GetRawText();
+        }
+
         var canonical = string.Concat(
             normAgent,
             Sep,
@@ -57,7 +65,9 @@ public static class StartAgentRunFingerprint
             Sep,
             knowledgeScopeTok,
             Sep,
-            inputTok);
+            inputTok,
+            Sep,
+            structuredTok);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
         return Convert.ToHexString(hash);
     }

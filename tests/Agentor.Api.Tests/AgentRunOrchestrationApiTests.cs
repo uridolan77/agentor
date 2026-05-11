@@ -199,6 +199,52 @@ public sealed class AgentRunOrchestrationApiTests : IClassFixture<WebApplication
         Assert.NotNull(run);
         Assert.Equal(AgentRunStatus.Completed, run!.Status);
     }
+
+    [Fact]
+    public async Task PostAgentRunsQueued_WithStructuredToolInputPayload_McpEcho_CompletesAndExportsBody()
+    {
+        using var client = _factory.CreateClient();
+        var echoKey = McpToolKeys.Format("demo-server", "echo");
+        var toolInputPayload = JsonSerializer.SerializeToElement(new
+        {
+            body = new { text = "queued-structured-echo" },
+            schemaId = "urn:agentor:queued:test",
+            contentType = "application/json",
+            summary = new Dictionary<string, string> { ["slot"] = "A1" },
+        });
+        var body = new StartAgentRunRequestDto(
+            "Queued MCP",
+            "Structured payload via queue.",
+            "orch-queued-struct",
+            ToolKey: echoKey,
+            ToolInputPayload: toolInputPayload);
+
+        var post = await client.PostAsJsonAsync("/api/v1/agent-runs/queued", body, JsonOptions);
+        Assert.Equal(HttpStatusCode.Accepted, post.StatusCode);
+        var env = await post.Content.ReadFromJsonAsync<EnqueueAgentRunQueuedResponseDto>(JsonOptions);
+        Assert.NotNull(env);
+
+        Guid? runId = null;
+        for (var i = 0; i < 40 && runId is null; i++)
+        {
+            await Task.Delay(50);
+            var st = await client.GetFromJsonAsync<QueuedAgentRunStatusResponseDto>(
+                $"/api/v1/agent-runs/queued/{env!.WorkItemId:D}",
+                JsonOptions);
+            if (string.Equals(st?.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                runId = st!.AgentRunId;
+            }
+        }
+
+        Assert.NotNull(runId);
+
+        var export = await client.GetAsync($"/api/v1/agent-runs/{runId}/audit-export");
+        export.EnsureSuccessStatusCode();
+        var exportJson = await export.Content.ReadAsStringAsync();
+        Assert.Contains("queued-structured-echo", exportJson, StringComparison.Ordinal);
+        Assert.Contains("urn:agentor:queued:test", exportJson, StringComparison.Ordinal);
+    }
 }
 
 internal sealed class DenyConexusToolWebApplicationFactory : WebApplicationFactory<Program>

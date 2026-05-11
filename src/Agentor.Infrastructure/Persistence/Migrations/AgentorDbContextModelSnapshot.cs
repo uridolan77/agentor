@@ -459,6 +459,10 @@ namespace Agentor.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("tool_input_json");
 
+                    b.Property<string>("ToolPayloadJson")
+                        .HasColumnType("text")
+                        .HasColumnName("tool_payload_json");
+
                     b.Property<string>("ToolKey")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")

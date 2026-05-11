@@ -122,7 +122,8 @@ public static class StartAgentRunRouting
             planId,
             toolKey,
             skillKey,
-            command.ToolInput);
+            command.ToolInput,
+            command.ToolInputPayload);
         errors = null;
         return true;
     }
