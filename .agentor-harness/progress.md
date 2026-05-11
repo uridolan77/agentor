@@ -1,5 +1,26 @@
 # Agentor harness progress
 
+## Phase 32 PR127 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **Evaluation dataset registry** (**`EvaluationDatasetRegistry`**, **`evaluation-datasets.json`**) validated against **`EvaluationFixtureRegistry`**; tag-based case selection.
+- **Comparative metrics**: **`EvaluationMetricSnapshot`**, **`EvaluationBaseline`**, **`EvaluationDeltaCalculator`** (stable JSON); **`EvaluationAggregateReportGenerator`**.
+- **Thresholds**: **`EvaluationThresholdEvaluator`** + **`evaluation-thresholds.json`** (`EVAL_THRESHOLD_*` codes).
+- **Reporting**: **`EvaluationReportGenerator`** aggregate + threshold sections; **`CoordinationProfileRunRecord`** policy deny / requires-review counts.
+- **CI**: **`generate-evaluation-ci-artifacts.ps1`**, artifact upload **`agentor-evaluation-reports`**, **`verify-harness`** Phase **32** / **PR127**.
+- **Tests**: **`EvaluationScienceV2Tests`**, **`EvaluationCiArtifactsTests`**; **`docs/REPO_TRUTH.md`** updated.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **498 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 32 -ExpectedHarnessPass PR127`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 33 not started.
+
 ## Phase 31 PR122.5 (2026-05-11)
 
 **Status**: Complete.

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "kind": "EvaluationDatasetRegistry",
+  "datasets": [
+    {
+      "id": "coordination-default",
+      "cases": [
+        {
+          "id": "seq-one-step-smoke",
+          "fixtureId": "one-step-fake-tool",
+          "profile": "SequentialPipeline",
+          "tags": [ "smoke", "regression", "policy" ]
+        },
+        {
+          "id": "external-agent-call",
+          "fixtureId": "external-agent-one-call",
+          "profile": "ExternalAgentTool",
+          "tags": [ "external-agent", "regression" ]
+        },
+        {
+          "id": "review-gated-sample",
+          "fixtureId": "review-gated-multistep-plan",
+          "profile": "ReviewGatedPlan",
+          "tags": [ "review", "queue", "regression" ]
+        }
+      ]
+    }
+  ]
+}

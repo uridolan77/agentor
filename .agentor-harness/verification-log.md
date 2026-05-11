@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 32 PR127 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 32 -ExpectedHarnessPass PR127
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **498 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=32`, `ExpectedHarnessPass=PR127`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 85 / Total 85
+- Agentor.Application.Tests: Passed 169 / Total 169
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Infrastructure.Tests: Passed 107 / Total 107
+- Agentor.Api.Tests: Passed 124 / Total 124
+
+Scope:
+
+- completed: Phase 32 PR123–PR127 evaluation science v2 (registry, baselines/deltas, aggregates, thresholds, CI artifacts, REPO_TRUTH)
+- not started: Phase 33+
+
 ## Phase 31 PR122.5 (2026-05-11)
 
 ```powershell

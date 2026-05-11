@@ -1,10 +1,11 @@
 {
-    "phase": 31,
-    "title": "Phase 31 \u2014 PR122.5 harness reconciliation + human-review refactor hardening (PR122 + closeout)",
-    "harnessPass": "PR122.5",
+    "phase": 32,
+    "title": "Phase 32 \u2014 Evaluation science v2 (PR123\u2013PR127)",
+    "harnessPass": "PR127",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR127 (2026-05-11): Phase 32 evaluation science v2 \u2014 EvaluationDataset + EvaluationCase + EvaluationCaseTag + EvaluationDatasetRegistry (fixtures/eval/evaluation-datasets.json); EvaluationMetricSnapshot + EvaluationBaseline + EvaluationDeltaKind/DeltaCalculator (stable JSON); EvaluationAggregateReport + EvaluationAggregateReportGenerator; EvaluationThresholdSet + EvaluationThresholdEvaluator (fixtures/eval/evaluation-thresholds.json, EVAL_THRESHOLD_* codes); CoordinationProfileRunRecord policy decision counts; EvaluationReportGenerator optional aggregate + thresholdEvaluation in md/json/csv; scripts/generate-evaluation-ci-artifacts.ps1; CI uploads artifacts/evaluation; docs/REPO_TRUTH evaluation section. Verification: dotnet test Agentor.sln \u2014 498 passed; verify-harness ExpectedPhase 32 PR127; verify-repo-clean.",
         "PR122.5 (2026-05-11): Phase 31 second pass \u2014 Reconciled current-pr/session-handoff/feature-list/progress/verification-log + CI verify-harness to phase 31 PR122.5; documented test count lineage (482 PR121.5 snapshot \u2192 468 PR122 mid-pass snapshot \u2192 488 current on Agentor.sln; no PR121.5 tests removed for PR122); GovernanceApproverRequiredException \u2192 HTTP 403 GovernanceApproverRequired on governance + Phase13 review POST; HumanReviewDecisionApplicator single clock.UtcNow; HumanReviewExtractedServicesTests + GovernanceResumeApiTests escalated operator approve. REPO_TRUTH + GOVERNANCE_BOUNDARY updated. Verification: dotnet test \u2014 488 passed; verify-harness ExpectedPhase 31 PR122.5; verify-repo-clean.",
         "PR121.5 (2026-05-11): Phase 28\u201330 finalization \u2014 AgentRun.Complete clears TerminalAt (success uses CompletedAt only); Reconstitute + EF summary normalize stale terminal_at on Completed; JwtAcceptUnvalidatedBearerTokens blocked in Production without JwtAllowUnvalidatedTokensOutsideDevelopment; OpenAPI MapOpenApi gated (Development/Test always; Production requires Agentor:OpenApi:Enabled; late config merge); ToolPayload FromPersistedJson malformed/v2 edge paths; EF SaveAsync_RoundTripsStructuredToolPayload_V2OnToolCall; audit summary redaction test; GovernedSingleToolRunDriver trace scalar test; verify-repo-clean mojibake tokens; docs/security updates. Verification: dotnet test Agentor.sln \u2014 482 passed; verify-harness ExpectedPhase 30 PR121.5; verify-repo-clean.",
         "PR122 (2026-05-11): Phase 31 \u2014 Extract HumanReviewDecisionApplicator, ReviewedToolContinuationService, PlanResumeOrchestrator, ReviewPolicyReevaluationService, ReviewTraceWriter (src/Agentor.Application/HumanReview/); ApplyHumanReviewDecisionHandler thin (repo + applicator + continuation); AddAgentorApplication scoped registrations; AgentorTestComposition.CreateApplyHumanReviewDecisionHandler; HumanReviewDecisionApplicatorTests + ReviewPolicyReevaluationServiceTests; ApplyHumanReviewDecisionHandlerTests/MultiStepReviewResumeTests/Phase18FixtureTests updated. Verification: dotnet test Agentor.sln \u2014 468 passed; verify-harness ExpectedPhase 31 PR122; verify-repo-clean.",
@@ -54,6 +55,48 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR127-001",
+                                "pr": 127,
+                                "description": "Harness phase 32 PR127 + CI verify-harness + evaluation artifact upload job",
+                                "passes": true,
+                                "evidence": ".agentor-harness/feature-list.json; .github/workflows/ci.yml; scripts/generate-evaluation-ci-artifacts.ps1"
+                            },
+                            {
+                                "id": "PR123-001",
+                                "pr": 123,
+                                "description": "EvaluationDatasetRegistry validates fixtures, duplicate ids, tag subset selection",
+                                "passes": true,
+                                "evidence": "src/Agentor.Application/Evaluation/EvaluationDatasetRegistry.cs; tests/Agentor.Application.Tests/Evaluation/EvaluationScienceV2Tests.cs; tests/Agentor.Application.Tests/fixtures/eval/evaluation-datasets.json"
+                            },
+                            {
+                                "id": "PR124-001",
+                                "pr": 124,
+                                "description": "EvaluationMetricSnapshot, EvaluationBaseline JSON round-trip, EvaluationDeltaCalculator stable serialization",
+                                "passes": true,
+                                "evidence": "src/Agentor.Application/Evaluation/EvaluationMetricSnapshot.cs; tests/Agentor.Application.Tests/Evaluation/EvaluationScienceV2Tests.cs"
+                            },
+                            {
+                                "id": "PR125-001",
+                                "pr": 125,
+                                "description": "EvaluationAggregateReportGenerator + EvaluationReportGenerator aggregate sections",
+                                "passes": true,
+                                "evidence": "src/Agentor.Application/Evaluation/EvaluationAggregateReport.cs; src/Agentor.Application/Evaluation/EvaluationReportGenerator.cs; tests/Agentor.Application.Tests/Evaluation/EvaluationScienceV2Tests.cs; EvaluationCiArtifactsTests.cs"
+                            },
+                            {
+                                "id": "PR126-001",
+                                "pr": 126,
+                                "description": "EvaluationThresholdEvaluator pass/warn/fail with stable EVAL_THRESHOLD_* reason codes",
+                                "passes": true,
+                                "evidence": "src/Agentor.Application/Evaluation/EvaluationThresholdEvaluator.cs; tests/Agentor.Application.Tests/Evaluation/EvaluationScienceV2Tests.cs; tests/Agentor.Application.Tests/fixtures/eval/evaluation-thresholds.json"
+                            },
+                            {
+                                "id": "PR127-002",
+                                "pr": 127,
+                                "description": "CI publishes evaluation-report.md/json + evaluation-summary.csv via AGENTOR_EVAL_CI_OUT test path",
+                                "passes": true,
+                                "evidence": "tests/Agentor.Application.Tests/Evaluation/EvaluationCiArtifactsTests.cs; .github/workflows/ci.yml"
+                            },
                             {
                                 "id": "PR122.5-001",
                                 "pr": 122.5,

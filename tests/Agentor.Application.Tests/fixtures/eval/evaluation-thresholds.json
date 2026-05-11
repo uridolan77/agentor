@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "maxFailureRateIncrease": 0.05,
+  "maxReviewBurdenIncrease": 0.1,
+  "maxLatencyIncreasePercent": 25,
+  "maxCostIncreasePercent": 25,
+  "maxQualityViolationIncrease": 2,
+  "maxPolicyDenyRateIncrease": 0.05,
+  "maxRequiresReviewPolicyRateIncrease": 0.1
+}

@@ -34,11 +34,23 @@ jobs:
       - name: Evaluation regression slice
         run: dotnet test Agentor.sln --no-build --configuration Release --filter "FullyQualifiedName~Agentor.Application.Tests.Evaluation"
 
+      - name: Evaluation CI artifacts (Phase 32 PR127)
+        env:
+          AGENTOR_EVAL_CI_OUT: ${{ github.workspace }}/artifacts/evaluation
+        run: pwsh ./scripts/generate-evaluation-ci-artifacts.ps1
+
+      - name: Upload evaluation CI artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agentor-evaluation-reports
+          path: artifacts/evaluation/
+
       - name: Benchmark project compile (release baseline harness)
         run: dotnet build benchmarks/Agentor.Benchmarks/Agentor.Benchmarks.csproj --configuration Release --no-restore
 
-      - name: Verify harness (phase 31 PR122.5)
-        run: pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 31 -ExpectedHarnessPass PR122.5
+      - name: Verify harness (phase 32 PR127)
+        run: pwsh ./scripts/verify-harness.ps1 -ExpectedPhase 32 -ExpectedHarnessPass PR127
 
       - name: Verify repository cleanliness
         run: pwsh ./scripts/verify-repo-clean.ps1

@@ -15,7 +15,9 @@ public sealed record CoordinationProfileRunRecord(
     IReadOnlyList<string> RuntimeQualityViolations,
     IReadOnlyList<string> RuntimeQualityWarnings,
     bool DeclarativeQualityPassed,
-    IReadOnlyList<QualityViolation> DeclarativeViolations);
+    IReadOnlyList<QualityViolation> DeclarativeViolations,
+    int PolicyDenyDecisionCount = 0,
+    int PolicyRequiresReviewDecisionCount = 0);
 
 /// <summary>
 /// Deterministic Markdown / JSON / CSV outputs for CI artifacts (PR70).
@@ -28,20 +30,27 @@ public static class EvaluationReportGenerator
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public static void WriteCiArtifactFolder(string directory, IReadOnlyList<CoordinationProfileRunRecord> rows)
+    public static void WriteCiArtifactFolder(
+        string directory,
+        IReadOnlyList<CoordinationProfileRunRecord> rows,
+        EvaluationAggregateReport? aggregate = null,
+        EvaluationThresholdResult? thresholdEvaluation = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentNullException.ThrowIfNull(rows);
 
         Directory.CreateDirectory(directory);
-        File.WriteAllText(Path.Combine(directory, "evaluation-report.md"), BuildMarkdown(rows), Utf8NoBom);
-        File.WriteAllText(Path.Combine(directory, "evaluation-report.json"), BuildJson(rows), Utf8NoBom);
-        File.WriteAllText(Path.Combine(directory, "evaluation-summary.csv"), BuildCsv(rows), Utf8NoBom);
+        File.WriteAllText(Path.Combine(directory, "evaluation-report.md"), BuildMarkdown(rows, aggregate, thresholdEvaluation), Utf8NoBom);
+        File.WriteAllText(Path.Combine(directory, "evaluation-report.json"), BuildJson(rows, aggregate, thresholdEvaluation), Utf8NoBom);
+        File.WriteAllText(Path.Combine(directory, "evaluation-summary.csv"), BuildCsv(rows, aggregate), Utf8NoBom);
     }
 
     private static readonly UTF8Encoding Utf8NoBom = new(false);
 
-    public static string BuildMarkdown(IReadOnlyList<CoordinationProfileRunRecord> rows)
+    public static string BuildMarkdown(
+        IReadOnlyList<CoordinationProfileRunRecord> rows,
+        EvaluationAggregateReport? aggregate = null,
+        EvaluationThresholdResult? thresholdEvaluation = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("# Agentor coordination evaluation report");
@@ -84,10 +93,49 @@ public static class EvaluationReportGenerator
             }
         }
 
+        if (aggregate is { } agg)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Aggregate metrics");
+            sb.AppendLine();
+            sb.AppendLine("| Runs | Mean latency (ms) | Median latency (ms) | Failure rate | Mean review burden | Policy deny rate | Req-review policy rate | Mean ext invocations | Cost min | Cost max | Mean cost | Mean qual violations | Max qual violations |");
+            sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            sb.Append('|')
+                .Append(agg.RunCount).Append('|')
+                .Append(FormatDouble(agg.MeanLatencyMs)).Append('|')
+                .Append(FormatDouble(agg.MedianLatencyMs)).Append('|')
+                .Append(FormatDouble(agg.FailureRate)).Append('|')
+                .Append(FormatDouble(agg.MeanReviewBurden)).Append('|')
+                .Append(FormatDouble(agg.PolicyDenyRate)).Append('|')
+                .Append(FormatDouble(agg.RequiresReviewPolicyRate)).Append('|')
+                .Append(FormatDouble(agg.MeanExternalAgentInvocations)).Append('|')
+                .Append(FormatDecimal(agg.MinCostUnits)).Append('|')
+                .Append(FormatDecimal(agg.MaxCostUnits)).Append('|')
+                .Append(FormatDecimal(agg.MeanCostUnits)).Append('|')
+                .Append(FormatDouble(agg.MeanQualityViolationsPerRun)).Append('|')
+                .Append(FormatDouble(agg.MaxQualityViolationsPerRun))
+                .AppendLine("|");
+        }
+
+        if (thresholdEvaluation is { } te)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Threshold evaluation");
+            sb.AppendLine();
+            sb.AppendLine($"Verdict: **{te.Verdict}**");
+            foreach (var f in te.Findings)
+            {
+                sb.AppendLine($"- `{EscapeMd(f.ReasonCode)}` ({f.Severity}): {EscapeMd(f.Message)}");
+            }
+        }
+
         return sb.ToString();
     }
 
-    public static string BuildJson(IReadOnlyList<CoordinationProfileRunRecord> rows)
+    public static string BuildJson(
+        IReadOnlyList<CoordinationProfileRunRecord> rows,
+        EvaluationAggregateReport? aggregate = null,
+        EvaluationThresholdResult? thresholdEvaluation = null)
     {
         var ordered = rows
             .OrderBy(x => x.FixtureId, StringComparer.Ordinal)
@@ -126,16 +174,49 @@ public static class EvaluationReportGenerator
                 r.RuntimeQualityViolations,
                 r.RuntimeQualityWarnings,
                 r.DeclarativeQualityPassed,
-                declarativeViolations = r.DeclarativeViolations.Select(v => new { v.RuleId, v.Code, v.Message }).ToList()
+                declarativeViolations = r.DeclarativeViolations.Select(v => new { v.RuleId, v.Code, v.Message }).ToList(),
+                r.PolicyDenyDecisionCount,
+                r.PolicyRequiresReviewDecisionCount
             })
             .ToList();
 
-        var root = JsonSerializer.SerializeToNode(new { generatedAtUtc = "1970-01-01T00:00:00Z", rows = ordered }, JsonOptions);
+        var root = JsonSerializer.SerializeToNode(
+            new
+            {
+                generatedAtUtc = "1970-01-01T00:00:00Z",
+                rows = ordered,
+                aggregate = aggregate is null
+                    ? null
+                    : new
+                    {
+                        aggregate!.RunCount,
+                        aggregate.MeanLatencyMs,
+                        aggregate.MedianLatencyMs,
+                        aggregate.FailureRate,
+                        aggregate.MeanReviewBurden,
+                        aggregate.PolicyDenyRate,
+                        aggregate.RequiresReviewPolicyRate,
+                        aggregate.MeanExternalAgentInvocations,
+                        aggregate.MinCostUnits,
+                        aggregate.MaxCostUnits,
+                        aggregate.MeanCostUnits,
+                        aggregate.MeanQualityViolationsPerRun,
+                        aggregate.MaxQualityViolationsPerRun
+                    },
+                thresholdEvaluation = thresholdEvaluation is null
+                    ? null
+                    : new
+                    {
+                        verdict = thresholdEvaluation.Verdict.ToString(),
+                        findings = thresholdEvaluation.Findings.Select(f => new { f.ReasonCode, severity = f.Severity.ToString(), f.Message }).ToList()
+                    }
+            },
+            JsonOptions);
         JsonRedaction.Apply(root, RedactionPolicy.CatalogDefault);
         return root!.ToJsonString(JsonOptions);
     }
 
-    public static string BuildCsv(IReadOnlyList<CoordinationProfileRunRecord> rows)
+    public static string BuildCsv(IReadOnlyList<CoordinationProfileRunRecord> rows, EvaluationAggregateReport? aggregate = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("fixtureId,profile,runStatus,traceCount,toolCount,externalCount,reliability,costUnits,declarativeOk");
@@ -150,6 +231,28 @@ public static class EvaluationReportGenerator
                 .Append(FormatDouble(r.Metrics.Reliability)).Append(',')
                 .Append(FormatDecimal(r.Metrics.CostUnits)).Append(',')
                 .Append(r.DeclarativeQualityPassed ? "true" : "false")
+                .AppendLine();
+        }
+
+        if (aggregate is { } agg)
+        {
+            sb.AppendLine();
+            sb.AppendLine(
+                "section,runCount,meanLatencyMs,medianLatencyMs,failureRate,meanReviewBurden,policyDenyRate,requiresReviewPolicyRate,meanExternalAgentInvocations,minCostUnits,maxCostUnits,meanCostUnits,meanQualityViolationsPerRun,maxQualityViolationsPerRun");
+            sb.Append("aggregate,")
+                .Append(agg.RunCount).Append(',')
+                .Append(FormatDouble(agg.MeanLatencyMs)).Append(',')
+                .Append(FormatDouble(agg.MedianLatencyMs)).Append(',')
+                .Append(FormatDouble(agg.FailureRate)).Append(',')
+                .Append(FormatDouble(agg.MeanReviewBurden)).Append(',')
+                .Append(FormatDouble(agg.PolicyDenyRate)).Append(',')
+                .Append(FormatDouble(agg.RequiresReviewPolicyRate)).Append(',')
+                .Append(FormatDouble(agg.MeanExternalAgentInvocations)).Append(',')
+                .Append(FormatDecimal(agg.MinCostUnits)).Append(',')
+                .Append(FormatDecimal(agg.MaxCostUnits)).Append(',')
+                .Append(FormatDecimal(agg.MeanCostUnits)).Append(',')
+                .Append(FormatDouble(agg.MeanQualityViolationsPerRun)).Append(',')
+                .Append(FormatDouble(agg.MaxQualityViolationsPerRun))
                 .AppendLine();
         }
 
