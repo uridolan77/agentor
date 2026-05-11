@@ -14,8 +14,9 @@ This document records non-goals and safety posture for the Phase 11 governance s
 ## Human review (PR53)
 
 - Human review decisions are governance records on the run: they gate whether execution may continue; they do not canonize knowledge in Athanor or elsewhere.
-- Approve may reopen a tool that was held in RequiresReview; it does not override an immediate policy Deny outcome on a later policy evaluation (post-approval policy still applies in ApplyHumanReviewDecisionHandler).
+- Approve may reopen a tool that was held in RequiresReview; it does not override an immediate policy Deny outcome on a later policy evaluation (post-approval policy still applies in **`ReviewedToolContinuationService`** / **`PlanResumeOrchestrator`** via **`ReviewPolicyReevaluationService`**).
 - Reject fails the reviewed run. RequestChanges and Escalate record a decision without resuming tool execution in the current handler path; the run remains in RequiresReview until further action.
+- Escalated workflow: approving without **`HumanGovernanceApprover`** (or **`System`**) role is rejected at the domain/application boundary with **`GovernanceApproverRequiredException`** and surfaces as **HTTP 403** with code **`GovernanceApproverRequired`** on governance review POST routes (other invalid human-review states remain **409** **`HumanReviewInvalid`**).
 - Multi-step plan resume beyond the single pending-tool path is not fully specified here; treat that as a follow-up hardening area.
 
 ## Policy profiles (PR52)

@@ -166,6 +166,45 @@ public sealed class GovernanceResumeApiTests : IClassFixture<GovernanceResumeApi
     }
 
     [Fact]
+    public async Task Escalate_ThenApprove_AsOperator_Returns403Forbidden()
+    {
+        var run = BuildRunInRequiresReview(DateTimeOffset.UtcNow);
+        _factory.Repository.Seed(run);
+
+        using var client = _factory.CreateClient();
+        var escalate = await client.PostAsync(
+            $"/api/v1/agent-runs/{run.Id}/human-review",
+            ReviewBody(ReviewDecisionKind.Escalate, "Escalated to senior reviewer."));
+        Assert.Equal(HttpStatusCode.OK, escalate.StatusCode);
+
+        var approve = await client.PostAsync(
+            $"/api/v1/agent-runs/{run.Id}/human-review",
+            ReviewBody(ReviewDecisionKind.Approve));
+
+        Assert.Equal(HttpStatusCode.Forbidden, approve.StatusCode);
+        var body = await approve.Content.ReadAsStringAsync();
+        Assert.Contains("GovernanceApproverRequired", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Escalate_ThenApprove_AsOperator_OnReviewsAlias_Returns403Forbidden()
+    {
+        var run = BuildRunInRequiresReview(DateTimeOffset.UtcNow);
+        _factory.Repository.Seed(run);
+
+        using var client = _factory.CreateClient();
+        await client.PostAsync(
+            $"/api/v1/reviews/{run.Id}/decisions",
+            ReviewBody(ReviewDecisionKind.Escalate, "Escalated to senior reviewer."));
+
+        var approve = await client.PostAsync(
+            $"/api/v1/reviews/{run.Id}/decisions",
+            ReviewBody(ReviewDecisionKind.Approve));
+
+        Assert.Equal(HttpStatusCode.Forbidden, approve.StatusCode);
+    }
+
+    [Fact]
     public async Task HumanReview_OnUnknownRun_Returns404NotFound()
     {
         using var client = _factory.CreateClient();

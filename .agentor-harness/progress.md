@@ -1,5 +1,23 @@
 # Agentor harness progress
 
+## Phase 31 PR122.5 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **Harness reconciliation**: **`current-pr.md`**, **`feature-list.json`**, **`progress`**, **`verification-log`**, **`session-handoff`**, and **CI** aligned to **Phase 31 / PR122.5**; explicit narrative for test totals (**482** PR121.5 snapshot → **468** PR122 snapshot → **488** PR122.5 authoritative `Agentor.sln` count; no PR121.5 tests removed for PR122).
+- **`GovernanceApproverRequiredException`** + **403** / **`GovernanceApproverRequired`** on governance + Phase13 review POST paths; **`HumanReviewDecisionApplicator`** single **`now`** timestamp.
+- **Tests**: **`HumanReviewExtractedServicesTests`**; **`GovernanceResumeApiTests`** escalated operator approve (**403** + alias).
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **488 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 31 -ExpectedHarnessPass PR122.5`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 32 not started.
+
 ## Phase 30 PR121.5 (2026-05-11)
 
 **Status**: Complete.
@@ -36,11 +54,11 @@
 
 **Verification**:
 
-- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **468 passed, 0 failed**
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 31 -ExpectedHarnessPass PR122`
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **468 passed, 0 failed** (mid-pass snapshot; superseded by **PR122.5** harness totals)
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 31 -ExpectedHarnessPass PR122` (superseded by **PR122.5**)
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 32 not started.
+**Scope guard**: Phase 32 not started (canonical harness marker: **PR122.5**).
 
 ## Phase 30 PR121 (2026-05-11)
 

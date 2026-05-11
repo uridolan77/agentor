@@ -1,9 +1,10 @@
 using Agentor.Api.Mapping;
 using Agentor.Api.Security;
+using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
+using Agentor.Application.HumanReview;
 using Agentor.Application.Management;
 using Agentor.Application.Queries;
-using Agentor.Application.Abstractions;
 using Agentor.Contracts;
 using Agentor.Domain;
 
@@ -578,6 +579,12 @@ internal static class Phase13ProductEndpoints
                     }
 
                     return Results.Ok(run.ToDto());
+                }
+                catch (GovernanceApproverRequiredException ex)
+                {
+                    return Results.Json(
+                        new ApiErrorDto("GovernanceApproverRequired", ex.Message, traceId, [ex.Message]),
+                        statusCode: StatusCodes.Status403Forbidden);
                 }
                 catch (InvalidOperationException ex)
                 {

@@ -1,5 +1,6 @@
 using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
+using Agentor.Application.HumanReview;
 using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Domain.Governance;
@@ -130,7 +131,7 @@ public sealed class ApplyHumanReviewDecisionHandlerTests
         var approveHandler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
             repo, stubPolicy, registry, clock, new FixedActorAccessor(actorId));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<GovernanceApproverRequiredException>(() =>
             approveHandler.HandleAsync(
                 new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
                 CancellationToken.None));

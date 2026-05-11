@@ -13,6 +13,8 @@ public sealed class HumanReviewDecisionApplicator(IClock clock, ICurrentActorAcc
 {
     public void Apply(AgentRun run, ApplyHumanReviewDecisionCommand command)
     {
+        var now = clock.UtcNow;
+
         if (run.Status != AgentRunStatus.RequiresReview)
         {
             throw new InvalidOperationException(
@@ -35,8 +37,7 @@ public sealed class HumanReviewDecisionApplicator(IClock clock, ICurrentActorAcc
             var role = actorAccessor.Current.Role;
             if (role is not ActorRole.HumanGovernanceApprover and not ActorRole.System)
             {
-                throw new InvalidOperationException(
-                    "Escalated human reviews require a governance approver role to approve.");
+                throw new GovernanceApproverRequiredException();
             }
         }
 
@@ -59,11 +60,11 @@ public sealed class HumanReviewDecisionApplicator(IClock clock, ICurrentActorAcc
             Guid.NewGuid(),
             command.Kind,
             actorId,
-            clock.UtcNow,
+            now,
             command.Note,
             resolution,
             command.RelatedPriorActorId);
 
-        run.ApplyHumanReviewDecision(decision, clock.UtcNow);
+        run.ApplyHumanReviewDecision(decision, now);
     }
 }

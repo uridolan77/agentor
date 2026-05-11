@@ -1,5 +1,42 @@
 # Verification log
 
+## Phase 31 PR122.5 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 31 -ExpectedHarnessPass PR122.5
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **488 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=31`, `ExpectedHarnessPass=PR122.5`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 85 / Total 85
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 159 / Total 159
+- Agentor.Infrastructure.Tests: Passed 107 / Total 107
+- Agentor.Api.Tests: Passed 124 / Total 124
+
+Scope:
+
+- completed: PR122.5 harness reconciliation + governance **403** for escalated approve + applicator single-**`now`** + **`HumanReviewExtractedServicesTests`** + **`GovernanceResumeApiTests`**
+- not started: Phase 32+
+
+Test count note (PR122.5):
+
+- **482** = PR121.5 milestone total on `Agentor.sln` at that closeout.
+- **468** = PR122 mid-pass snapshot during handler extraction (documented alongside PR122); not evidence that PR121.5 tests were deleted.
+- **488** = authoritative current total after PR122.5 (adds targeted tests; per-assembly counts evolved vs the **468** snapshot).
+
 ## Phase 30 PR121.5 (2026-05-11)
 
 ```powershell

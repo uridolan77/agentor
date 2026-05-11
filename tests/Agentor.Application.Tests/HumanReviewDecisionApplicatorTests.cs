@@ -91,7 +91,7 @@ public sealed class HumanReviewDecisionApplicatorTests
 
         Assert.Equal(HumanReviewWorkflowStatus.Escalated, run.ReviewWorkflowStatus);
 
-        Assert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<GovernanceApproverRequiredException>(() =>
             applicator.Apply(run, new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null)));
     }
 }

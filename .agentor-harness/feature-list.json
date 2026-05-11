@@ -1,10 +1,11 @@
 {
-    "phase": 30,
-    "title": "Phase 30 \u2014 PR121.5 Phase 28\u201330 finalization (review timestamps, auth/OpenAPI, ToolPayload hardening)",
-    "harnessPass": "PR121.5",
+    "phase": 31,
+    "title": "Phase 31 \u2014 PR122.5 harness reconciliation + human-review refactor hardening (PR122 + closeout)",
+    "harnessPass": "PR122.5",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR122.5 (2026-05-11): Phase 31 second pass \u2014 Reconciled current-pr/session-handoff/feature-list/progress/verification-log + CI verify-harness to phase 31 PR122.5; documented test count lineage (482 PR121.5 snapshot \u2192 468 PR122 mid-pass snapshot \u2192 488 current on Agentor.sln; no PR121.5 tests removed for PR122); GovernanceApproverRequiredException \u2192 HTTP 403 GovernanceApproverRequired on governance + Phase13 review POST; HumanReviewDecisionApplicator single clock.UtcNow; HumanReviewExtractedServicesTests + GovernanceResumeApiTests escalated operator approve. REPO_TRUTH + GOVERNANCE_BOUNDARY updated. Verification: dotnet test \u2014 488 passed; verify-harness ExpectedPhase 31 PR122.5; verify-repo-clean.",
         "PR121.5 (2026-05-11): Phase 28\u201330 finalization \u2014 AgentRun.Complete clears TerminalAt (success uses CompletedAt only); Reconstitute + EF summary normalize stale terminal_at on Completed; JwtAcceptUnvalidatedBearerTokens blocked in Production without JwtAllowUnvalidatedTokensOutsideDevelopment; OpenAPI MapOpenApi gated (Development/Test always; Production requires Agentor:OpenApi:Enabled; late config merge); ToolPayload FromPersistedJson malformed/v2 edge paths; EF SaveAsync_RoundTripsStructuredToolPayload_V2OnToolCall; audit summary redaction test; GovernedSingleToolRunDriver trace scalar test; verify-repo-clean mojibake tokens; docs/security updates. Verification: dotnet test Agentor.sln \u2014 482 passed; verify-harness ExpectedPhase 30 PR121.5; verify-repo-clean.",
         "PR122 (2026-05-11): Phase 31 \u2014 Extract HumanReviewDecisionApplicator, ReviewedToolContinuationService, PlanResumeOrchestrator, ReviewPolicyReevaluationService, ReviewTraceWriter (src/Agentor.Application/HumanReview/); ApplyHumanReviewDecisionHandler thin (repo + applicator + continuation); AddAgentorApplication scoped registrations; AgentorTestComposition.CreateApplyHumanReviewDecisionHandler; HumanReviewDecisionApplicatorTests + ReviewPolicyReevaluationServiceTests; ApplyHumanReviewDecisionHandlerTests/MultiStepReviewResumeTests/Phase18FixtureTests updated. Verification: dotnet test Agentor.sln \u2014 468 passed; verify-harness ExpectedPhase 31 PR122; verify-repo-clean.",
         "PR121 (2026-05-11): Phase 30 \u2014 Domain ToolPayload (JsonObject body + schemaId/contentType + summary) + ToolPayloadJsonConverter; ToolCall InputPayload/OutputPayload + persisted v2 JSON with legacy flat-object fallback; ToolExecutionRequest/ToolExecutionResult/McpToolInvocationResult use ToolPayload; PolicyEvaluationRequest callers use ToPolicyEvaluationDictionary where needed; ModelCallRequestDto/ModelCallResultDto wrap ToolPayload + FromLegacy factories; ExternalAgentInvocationRequestDto Arguments ToolPayload; IMcpRegistryClient.InvokeToolAsync ToolPayload; HTTP MCP/Conexus/External-agent JSON wiring; GetRunAuditExportQueryHandler steps.toolCalls input/output as body+summary+metadata (redaction); docs/REPO_TRUTH structured I/O bullet; tests ToolPayloadTests + GetRunAuditExportQueryHandlerTests nested redaction + updated adapter tests. Verification: dotnet test Agentor.sln \u2014 461 passed; verify-harness ExpectedPhase 30 PR121; verify-repo-clean.",
@@ -53,6 +54,41 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR122.5-001",
+                                "pr": 122.5,
+                                "description": "Harness files + CI verify-harness expect Phase 31 PR122.5; test-count narrative links 482/468 snapshots to 488 current",
+                                "passes": true,
+                                "evidence": ".agentor-harness/current-pr.md; .agentor-harness/feature-list.json; .agentor-harness/progress.md; .agentor-harness/verification-log.md; .agentor-harness/session-handoff.md; .github/workflows/ci.yml"
+                            },
+                            {
+                                "id": "PR122.5-002",
+                                "pr": 122.5,
+                                "description": "Escalated approve without governance approver returns HTTP 403 GovernanceApproverRequired (governance + Phase13 reviews alias)",
+                                "passes": true,
+                                "evidence": "src/Agentor.Application/HumanReview/GovernanceApproverRequiredException.cs; src/Agentor.Api/Endpoints/GovernanceEndpoints.cs; src/Agentor.Api/Phase13ProductEndpoints.cs; tests/Agentor.Api.Tests/GovernanceResumeApiTests.cs"
+                            },
+                            {
+                                "id": "PR122.5-003",
+                                "pr": 122.5,
+                                "description": "HumanReviewDecisionApplicator uses one timestamp for HumanReviewDecision and ApplyHumanReviewDecision",
+                                "passes": true,
+                                "evidence": "src/Agentor.Application/HumanReview/HumanReviewDecisionApplicator.cs"
+                            },
+                            {
+                                "id": "PR122.5-004",
+                                "pr": 122.5,
+                                "description": "Focused tests for ReviewedToolContinuationService, PlanResumeOrchestrator, ReviewTraceWriter (slice, not full multi-step suite)",
+                                "passes": true,
+                                "evidence": "tests/Agentor.Application.Tests/HumanReviewExtractedServicesTests.cs"
+                            },
+                            {
+                                "id": "PR122.5-005",
+                                "pr": 122.5,
+                                "description": "REPO_TRUTH + GOVERNANCE_BOUNDARY document HumanReview/* split and 403 escalated-approve behavior",
+                                "passes": true,
+                                "evidence": "docs/REPO_TRUTH.md; docs/GOVERNANCE_BOUNDARY.md"
+                            },
         {
             "id": "PR121.5-001",
             "pr": 121.5,
