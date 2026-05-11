@@ -23,9 +23,11 @@ This document states **what the code and HTTP surface actually do today**, so op
 - **`agent_runs.aggregate_version`** is an optimistic-concurrency token (incremented on each successful save). **`AgentRun.PersistenceConcurrencyVersion`** is populated on **`GetAsync`** and refreshed after **`SaveAsync`**; a stale version yields **`AgentRunPersistenceConcurrencyException`** (mapped to **409 Conflict** on the HTTP surface). **`POST /agent-runs`** and other handlers that only create runs do not require a prior load.
 - **Human review workflow (Phase 28)**: **`completed_at`** stores **successful completion only**. Review suspension uses **`review_requested_at`** / **`paused_at`**; failures and human rejection terminal timestamps use **`terminal_at`**. **`review_workflow_status`** persists **`HumanReviewWorkflowStatus`** (Pending / ChangesRequested / Escalated / …). **`ApplyHumanReviewDecision`** APIs accept optional **`relatedPriorActorId`** for escalation chains.
 
-## Authentication (Jwt mode)
+## Authentication (Jwt / ASP.NET)
 
-- **Jwt** auth mode consumes an **already-authenticated** `ClaimsPrincipal` (header or upstream gateway). The API does **not** register full **Bearer token validation middleware** by default in that configuration; treat Jwt mode as **explicit external auth** unless you add validation yourself.
+- **`UseAuthentication` / `UseAuthorization`** are enabled. **`/api/v1/*`** requires an authenticated principal (**`Agentor.Authenticated`** policy). **`GET /health`** stays anonymous.
+- **Fake** mode registers **`Agentor.Fake`** authentication (stable dev principal). **Header** mode registers **`Agentor.Header`** (GUID in `X-Agentor-Actor-Id` by default). **Jwt** mode registers **`AddJwtBearer`** when **`Agentor:Auth:JwtAuthority`** is set; otherwise **`Agentor:Auth:JwtAcceptUnvalidatedBearerTokens=true`** enables **`Agentor.JwtUnvalidated`** (parses bearer JWTs **without** signature validation — trusted path only).
+- **`ICurrentActorAccessor`** still maps **`HttpContext.User`** in Jwt mode (claims → `ActorRole`). See **`docs/security/auth-boundary.md`** and **`docs/security/AUTHORIZATION_MATRIX.md`**.
 
 ## Durable run queue worker
 

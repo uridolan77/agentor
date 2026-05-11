@@ -8,6 +8,13 @@ public enum AgentorPermission
     PolicyBundleRead,
     AuditRead,
     OpsRead,
+    RunWrite,
+    RunRead,
+    TraceRead,
+    QueueWrite,
+    QueueRead,
+    ManagementRead,
+    ManagementWrite,
 }
 
 public sealed record AuthorizationDecision(bool Allowed, string? Reason = null)

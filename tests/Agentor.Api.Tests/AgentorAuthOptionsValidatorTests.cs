@@ -70,6 +70,55 @@ public sealed class AgentorAuthOptionsValidatorTests
         Assert.Contains("JwtActorIdClaimTypes", result.FailureMessage);
     }
 
+    [Fact]
+    public void Validate_Fails_WhenJwtModeHasNoAuthorityOrUnvalidatedFlag()
+    {
+        var validator = new AgentorAuthOptionsValidator(new FakeHostEnvironment(Environments.Development));
+        var options = new AgentorAuthOptions
+        {
+            Mode = AgentorAuthMode.Jwt,
+            JwtAcceptUnvalidatedBearerTokens = false,
+            JwtAuthority = null
+        };
+
+        var result = validator.Validate(Options.DefaultName, options);
+
+        Assert.True(result.Failed);
+        Assert.Contains("JwtAuthority", result.FailureMessage);
+    }
+
+    [Fact]
+    public void Validate_Succeeds_WhenJwtModeUsesUnvalidatedBearerTokens()
+    {
+        var validator = new AgentorAuthOptionsValidator(new FakeHostEnvironment(Environments.Development));
+        var options = new AgentorAuthOptions
+        {
+            Mode = AgentorAuthMode.Jwt,
+            JwtAcceptUnvalidatedBearerTokens = true,
+            JwtAuthority = null
+        };
+
+        var result = validator.Validate(Options.DefaultName, options);
+
+        Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Validate_Succeeds_WhenJwtModeUsesAuthority()
+    {
+        var validator = new AgentorAuthOptionsValidator(new FakeHostEnvironment(Environments.Development));
+        var options = new AgentorAuthOptions
+        {
+            Mode = AgentorAuthMode.Jwt,
+            JwtAuthority = "https://login.example.com/",
+            JwtAcceptUnvalidatedBearerTokens = false
+        };
+
+        var result = validator.Validate(Options.DefaultName, options);
+
+        Assert.True(result.Succeeded);
+    }
+
     private sealed class FakeHostEnvironment(string environmentName) : IHostEnvironment
     {
         public string EnvironmentName { get; set; } = environmentName;

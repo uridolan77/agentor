@@ -84,4 +84,24 @@ public sealed class RoleBasedAuthorizationDecisionServiceTests
 
         Assert.True(decision.Allowed);
     }
+
+    [Fact]
+    public void Authorize_Allows_Service_ForRunRead_Denies_RunWrite()
+    {
+        var sut = new RoleBasedAuthorizationDecisionService();
+        var actor = new ActorContext(ActorId, "svc", ActorRole.Service);
+
+        Assert.True(sut.Authorize(actor, AgentorPermission.RunRead).Allowed);
+        Assert.False(sut.Authorize(actor, AgentorPermission.RunWrite).Allowed);
+    }
+
+    [Fact]
+    public void Authorize_Allows_Service_ForManagementRead_Denies_ManagementWrite()
+    {
+        var sut = new RoleBasedAuthorizationDecisionService();
+        var actor = new ActorContext(ActorId, "svc", ActorRole.Service);
+
+        Assert.True(sut.Authorize(actor, AgentorPermission.ManagementRead).Allowed);
+        Assert.False(sut.Authorize(actor, AgentorPermission.ManagementWrite).Allowed);
+    }
 }

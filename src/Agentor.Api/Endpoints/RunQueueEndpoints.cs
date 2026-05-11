@@ -1,4 +1,5 @@
 using Agentor.Api.Mapping;
+using Agentor.Api.Security;
 using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Application.RunQueue;
@@ -15,9 +16,21 @@ public static class RunQueueEndpoints
         v1.MapPost("/agent-runs/queued", async (
             StartAgentRunRequestDto request,
             IRunQueue runQueue,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.QueueWrite);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var requestTraceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
 
             var commandTraceId = string.IsNullOrWhiteSpace(request.TraceId)
@@ -52,9 +65,21 @@ public static class RunQueueEndpoints
         v1.MapGet("/agent-runs/queued/{workItemId:guid}", async (
             Guid workItemId,
             IRunQueue runQueue,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.QueueRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var snap = await runQueue.GetSnapshotAsync(workItemId, cancellationToken);
             if (snap is null)
             {

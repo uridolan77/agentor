@@ -17,7 +17,11 @@ public sealed class RoleBasedAuthorizationDecisionService : IAuthorizationDecisi
             ActorRole.HumanGovernanceApprover => true,
             ActorRole.Service => permission is AgentorPermission.PolicyBundleRead
                 or AgentorPermission.AuditRead
-                or AgentorPermission.GovernanceReviewRead,
+                or AgentorPermission.GovernanceReviewRead
+                or AgentorPermission.RunRead
+                or AgentorPermission.TraceRead
+                or AgentorPermission.QueueRead
+                or AgentorPermission.ManagementRead,
             _ => false
         };
 

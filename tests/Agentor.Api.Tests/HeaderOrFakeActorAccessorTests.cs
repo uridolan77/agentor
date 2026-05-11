@@ -9,7 +9,7 @@ namespace Agentor.Api.Tests;
 
 public sealed class HeaderOrFakeActorAccessorTests
 {
-    private static readonly Guid Fallback = Guid.Parse("11111111-1111-4111-8111-111111111111");
+    private static readonly Guid Fallback = HeaderOrFakeActorAccessor.LocalDevelopmentFakeActorId;
 
     [Fact]
     public void Current_UsesXAgentorActorIdHeader_WhenValidGuid()

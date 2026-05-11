@@ -37,6 +37,13 @@ public sealed class AgentorAuthOptionsValidator(IHostEnvironment hostEnvironment
                 return ValidateOptionsResult.Fail(
                     "Agentor:Auth:JwtRoleClaimType is required when Agentor:Auth:Mode=Jwt.");
             }
+
+            if (string.IsNullOrWhiteSpace(options.JwtAuthority) && !options.JwtAcceptUnvalidatedBearerTokens)
+            {
+                return ValidateOptionsResult.Fail(
+                    "Agentor:Auth:Mode=Jwt requires JwtAuthority (in-process bearer validation) or " +
+                    "JwtAcceptUnvalidatedBearerTokens=true (trusted-path / dev only).");
+            }
         }
 
         return ValidateOptionsResult.Success;

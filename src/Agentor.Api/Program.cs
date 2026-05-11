@@ -30,6 +30,9 @@ if (persistenceOpts.Mode == AgentorPersistenceOptions.ModePostgres
 
 builder.Services.AddOpenApi();
 
+builder.Services.AddAgentorWebAuthentication(builder.Configuration);
+builder.Services.AddAgentorWebAuthorization();
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentActorAccessor, HeaderOrFakeActorAccessor>();
 builder.Services.AddScoped<IAuthorizationDecisionService, RoleBasedAuthorizationDecisionService>();
@@ -75,11 +78,15 @@ var app = builder.Build();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseMiddleware<RequestTracingMiddleware>();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapOpenApi();
 
 app.MapSystemEndpoints();
 
-var v1 = app.MapGroup("/api/v1");
+var v1 = app.MapGroup("/api/v1")
+    .RequireAuthorization(AgentorAuthorizationPolicies.Authenticated);
 v1.MapAgentRunEndpoints();
 v1.MapRunQueueEndpoints();
 v1.MapOpsEndpoints();

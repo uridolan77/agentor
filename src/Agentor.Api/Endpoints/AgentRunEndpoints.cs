@@ -1,4 +1,6 @@
 using Agentor.Api.Mapping;
+using Agentor.Api.Security;
+using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Application.Queries;
 using Agentor.Application.Services;
@@ -17,8 +19,21 @@ public static class AgentRunEndpoints
             int? skip,
             int? take,
             ListAgentRunsQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
+            HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var s = skip ?? 0;
             var t = take ?? ListAgentRunsQueryHandler.DefaultTake;
             var page = await handler.HandleAsync(s, t, cancellationToken);
@@ -33,9 +48,21 @@ public static class AgentRunEndpoints
             StartAgentRunRequestDto request,
             StartAgentRunHandler handler,
             AgentRunIdempotencyService idempotencyService,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunWrite);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var requestTraceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
 
             var commandTraceId = string.IsNullOrWhiteSpace(request.TraceId)
@@ -105,9 +132,21 @@ public static class AgentRunEndpoints
         v1.MapGet("/agent-runs/{runId:guid}", async (
             Guid runId,
             GetAgentRunQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var run = await handler.HandleAsync(runId, cancellationToken);
             if (run is null)
             {
@@ -125,9 +164,21 @@ public static class AgentRunEndpoints
         v1.MapGet("/agent-runs/{runId:guid}/trace", async (
             Guid runId,
             GetAgentRunTraceQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.TraceRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var trace = await handler.HandleAsync(runId, cancellationToken);
             if (trace is null)
             {
@@ -145,9 +196,21 @@ public static class AgentRunEndpoints
         v1.MapGet("/agent-runs/{runId:guid}/steps", async (
             Guid runId,
             GetAgentRunStepsQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.TraceRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var steps = await handler.HandleAsync(runId, cancellationToken);
             if (steps is null)
             {
@@ -165,9 +228,21 @@ public static class AgentRunEndpoints
         v1.MapGet("/agent-runs/{runId:guid}/tool-calls", async (
             Guid runId,
             GetAgentRunToolCallsQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.TraceRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var toolCalls = await handler.HandleAsync(runId, cancellationToken);
             if (toolCalls is null)
             {
@@ -185,9 +260,21 @@ public static class AgentRunEndpoints
         v1.MapGet("/agent-runs/{runId:guid}/manifest", async (
             Guid runId,
             GetRunManifestQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var manifest = await handler.HandleAsync(runId, cancellationToken);
             if (manifest is null)
             {

@@ -1,10 +1,11 @@
 {
-    "phase":  28,
-    "title":  "Phase 28 — PR119 review workflow semantics (pause vs completion vs terminal)",
-    "harnessPass":  "PR119",
+    "phase":  29,
+    "title":  "Phase 29 — PR120 production ASP.NET auth + run/queue/management permission matrix",
+    "harnessPass":  "PR120",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
+                  "PR120 (2026-05-11): Phase 29 — AddAuthentication/AddAuthorization + UseAuthentication/UseAuthorization; Fake/Header/Jwt schemes (JwtBearer when JwtAuthority; Agentor.JwtUnvalidated when JwtAcceptUnvalidatedBearerTokens); /api/v1 RequireAuthenticatedUser; AgentorPermission RunRead/RunWrite/TraceRead/QueueRead/QueueWrite/ManagementRead/ManagementWrite; EndpointAuthorization on AgentRun/RunQueue/Athanor/Phase13 management+run aliases; GET /ready + GET /api/v1/integrations/status authenticated (integrations + OpsRead); Jwt options validator requires JwtAuthority or JwtAcceptUnvalidatedBearerTokens; Microsoft.AspNetCore.Authentication.JwtBearer package; docs/security/auth-boundary.md + AUTHORIZATION_MATRIX.md + REPO_TRUTH auth; Phase29WebAuthenticationApiTests Header 401/200; RoleBasedAuthorizationDecisionServiceTests service run/management; AgentorAuthOptionsValidatorTests Jwt authority paths. Verification: dotnet test Agentor.sln — 456 passed; verify-harness ExpectedPhase 29 PR120; verify-repo-clean.",
                   "PR119 (2026-05-11): Phase 28 — AgentRun separates ReviewRequestedAt/PausedAt/TerminalAt vs CompletedAt (success-only); HumanReviewWorkflowStatus on aggregate + audit/export/API; EnterRequiresReview no longer sets CompletedAt; Fail/human-reject set TerminalAt not CompletedAt; RequestChanges/Escalate enforce notes + update workflow; Escalated approve requires ActorRole.HumanGovernanceApprover or System (ApplyHumanReviewDecisionHandler); HumanReviewDecision.RelatedPriorActorId + ApplyHumanReviewRequestDto; PendingHumanReviewItemDto exposes pausedAt/reviewRequestedAt/reviewWorkflowStatus; migration 20260511203000_Phase28ReviewWorkflowSemantics + snapshot columns + SQL repair for legacy completed_at misuse; RoleBasedAuthorizationDecisionService governance approver; CoordinationEvaluationMetrics uses CompletedAt??TerminalAt; tests AgentRunTests + ApplyHumanReviewDecisionHandlerTests + MultiStepReviewResumeTests + GetRunAuditExportQueryHandlerTests + ContractDtoCompatibilityTests + EfCoreAgentRunRepositoryTests hr-json reconstitute. Verification: dotnet test Agentor.sln — 449 passed; verify-harness ExpectedPhase 28 PR119; verify-repo-clean.",
                   "PR118 (2026-05-11): Phase 27 — EfCoreAgentRunRepository.SaveAsync merges tracked aggregate (no delete/reinsert): upsert root + steps + tool_calls + policy_decisions; append-only trace_events by id with AgentRunTraceImmutabilityException on rewrite; agent_runs.resume_cursor_json + PlanResumeCursor JSON round-trip; aggregate_version optimistic concurrency + AgentRun.PersistenceConcurrencyVersion; AgentRunPersistenceConcurrencyException + ExceptionHandlingMiddleware 409/400; migration 20260511200000_Phase27AgentRunPersistence + snapshot; EfCoreAgentRunRepositoryTests (re-save dedup trace, tampered trace, resume cursor, HR order, stale concurrency SQLite). Verification: dotnet test Agentor.sln — 443 passed; verify-harness ExpectedPhase 27 PR118; verify-repo-clean.",
                   "PR117.5 (2026-05-11): Phase 26 second pass — EF run_queue_items persists execution_mode/recipe_id/plan_id/tool_key/skill_key/tool_input_json; EfRunQueueStore enqueue/ToRecord; PostgreSQL migration 20260511183000_RunQueueOrchestrationPayload + snapshot RunQueueItemRecord; RunQueueHostedServiceEfSqliteScopeTests (Conexus model, MCP echo, explicit LegacyFakeTool, recipe); EfRunQueueStoreTests orchestration round-trip; StartAgentRunFingerprint includes Tenant/Workspace/Project/KnowledgeScope; ApiContractTests idempotency conflicts on differing ProjectId/KnowledgeScopeId; RunOrchestrationNotFoundException + ExceptionHandlingMiddleware (404 + sanitized 500); AgentRunOrchestrator maps missing plan/recipe/skill to typed errors; AgentRunOrchestrationApiTests unknown plan/recipe/skill; docs REPO_TRUTH queue payload + policy-bundles scoped merge security note. Verification: dotnet test Agentor.sln — 438 passed; verify-harness ExpectedPhase 26 PR117.5; verify-repo-clean.",
@@ -49,6 +50,62 @@
                   "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model — PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle→PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
               ],
     "acceptanceItems":  [
+                            {
+                                "id":  "PR120-001",
+                                "pr":  120,
+                                "description":  "ASP.NET authentication + authorization middleware registered; /api/v1 requires authenticated principal",
+                                "passes":  true,
+                                "evidence":  "Program.cs UseAuthentication/UseAuthorization; MapGroup RequireAuthorization(AgentorAuthorizationPolicies.Authenticated); AgentorAuthenticationExtensions.AddAgentorWebAuthentication"
+                            },
+                            {
+                                "id":  "PR120-002",
+                                "pr":  120,
+                                "description":  "Fake and Header authentication schemes issue principals aligned with dev/header actor flows",
+                                "passes":  true,
+                                "evidence":  "AgentorFakeAuthenticationHandler; AgentorHeaderAuthenticationHandler; Phase29WebAuthenticationApiTests"
+                            },
+                            {
+                                "id":  "PR120-003",
+                                "pr":  120,
+                                "description":  "Jwt mode requires JwtAuthority (AddJwtBearer) or JwtAcceptUnvalidatedBearerTokens (documented trusted-path option)",
+                                "passes":  true,
+                                "evidence":  "AgentorAuthOptionsValidator; AgentorUnvalidatedJwtBearerAuthenticationHandler; AgentorAuthOptionsValidatorTests.Validate_Fails_WhenJwtModeHasNoAuthorityOrUnvalidatedFlag"
+                            },
+                            {
+                                "id":  "PR120-004",
+                                "pr":  120,
+                                "description":  "Run and queue HTTP surface gated by RunRead/RunWrite/TraceRead/QueueRead/QueueWrite",
+                                "passes":  true,
+                                "evidence":  "AgentRunEndpoints.cs; RunQueueEndpoints.cs; RoleBasedAuthorizationDecisionServiceTests.Authorize_Allows_Service_ForRunRead_Denies_RunWrite"
+                            },
+                            {
+                                "id":  "PR120-005",
+                                "pr":  120,
+                                "description":  "Management CRUD and run alias reads gated by ManagementRead/ManagementWrite and RunRead",
+                                "passes":  true,
+                                "evidence":  "Phase13ProductEndpoints.cs ManagementRead/Write + RunRead; RoleBasedAuthorizationDecisionServiceTests.Authorize_Allows_Service_ForManagementRead_Denies_ManagementWrite"
+                            },
+                            {
+                                "id":  "PR120-006",
+                                "pr":  120,
+                                "description":  "Athanor integration routes gated by RunRead (GET) and RunWrite (POST)",
+                                "passes":  true,
+                                "evidence":  "AthanorEndpoints.cs EndpointAuthorization RunRead/RunWrite"
+                            },
+                            {
+                                "id":  "PR120-007",
+                                "pr":  120,
+                                "description":  "Authorization matrix doc lists endpoints, permissions, and role exposure",
+                                "passes":  true,
+                                "evidence":  "docs/security/AUTHORIZATION_MATRIX.md"
+                            },
+                            {
+                                "id":  "PR120-008",
+                                "pr":  120,
+                                "description":  "Readiness + integrations status require auth; integrations additionally requires OpsRead",
+                                "passes":  true,
+                                "evidence":  "SystemEndpoints.cs RequireAuthorization + EndpointAuthorization OpsRead; IntegrationEndpointsTests"
+                            },
                             {
                                 "id":  "PR119-001",
                                 "pr":  119,

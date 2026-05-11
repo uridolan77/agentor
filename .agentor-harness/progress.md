@@ -1,5 +1,25 @@
 # Agentor harness progress
 
+## Phase 29 PR120 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **ASP.NET auth**: **`AddAgentorWebAuthentication`** (Fake / Header / JwtBearer when **`JwtAuthority`** / **`Agentor.JwtUnvalidated`** when **`JwtAcceptUnvalidatedBearerTokens`**) + **`AddAgentorWebAuthorization`** policy **`Agentor.Authenticated`**; **`UseAuthentication`/`UseAuthorization`** in **`Program`**; **`/api/v1/*`** **`RequireAuthorization`**.
+- **Permissions**: **`AgentorPermission`** **`RunRead`/`RunWrite`/`TraceRead`/`QueueRead`/`QueueWrite`/`ManagementRead`/`ManagementWrite`**; **`RoleBasedAuthorizationDecisionService`** service read matrix.
+- **Endpoints**: **`AgentRunEndpoints`**, **`RunQueueEndpoints`**, **`AthanorEndpoints`**, **`Phase13ProductEndpoints`** **`EndpointAuthorization`**; **`SystemEndpoints`** **`/ready`** + **`/api/v1/integrations/status`** (**`OpsRead`**).
+- **Options**: **`AgentorAuthOptions`** JWT fields; **`AgentorAuthOptionsValidator`** Jwt authority / unvalidated requirement.
+- **Docs/tests**: **`docs/security/auth-boundary.md`**, **`docs/security/AUTHORIZATION_MATRIX.md`**, **`docs/REPO_TRUTH.md`**; **`Phase29WebAuthenticationApiTests`**; extended validator + role-based tests.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **456 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 29 -ExpectedHarnessPass PR120`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 30 not started.
+
 ## Phase 28 PR119 (2026-05-11)
 
 **Status**: Complete.

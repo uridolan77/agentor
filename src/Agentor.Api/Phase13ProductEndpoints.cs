@@ -24,25 +24,68 @@ internal static class Phase13ProductEndpoints
 
     private static void MapRecipes(RouteGroupBuilder v1)
     {
-        v1.MapGet("/recipes", (IManagementRecipeStore store) =>
-            Results.Ok(store.List().Select(r => r.ToResponse()).ToList()))
+        v1.MapGet("/recipes", (
+                IManagementRecipeStore store,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext) =>
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                return Results.Ok(store.List().Select(r => r.ToResponse()).ToList());
+            })
             .WithName("ListRecipes")
             .WithTags("Management")
             .WithSummary("Lists declarative recipes registered in the operator artifact store (no execution).");
 
-        v1.MapGet("/recipes/{recipeId:guid}", (Guid recipeId, IManagementRecipeStore store) =>
-        {
-            var r = store.Get(recipeId);
-            return r is null ? Results.NotFound() : Results.Ok(r.ToResponse());
-        })
+        v1.MapGet("/recipes/{recipeId:guid}", (
+                Guid recipeId,
+                IManagementRecipeStore store,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext) =>
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                var r = store.Get(recipeId);
+                return r is null ? Results.NotFound() : Results.Ok(r.ToResponse());
+            })
             .WithName("GetRecipe")
             .WithTags("Management");
 
         v1.MapPost("/recipes", (
                 CreateRecipeRequestDto body,
                 IManagementRecipeStore store,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementWrite);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
                 var id = Guid.NewGuid();
                 if (!ManagementArtifactMapper.TryMap(body, id, out var recipe, out var validation) || recipe is null)
@@ -68,16 +111,47 @@ internal static class Phase13ProductEndpoints
 
     private static void MapPlans(RouteGroupBuilder v1)
     {
-        v1.MapGet("/plans", (IManagementPlanStore store) =>
-            Results.Ok(store.List().Select(p => p.ToResponse()).ToList()))
+        v1.MapGet("/plans", (
+                IManagementPlanStore store,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext) =>
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                return Results.Ok(store.List().Select(p => p.ToResponse()).ToList());
+            })
             .WithName("ListPlans")
             .WithTags("Management");
 
-        v1.MapGet("/plans/{planId:guid}", (Guid planId, IManagementPlanStore store) =>
-        {
-            var p = store.Get(planId);
-            return p is null ? Results.NotFound() : Results.Ok(p.ToResponse());
-        })
+        v1.MapGet("/plans/{planId:guid}", (
+                Guid planId,
+                IManagementPlanStore store,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext) =>
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                var p = store.Get(planId);
+                return p is null ? Results.NotFound() : Results.Ok(p.ToResponse());
+            })
             .WithName("GetPlan")
             .WithTags("Management");
 
@@ -86,8 +160,20 @@ internal static class Phase13ProductEndpoints
                 IManagementRecipeStore recipes,
                 IManagementPlanStore plans,
                 IClock clock,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementWrite);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
                 var recipe = recipes.Get(body.RecipeId);
                 if (recipe is null)
@@ -124,30 +210,74 @@ internal static class Phase13ProductEndpoints
 
     private static void MapSkills(RouteGroupBuilder v1)
     {
-        v1.MapGet("/skills", (ISkillPackageCatalog catalog) =>
-            Results.Ok(catalog.ListRegisteredPackages()
-                .Select(p => new SkillPackageSummaryResponseDto(p.Id, p.SkillKey, p.Version.Value, p.Name))
-                .ToList()))
+        v1.MapGet("/skills", (
+                ISkillPackageCatalog catalog,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext) =>
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                return Results.Ok(catalog.ListRegisteredPackages()
+                    .Select(p => new SkillPackageSummaryResponseDto(p.Id, p.SkillKey, p.Version.Value, p.Name))
+                    .ToList());
+            })
             .WithName("ListSkillPackages")
             .WithTags("Management");
 
-        v1.MapGet("/skills/{skillKey}/{version}", (string skillKey, string version, ISkillPackageCatalog catalog) =>
-        {
-            if (!catalog.TryGet(skillKey, AgentRecipeVersion.Parse(version), out var pkg) || pkg is null)
+        v1.MapGet("/skills/{skillKey}/{version}", (
+                string skillKey,
+                string version,
+                ISkillPackageCatalog catalog,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext) =>
             {
-                return Results.NotFound();
-            }
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
 
-            return Results.Ok(pkg.ToDetailResponse());
-        })
+                if (!catalog.TryGet(skillKey, AgentRecipeVersion.Parse(version), out var pkg) || pkg is null)
+                {
+                    return Results.NotFound();
+                }
+
+                return Results.Ok(pkg.ToDetailResponse());
+            })
             .WithName("GetSkillPackage")
             .WithTags("Management");
 
         v1.MapPost("/skills", (
                 CreateSkillPackageRequestDto body,
                 ISkillPackageCatalog catalog,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementWrite);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
                 var version = AgentRecipeVersion.Parse(body.Version);
                 if (catalog.TryGet(body.SkillKey, version, out var existing) && existing is not null)
@@ -180,26 +310,69 @@ internal static class Phase13ProductEndpoints
 
     private static void MapPolicyProfiles(RouteGroupBuilder v1)
     {
-        v1.MapGet("/policy-profiles", (IManagementPolicyProfileStore store) =>
-            Results.Ok(store.List().Select(p => new PolicyProfileArtifactResponseDto(p.Id, p.Name, p.Rules, p.CreatedAt)).ToList()))
+        v1.MapGet("/policy-profiles", (
+                IManagementPolicyProfileStore store,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext) =>
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                return Results.Ok(store.List().Select(p => new PolicyProfileArtifactResponseDto(p.Id, p.Name, p.Rules, p.CreatedAt)).ToList());
+            })
             .WithName("ListPolicyProfiles")
             .WithTags("Management");
 
-        v1.MapGet("/policy-profiles/{profileId:guid}", (Guid profileId, IManagementPolicyProfileStore store) =>
-        {
-            var p = store.Get(profileId);
-            return p is null
-                ? Results.NotFound()
-                : Results.Ok(new PolicyProfileArtifactResponseDto(p.Id, p.Name, p.Rules, p.CreatedAt));
-        })
+        v1.MapGet("/policy-profiles/{profileId:guid}", (
+                Guid profileId,
+                IManagementPolicyProfileStore store,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
+                HttpContext httpContext) =>
+            {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
+                var p = store.Get(profileId);
+                return p is null
+                    ? Results.NotFound()
+                    : Results.Ok(new PolicyProfileArtifactResponseDto(p.Id, p.Name, p.Rules, p.CreatedAt));
+            })
             .WithName("GetPolicyProfile")
             .WithTags("Management");
 
         v1.MapPost("/policy-profiles", (
                 CreatePolicyProfileRequestDto body,
                 IManagementPolicyProfileStore store,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.ManagementWrite);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
                 if (string.IsNullOrWhiteSpace(body.Name))
                 {
@@ -219,9 +392,21 @@ internal static class Phase13ProductEndpoints
         v1.MapGet("/runs/{runId:guid}/timeline", async (
                 Guid runId,
                 GetRunTimelineQueryHandler handler,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext,
                 CancellationToken cancellationToken) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.RunRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var dto = await handler.HandleAsync(runId, cancellationToken);
                 if (dto is null)
                 {
@@ -238,9 +423,21 @@ internal static class Phase13ProductEndpoints
         v1.MapGet("/runs/{runId:guid}/coordination-view", async (
                 Guid runId,
                 GetRunCoordinationViewQueryHandler handler,
+                ICurrentActorAccessor actorAccessor,
+                IAuthorizationDecisionService authorization,
                 HttpContext httpContext,
                 CancellationToken cancellationToken) =>
             {
+                var authResult = EndpointAuthorization.Require(
+                    httpContext,
+                    actorAccessor,
+                    authorization,
+                    AgentorPermission.RunRead);
+                if (authResult is not null)
+                {
+                    return authResult;
+                }
+
                 var dto = await handler.HandleAsync(runId, cancellationToken);
                 if (dto is null)
                 {

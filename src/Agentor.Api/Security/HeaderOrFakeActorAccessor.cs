@@ -9,7 +9,8 @@ public sealed class HeaderOrFakeActorAccessor(
     IHttpContextAccessor http,
     IOptions<AgentorAuthOptions> authOptions) : ICurrentActorAccessor
 {
-    private static readonly Guid FallbackActorId = Guid.Parse("11111111-1111-4111-8111-111111111111");
+    /// <summary>Stable actor id used for <see cref="AgentorAuthMode.Fake"/> and fake authentication tickets.</summary>
+    public static readonly Guid LocalDevelopmentFakeActorId = Guid.Parse("11111111-1111-4111-8111-111111111111");
 
     public ActorContext Current
     {
@@ -27,7 +28,7 @@ public sealed class HeaderOrFakeActorAccessor(
     }
 
     private static ActorContext ResolveFakeActor()
-        => new(FallbackActorId, "local-dev-actor", ActorRole.HumanOperator);
+        => new(LocalDevelopmentFakeActorId, "local-dev-actor", ActorRole.HumanOperator);
 
     private ActorContext ResolveHeaderActor()
     {

@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 29 PR120 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 29 -ExpectedHarnessPass PR120
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **456 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=29`, `ExpectedHarnessPass=PR120`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 76 / Total 76
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 145 / Total 145
+- Agentor.Infrastructure.Tests: Passed 106 / Total 106
+- Agentor.Api.Tests: Passed 116 / Total 116
+
+Scope:
+
+- completed: Phase 29 PR120 ASP.NET authentication/authorization + new AgentorPermission surface + endpoint gates + docs matrix + tests
+- not started: Phase 30+
+
 ## Phase 28 PR119 (2026-05-11)
 
 ```powershell

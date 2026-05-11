@@ -1,3 +1,4 @@
+using Agentor.Api.Security;
 using Agentor.Application.Athanor;
 using Agentor.Application.Commands;
 using Agentor.Application.Abstractions;
@@ -14,9 +15,21 @@ public static class AthanorEndpoints
         v1.MapGet("/agent-runs/{runId:guid}/athanor/latest-snapshot", async (
             Guid runId,
             GetLatestAthanorSnapshotForRunQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             var outcome = await handler.HandleAsync(runId, cancellationToken);
             if (!outcome.RunExists)
             {
@@ -34,9 +47,21 @@ public static class AthanorEndpoints
             Guid runId,
             string key,
             LookupAthanorCanonicalForRunQueryHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunRead);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             AthanorCanonicalLookupResult outcome;
             try
             {
@@ -70,9 +95,21 @@ public static class AthanorEndpoints
             Guid runId,
             AttachEvidenceProvenanceRequestDto request,
             AttachAthanorEvidenceProvenanceHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunWrite);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Query))
             {
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
@@ -102,9 +139,21 @@ public static class AthanorEndpoints
             Guid runId,
             SubmitAthanorCandidateRequestDto request,
             SubmitAthanorCandidateHandler handler,
+            ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunWrite);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             if (string.IsNullOrWhiteSpace(request.Summary))
             {
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
@@ -135,9 +184,20 @@ public static class AthanorEndpoints
             QueueAthanorReviewRequestDto request,
             QueueAthanorReviewHandler handler,
             ICurrentActorAccessor actorAccessor,
+            IAuthorizationDecisionService authorization,
             HttpContext httpContext,
             CancellationToken cancellationToken) =>
         {
+            var authResult = EndpointAuthorization.Require(
+                httpContext,
+                actorAccessor,
+                authorization,
+                AgentorPermission.RunWrite);
+            if (authResult is not null)
+            {
+                return authResult;
+            }
+
             if (request.CandidateId == Guid.Empty)
             {
                 var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
