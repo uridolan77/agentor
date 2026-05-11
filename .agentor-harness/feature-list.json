@@ -1,10 +1,11 @@
 {
-    "phase": 37,
-    "title": "Phase 37 \u2014 Observability and operator readiness (PR149\u2013PR153)",
-    "harnessPass": "PR153",
+    "phase": 38,
+    "title": "Phase 38 \u2014 Security hardening final pass (PR154\u2013PR158)",
+    "harnessPass": "PR158",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR158 (2026-05-11): Phase 38 security hardening \u2014 PR154 ObservabilityRedactionTests expansion + IntegrationEndpointsTests diagnostics markdown redaction; PR155 AuthorizationMatrixApiTests + AuthorizationMatrixApiFixture + AuthorizationMatrixUnauthenticatedApiTests + AUTHORIZATION_MATRIX automated coverage; PR156 deployment-threat-notes + auth-boundary + SECURITY_RELEASE_CHECKLIST; PR157 ProductionAuthSafeDefaultsApiTests; PR158 docs/security/v1-security-review.md. CI verify-harness ExpectedPhase 38 PR158. Verification: dotnet test Agentor.sln \u2014 589 passed; verify-harness ExpectedPhase 38 PR158; verify-repo-clean.",
         "PR153 (2026-05-11): Phase 37 observability end-to-end \u2014 Application observability primitives (AgentorEventIds, AgentorLogFields, SafeLogContext, ObservabilityRedaction, AgentorCorrelationContext, IRuntimeMetricsRecorder); Infrastructure AgentorRuntimeMetricsRecorder (Agentor.Runtime meter + IServiceScopeFactory for scoped queue/outbox gauges); GovernedSingleToolRunDriver/SequentialAgentPlanExecutor/RuntimePolicyEvaluator/ToolExecutionPipeline/OutboxDispatcher/RunQueueHostedService/IntegrationSurfaceService structured logs + metrics; CorrelationHeadersDelegatingHandler + RequestTracingMiddleware Push; IntegrationHttpError correlation suffix; POST /agent-runs X-Agentor-Run-Trace-Id; GET /api/v1/ops/diagnostics-report (JSON + format=markdown) via OperatorDiagnosticsService; docs/operator/observability.md; docs/OBSERVABILITY.md; AUTHORIZATION_MATRIX diagnostics row; openapi snapshot; tests ObservabilityTests, IntegrationEndpointsTests.GetOpsDiagnosticsReport_ReturnsRedactedSchemaJson, IntegrationHttpErrorTests correlation, ObservabilityRedactionTests, IntegrationSurfaceServiceTests ctor; AddLogging in AddAgentorInfrastructure. Verification: dotnet test Agentor.sln \u2014 544 passed; verify-harness ExpectedPhase 37 PR153; verify-repo-clean.",
         "PR148.5 (2026-05-11): Phase 36 RC closeout polish \u2014 IntegrationSmokeCommandLine (rejects unknown flags + missing --target/--output values with InvalidOperationException; CLI exit code 2); tools/Agentor.IntegrationSmoke/Program.cs delegates to IntegrationSmokeCommandLine.Parse; IntegrationSmokeCommandLineTests in tests/Agentor.Infrastructure.Tests (9 new tests covering missing values, unknown flags, target validation); scripts/release-smoke.ps1 optional -OutputDirectory writes release-smoke-report.json/.md; docs/operator/release-smoke.md report section; docs/developer/MIGRATION_AND_UPGRADE.md drops stale PR75.6 note; harness phase 36 / harnessPass PR148.5; CI verify-harness ExpectedPhase 36 PR148.5. Verification: dotnet test Agentor.sln \u2014 539 passed; verify-harness ExpectedPhase 36 PR148.5; verify-repo-clean.",
         "PR148 (2026-05-11): Phase 36 release candidate consolidation \u2014 README + REPO_TRUTH + docs/RELEASE/v1.0-RC.md + docs/security/SECURITY_RELEASE_CHECKLIST.md + docs/operator/release-smoke.md; docs/developer/MIGRATION_AND_UPGRADE.md migration inventory + provider boundaries; docs/api/API_CONTRACT_SNAPSHOT.md + docs/api/openapi-v1.snapshot.json + OpenApiContractSnapshotTests/OpenApiJsonCanonicalizer; scripts/release-smoke.ps1; auth-boundary cross-link; CI verify-harness ExpectedPhase 36 PR148. Verification: dotnet test Agentor.sln \u2014 530 passed; verify-harness ExpectedPhase 36 PR148; verify-repo-clean.",
@@ -63,6 +64,41 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR158-001",
+                                "pr": 158,
+                                "description": "PR158 v1 security review doc: docs/security/v1-security-review.md (evidence table, boundaries, residual risks)",
+                                "passes": true,
+                                "evidence": "docs/security/v1-security-review.md"
+                            },
+                            {
+                                "id": "PR157-001",
+                                "pr": 157,
+                                "description": "PR157 production Fake auth blocked: ProductionAuthSafeDefaultsApiTests + existing AgentorAuthOptionsValidator",
+                                "passes": true,
+                                "evidence": "tests/Agentor.Api.Tests/ProductionAuthSafeDefaultsApiTests.cs; src/Agentor.Api/Security/AgentorAuthOptionsValidator.cs"
+                            },
+                            {
+                                "id": "PR156-001",
+                                "pr": 156,
+                                "description": "PR156 threat-model refresh: deployment-threat-notes, auth-boundary, SECURITY_RELEASE_CHECKLIST Phase 38 section",
+                                "passes": true,
+                                "evidence": "docs/security/deployment-threat-notes.md; docs/security/auth-boundary.md; docs/security/SECURITY_RELEASE_CHECKLIST.md"
+                            },
+                            {
+                                "id": "PR155-001",
+                                "pr": 155,
+                                "description": "PR155 authorization matrix table tests + unauthenticated Header sampling + matrix doc cross-link",
+                                "passes": true,
+                                "evidence": "tests/Agentor.Api.Tests/AuthorizationMatrixApiTests.cs; tests/Agentor.Api.Tests/AuthorizationMatrixApiFixture.cs; tests/Agentor.Api.Tests/AuthorizationMatrixUnauthenticatedApiTests.cs; docs/security/AUTHORIZATION_MATRIX.md"
+                            },
+                            {
+                                "id": "PR154-001",
+                                "pr": 154,
+                                "description": "PR154 secret leak regression: ObservabilityRedactionTests + diagnostics markdown no-secret assertions",
+                                "passes": true,
+                                "evidence": "tests/Agentor.Application.Tests/ObservabilityRedactionTests.cs; tests/Agentor.Api.Tests/IntegrationEndpointsTests.cs"
+                            },
                             {
                                 "id": "PR153-001",
                                 "pr": 153,

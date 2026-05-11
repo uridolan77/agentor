@@ -1,5 +1,24 @@
 # Agentor harness progress
 
+## Phase 38 PR154–PR158 security hardening final pass (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- Table-driven API authorization matrix tests (`AuthorizationMatrixApiTests`, `AuthorizationMatrixApiFixture`, `AuthorizationMatrixUnauthenticatedApiTests`) aligned with `docs/security/AUTHORIZATION_MATRIX.md`.
+- Redaction regression gates: `ObservabilityRedactionTests` expansion; diagnostics markdown no-secret checks in `IntegrationEndpointsTests`.
+- Production Fake auth startup guard: `ProductionAuthSafeDefaultsApiTests`.
+- Docs: `docs/security/v1-security-review.md`; threat-model updates (`deployment-threat-notes.md`, `auth-boundary.md`, `SECURITY_RELEASE_CHECKLIST.md`); matrix automated coverage footnote.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **589 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 38 -ExpectedHarnessPass PR158`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 39 not started.
+
 ## Phase 37 PR149–PR153 observability and operator readiness (2026-05-11)
 
 **Status**: Complete.
@@ -16,7 +35,7 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 37 -ExpectedHarnessPass PR153`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 38 not started.
+**Scope guard**: Phase 39 not started (Phase 38 completed in PR158).
 
 ## Phase 36 PR148.5 RC closeout polish (2026-05-11)
 

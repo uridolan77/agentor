@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 38 PR158 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 38 -ExpectedHarnessPass PR158
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **589 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=38`, `ExpectedHarnessPass=PR158`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 87 / Total 87
+- Agentor.Application.Tests: Passed 180 / Total 180
+- Agentor.Contracts.Tests: Passed 14 / Total 14
+- Agentor.Infrastructure.Tests: Passed 133 / Total 133
+- Agentor.Api.Tests: Passed 175 / Total 175
+
+Scope:
+
+- completed: PR154–PR158 — security hardening final pass (matrix tests, redaction gates, threat-model docs, production Fake startup guard, v1 security review)
+- not started: Phase 39+
+
 ## Phase 37 PR153 (2026-05-11)
 
 ```powershell

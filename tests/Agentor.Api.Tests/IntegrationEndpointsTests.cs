@@ -260,6 +260,24 @@ public sealed class IntegrationEndpointsTests
         Assert.DoesNotContain("server=", lower);
     }
 
+    [Fact]
+    public async Task GetOpsDiagnosticsReport_MarkdownFormat_ExcludesConnectionStringsAndSecrets()
+    {
+        await using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/v1/ops/diagnostics-report?format=markdown");
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.StartsWith("text/markdown", response.Content.Headers.ContentType?.MediaType, StringComparison.OrdinalIgnoreCase);
+        var lower = body.ToLowerInvariant();
+        Assert.DoesNotContain("postgresql://", lower);
+        Assert.DoesNotContain("password=", lower);
+        Assert.DoesNotContain("bearer ", lower);
+        Assert.DoesNotContain("apikey", lower);
+    }
+
     private sealed class FixedStatusHttpClientFactory(HttpStatusCode statusCode) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>

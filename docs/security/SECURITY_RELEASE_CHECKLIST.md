@@ -1,6 +1,16 @@
-# Security release checklist (Phase 36 / PR147)
+# Security release checklist (Phase 36 / PR147, Phase 38 / PR158)
 
 Use this list before tagging a release candidate or publishing images. It summarizes auth, exposure, and secret-handling evidence already implemented in code and tests.
+
+## Phase 38 security hardening (PR154–PR158)
+
+| PR | Topic | Evidence |
+|----|-------|----------|
+| PR154 | Secret leak / redaction regression gates | `ObservabilityRedactionTests`, `IntegrationEndpointsTests` (ops + diagnostics markdown), existing audit/integration redaction tests listed below |
+| PR155 | Authorization matrix table tests | `AuthorizationMatrixApiTests`, `AuthorizationMatrixApiFixture`, `AuthorizationMatrixUnauthenticatedApiTests`; matrix doc: `docs/security/AUTHORIZATION_MATRIX.md` |
+| PR156 | Threat-model refresh | `docs/security/deployment-threat-notes.md`, `docs/security/auth-boundary.md` (this checklist cross-linked) |
+| PR157 | Production safe defaults | `ProductionAuthSafeDefaultsApiTests`, `AgentorAuthOptionsValidatorTests`, `OpenApiExposureApiTests`, `OutboxHostedServiceTests` |
+| PR158 | Consolidated security review | `docs/security/v1-security-review.md` |
 
 ## Authentication modes
 

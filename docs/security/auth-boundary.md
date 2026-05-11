@@ -2,7 +2,7 @@
 
 This document defines the production identity and authorization boundary: **ASP.NET authentication** (who is signed in) plus **Agentor permissions** (what they may do via `ICurrentActorAccessor` + `IAuthorizationDecisionService`).
 
-See also: **[AUTHORIZATION_MATRIX.md](./AUTHORIZATION_MATRIX.md)** (route → permission → roles) and **[SECURITY_RELEASE_CHECKLIST.md](./SECURITY_RELEASE_CHECKLIST.md)** (Phase 36 RC security consolidation).
+See also: **[AUTHORIZATION_MATRIX.md](./AUTHORIZATION_MATRIX.md)** (route → permission → roles) and **[SECURITY_RELEASE_CHECKLIST.md](./SECURITY_RELEASE_CHECKLIST.md)** (Phase 36 RC security consolidation) and **[v1-security-review.md](./v1-security-review.md)** (Phase 38 evidence and residual risks).
 
 ## Goals
 
@@ -77,6 +77,10 @@ Default role mapping (`RoleBasedAuthorizationDecisionService`):
 - `403 Forbidden` when actor role lacks required permission.
 
 The full route matrix lives in **[AUTHORIZATION_MATRIX.md](./AUTHORIZATION_MATRIX.md)**.
+
+## Readiness probe (`GET /ready`)
+
+The route is annotated with **`RequireAuthorization(Agentor.Authenticated)`** alongside other system routes. Deployers should confirm that their ingress and health-check clients match the chosen **Auth** mode (for example, **Header** mode health checks must send the configured actor id header when probes hit Agentor directly). Phase 38 matrix sampling for unauthenticated **Header** mode focused on `/api/v1/*` operational routes; see **`docs/security/v1-security-review.md`**.
 
 ## Scope note (SCOPE-001)
 

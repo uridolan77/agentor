@@ -45,3 +45,13 @@ This matrix maps **HTTP routes** to **`AgentorPermission`** checks and default *
 | `POST /api/v1/reviews/{id}/decisions` | `GovernanceReviewWrite` | Allowed | Denied | Review alias. |
 
 **Header mode note**: ASP.NET authentication builds a principal with role **`HumanOperator`** from the actor id header; elevated roles such as **`HumanGovernanceApprover`** require **JWT** (or future header extensions) so claims carry the correct **`ActorRole`**.
+
+## Automated matrix coverage (Phase 38)
+
+Table-driven API tests mirror this matrix for the **`Service`** role (forbidden vs allowed reads), **`HumanGovernanceApprover`** / **`System`** samples, and unauthenticated sampling under **Header** mode on selected `/api/v1/*` routes:
+
+- `tests/Agentor.Api.Tests/AuthorizationMatrixApiTests.cs`
+- `tests/Agentor.Api.Tests/AuthorizationMatrixApiFixture.cs`
+- `tests/Agentor.Api.Tests/AuthorizationMatrixUnauthenticatedApiTests.cs`
+
+When you add or change a protected route, update this table and extend those tests (including POST bodies where validation runs after authorization).

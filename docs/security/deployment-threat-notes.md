@@ -39,6 +39,31 @@ This note captures operational risks and deployment controls for Agentor auth mo
 - Risk: enabled dispatch with `NoOpOutboxSink` marks outbox messages succeeded without delivery.
 - Control: `OutboxHostedService` throws outside Development/Test when `OutboxDispatch:Enabled=true` and sink is no-op unless `OutboxDispatch:AllowNoOpSinkOutsideDevelopment=true` is explicitly set.
 
+8. Trusted ingress assumptions
+
+- Risk: reverse proxies, service meshes, and API gateways must align with the configured **Auth** mode. Misconfiguration can expose Header-mode spoofing or bypass intended JWT validation.
+- Control: document ingress ownership; prefer **Jwt** with `JwtAuthority` in production; terminate TLS and client trust at the edge.
+
+9. OpenAPI document exposure
+
+- Risk: the OpenAPI JSON document can describe internal surface area if exposed on production URLs.
+- Control: Production maps `/openapi/v1.json` only when `Agentor:OpenApi:Enabled=true` (see `Program.cs`, `OpenApiExposureApiTests`).
+
+10. Integration smoke and Athanor write probes
+
+- Risk: automated smoke tools that perform writes against real backends can corrupt environments if pointed at production-like targets.
+- Control: keep smoke defaults disabled; gate write paths behind explicit configuration and operator runbooks (`docs/operator/integration-smoke.md`, `docs/operator/release-smoke.md`).
+
+11. Diagnostics and structured logging leak paths
+
+- Risk: operator bundles, dashboards, or logs could echo payloads, tokens, or connection strings.
+- Control: diagnostics builder avoids secrets; ops DTOs sanitize errors; `ObservabilityRedaction` and JSON redaction policies back audit/eval exports (see `docs/security/v1-security-review.md`).
+
+12. Queue / outbox operational abuse
+
+- Risk: queue flood, lease starvation, or outbox retry storms can impact availability even when authz is correct.
+- Control: durable queue/outbox implementations enforce worker identity on state transitions; rate limits and ingress controls are deployment responsibilities.
+
 ## Deployment recommendations
 
 1. Prefer `Jwt` mode for production.
