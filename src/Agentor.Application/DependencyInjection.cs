@@ -1,5 +1,6 @@
 using Agentor.Application.Athanor;
 using Agentor.Application.Commands;
+using Agentor.Application.HumanReview;
 using Agentor.Application.Queries;
 using Agentor.Application.Reliability;
 using Agentor.Application.Services;
@@ -20,6 +21,11 @@ public static class DependencyInjection
         services.AddScoped<GetAgentRunStepsQueryHandler>();
         services.AddScoped<GetAgentRunToolCallsQueryHandler>();
 
+        services.AddScoped<ReviewTraceWriter>();
+        services.AddScoped<ReviewPolicyReevaluationService>();
+        services.AddScoped<PlanResumeOrchestrator>();
+        services.AddScoped<ReviewedToolContinuationService>();
+        services.AddScoped<HumanReviewDecisionApplicator>();
         services.AddScoped<ApplyHumanReviewDecisionHandler>();
         services.AddScoped<GetRunAuditExportQueryHandler>();
 

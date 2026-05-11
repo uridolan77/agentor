@@ -1,5 +1,27 @@
 # Agentor harness progress
 
+## Phase 31 PR122 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **`HumanReviewDecisionApplicator`** — command/run validation + **`HumanReviewDecision`** + **`ApplyHumanReviewDecision`**.
+- **`ReviewedToolContinuationService`** — locate running step/tool, post-approve policy + pipeline, complete vs **`PlanResumeOrchestrator`**.
+- **`PlanResumeOrchestrator`** — multi-step **`ResumeRemainingPlanStepsAsync`** (failure policies, **`RecordPlanResumeCursor`**, skill unsupported).
+- **`ReviewPolicyReevaluationService`** — **`EvaluateAfterHumanApprovalAsync`** vs **`EvaluateResumedPlanStepAsync`** (**`PolicyEvaluationContext.ResumeAfterApprovedHumanReview`** only on the former).
+- **`ReviewTraceWriter`** — trace helpers for post-review and resumed-plan paths.
+- **`ApplyHumanReviewDecisionHandler`** — **`IAgentRunRepository`** + above services only.
+- **Tests**: **`AgentorTestComposition.CreateApplyHumanReviewDecisionHandler`**; **`HumanReviewDecisionApplicatorTests`**; **`ReviewPolicyReevaluationServiceTests`**; existing handler/plan/fixture tests rewired.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **468 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 31 -ExpectedHarnessPass PR122`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 32 not started.
+
 ## Phase 30 PR121 (2026-05-11)
 
 **Status**: Complete.

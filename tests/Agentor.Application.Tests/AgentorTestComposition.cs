@@ -1,6 +1,7 @@
 using Agentor.Application.Abstractions;
 using Agentor.Application.Commands;
 using Agentor.Application.Coordination;
+using Agentor.Application.HumanReview;
 using Agentor.Application.Options;
 using Agentor.Application.Orchestration;
 using Agentor.Infrastructure;
@@ -91,5 +92,23 @@ internal static class AgentorTestComposition
     {
         var executor = CreateSequentialPlanExecutor(toolRegistry, policyEvaluator, clock, toolExecutionOptions, guardEvaluator, skillCatalog);
         return new ExecuteAgentPlanHandler(executor, repository);
+    }
+
+    public static ApplyHumanReviewDecisionHandler CreateApplyHumanReviewDecisionHandler(
+        IAgentRunRepository repository,
+        IPolicyEvaluator policyEvaluator,
+        IToolRegistry toolRegistry,
+        IClock clock,
+        ICurrentActorAccessor actorAccessor,
+        ToolExecutionOptions? toolExecutionOptions = null)
+    {
+        var opts = Microsoft.Extensions.Options.Options.Create(toolExecutionOptions ?? new ToolExecutionOptions());
+        var pipeline = new ToolExecutionPipeline(clock, opts);
+        var traceWriter = new ReviewTraceWriter(clock);
+        var policyReeval = new ReviewPolicyReevaluationService(policyEvaluator);
+        var planResume = new PlanResumeOrchestrator(toolRegistry, policyReeval, pipeline, clock, traceWriter);
+        var continuation = new ReviewedToolContinuationService(toolRegistry, policyReeval, pipeline, clock, traceWriter, planResume);
+        var applicator = new HumanReviewDecisionApplicator(clock, actorAccessor);
+        return new ApplyHumanReviewDecisionHandler(repository, applicator, continuation);
     }
 }

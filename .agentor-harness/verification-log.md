@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 31 PR122 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 31 -ExpectedHarnessPass PR122
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **468 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=31`, `ExpectedHarnessPass=PR122`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 80 / Total 80
+- Agentor.Contracts.Tests: Passed 13 / Total 13
+- Agentor.Application.Tests: Passed 153 / Total 153
+- Agentor.Infrastructure.Tests: Passed 106 / Total 106
+- Agentor.Api.Tests: Passed 116 / Total 116
+
+Scope:
+
+- completed: Phase 31 PR122 — human review handler refactor into **`HumanReview/*`** services + tests
+- not started: Phase 32+
+
 ## Phase 30 PR121 (2026-05-11)
 
 ```powershell

@@ -9,7 +9,6 @@ using Agentor.Infrastructure;
 using Agentor.Infrastructure.Conexus;
 using Agentor.Infrastructure.ExternalAgents;
 using Agentor.Infrastructure.Mcp;
-using MicrosoftOptions = Microsoft.Extensions.Options.Options;
 using Xunit;
 
 namespace Agentor.Application.Tests;
@@ -139,8 +138,8 @@ public sealed class MultiStepReviewResumeTests
     {
         var registry = MakeRegistry(toolExecutor);
         var clock = new SystemClock();
-        var pipeline = new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions()));
-        return new ApplyHumanReviewDecisionHandler(repo, policy, registry, pipeline, new FixedActorAccessor(actorRole), clock);
+        return AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor(actorRole));
     }
 
     // ───────────────────────────────────────────────────────────────────────
@@ -349,10 +348,8 @@ public sealed class MultiStepReviewResumeTests
         await executor.ExecuteAsync(run, plan, CancellationToken.None);
 
         await repo.SaveAsync(run, CancellationToken.None);
-        var handler = new ApplyHumanReviewDecisionHandler(
-            repo, policy, registry,
-            new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions())),
-            new FixedActorAccessor(), clock);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor());
 
         var result = await handler.HandleAsync(
             new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
@@ -394,10 +391,8 @@ public sealed class MultiStepReviewResumeTests
         await executor.ExecuteAsync(run, plan, CancellationToken.None);
 
         await repo.SaveAsync(run, CancellationToken.None);
-        var handler = new ApplyHumanReviewDecisionHandler(
-            repo, policy, registry,
-            new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions())),
-            new FixedActorAccessor(), clock);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor());
 
         var result = await handler.HandleAsync(
             new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
@@ -442,10 +437,9 @@ public sealed class MultiStepReviewResumeTests
         await executor.ExecuteAsync(run, plan, CancellationToken.None);
 
         await repo.SaveAsync(run, CancellationToken.None);
-        var handler = new ApplyHumanReviewDecisionHandler(
-            repo, policy, registry,
-            new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions { MaxAttempts = 1 })),
-            new FixedActorAccessor(), clock);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor(),
+            new ToolExecutionOptions { MaxAttempts = 1 });
 
         var firstApproval = await handler.HandleAsync(
             new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
@@ -502,10 +496,9 @@ public sealed class MultiStepReviewResumeTests
         await executor.ExecuteAsync(run, plan, CancellationToken.None);
 
         await repo.SaveAsync(run, CancellationToken.None);
-        var handler = new ApplyHumanReviewDecisionHandler(
-            repo, policy, registry,
-            new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions { MaxAttempts = 1 })),
-            new FixedActorAccessor(), clock);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor(),
+            new ToolExecutionOptions { MaxAttempts = 1 });
 
         var firstApproval = await handler.HandleAsync(
             new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),
@@ -574,10 +567,8 @@ public sealed class MultiStepReviewResumeTests
         await repo.SaveAsync(run, CancellationToken.None);
 
         // First approval: s2 executes (policy clears it on resume context), s3 hits review again
-        var handler = new ApplyHumanReviewDecisionHandler(
-            repo, policy, registry,
-            new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions())),
-            new FixedActorAccessor(), clock);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixedActorAccessor());
 
         var result = await handler.HandleAsync(
             new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),

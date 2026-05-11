@@ -8,7 +8,6 @@ using Agentor.Domain;
 using Agentor.Domain.Enums;
 using Agentor.Domain.Governance;
 using Agentor.Infrastructure;
-using MicrosoftOptions = Microsoft.Extensions.Options.Options;
 using Xunit;
 
 namespace Agentor.Application.Tests;
@@ -165,9 +164,8 @@ public sealed class Phase18FixtureTests
         var repo = new InMemoryAgentRunRepository();
         await repo.SaveAsync(run, CancellationToken.None);
 
-        var pipeline = new ToolExecutionPipeline(clock, MicrosoftOptions.Create(new ToolExecutionOptions()));
-        var handler = new ApplyHumanReviewDecisionHandler(
-            repo, policy, registry, pipeline, new FixtureActorAccessor(), clock);
+        var handler = AgentorTestComposition.CreateApplyHumanReviewDecisionHandler(
+            repo, policy, registry, clock, new FixtureActorAccessor());
 
         var result = await handler.HandleAsync(
             new ApplyHumanReviewDecisionCommand(run.Id, ReviewDecisionKind.Approve, null),

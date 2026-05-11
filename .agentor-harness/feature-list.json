@@ -1,10 +1,11 @@
 {
-    "phase":  30,
-    "title":  "Phase 30 — PR121 structured tool I/O v2 (ToolPayload, JSON adapters, audit body+summary)",
-    "harnessPass":  "PR121",
+    "phase":  31,
+    "title":  "Phase 31 — PR122 human review handler refactor (HumanReview/* services, thin handler)",
+    "harnessPass":  "PR122",
     "encoding":  "utf-8",
     "lastVerified":  "2026-05-11",
     "notes":  [
+                  "PR122 (2026-05-11): Phase 31 — Extract HumanReviewDecisionApplicator, ReviewedToolContinuationService, PlanResumeOrchestrator, ReviewPolicyReevaluationService, ReviewTraceWriter (src/Agentor.Application/HumanReview/); ApplyHumanReviewDecisionHandler thin (repo + applicator + continuation); AddAgentorApplication scoped registrations; AgentorTestComposition.CreateApplyHumanReviewDecisionHandler; HumanReviewDecisionApplicatorTests + ReviewPolicyReevaluationServiceTests; ApplyHumanReviewDecisionHandlerTests/MultiStepReviewResumeTests/Phase18FixtureTests updated. Verification: dotnet test Agentor.sln — 468 passed; verify-harness ExpectedPhase 31 PR122; verify-repo-clean.",
                   "PR121 (2026-05-11): Phase 30 — Domain ToolPayload (JsonObject body + schemaId/contentType + summary) + ToolPayloadJsonConverter; ToolCall InputPayload/OutputPayload + persisted v2 JSON with legacy flat-object fallback; ToolExecutionRequest/ToolExecutionResult/McpToolInvocationResult use ToolPayload; PolicyEvaluationRequest callers use ToPolicyEvaluationDictionary where needed; ModelCallRequestDto/ModelCallResultDto wrap ToolPayload + FromLegacy factories; ExternalAgentInvocationRequestDto Arguments ToolPayload; IMcpRegistryClient.InvokeToolAsync ToolPayload; HTTP MCP/Conexus/External-agent JSON wiring; GetRunAuditExportQueryHandler steps.toolCalls input/output as body+summary+metadata (redaction); docs/REPO_TRUTH structured I/O bullet; tests ToolPayloadTests + GetRunAuditExportQueryHandlerTests nested redaction + updated adapter tests. Verification: dotnet test Agentor.sln — 461 passed; verify-harness ExpectedPhase 30 PR121; verify-repo-clean.",
                   "PR120 (2026-05-11): Phase 29 — AddAuthentication/AddAuthorization + UseAuthentication/UseAuthorization; Fake/Header/Jwt schemes (JwtBearer when JwtAuthority; Agentor.JwtUnvalidated when JwtAcceptUnvalidatedBearerTokens); /api/v1 RequireAuthenticatedUser; AgentorPermission RunRead/RunWrite/TraceRead/QueueRead/QueueWrite/ManagementRead/ManagementWrite; EndpointAuthorization on AgentRun/RunQueue/Athanor/Phase13 management+run aliases; GET /ready + GET /api/v1/integrations/status authenticated (integrations + OpsRead); Jwt options validator requires JwtAuthority or JwtAcceptUnvalidatedBearerTokens; Microsoft.AspNetCore.Authentication.JwtBearer package; docs/security/auth-boundary.md + AUTHORIZATION_MATRIX.md + REPO_TRUTH auth; Phase29WebAuthenticationApiTests Header 401/200; RoleBasedAuthorizationDecisionServiceTests service run/management; AgentorAuthOptionsValidatorTests Jwt authority paths. Verification: dotnet test Agentor.sln — 456 passed; verify-harness ExpectedPhase 29 PR120; verify-repo-clean.",
                   "PR119 (2026-05-11): Phase 28 — AgentRun separates ReviewRequestedAt/PausedAt/TerminalAt vs CompletedAt (success-only); HumanReviewWorkflowStatus on aggregate + audit/export/API; EnterRequiresReview no longer sets CompletedAt; Fail/human-reject set TerminalAt not CompletedAt; RequestChanges/Escalate enforce notes + update workflow; Escalated approve requires ActorRole.HumanGovernanceApprover or System (ApplyHumanReviewDecisionHandler); HumanReviewDecision.RelatedPriorActorId + ApplyHumanReviewRequestDto; PendingHumanReviewItemDto exposes pausedAt/reviewRequestedAt/reviewWorkflowStatus; migration 20260511203000_Phase28ReviewWorkflowSemantics + snapshot columns + SQL repair for legacy completed_at misuse; RoleBasedAuthorizationDecisionService governance approver; CoordinationEvaluationMetrics uses CompletedAt??TerminalAt; tests AgentRunTests + ApplyHumanReviewDecisionHandlerTests + MultiStepReviewResumeTests + GetRunAuditExportQueryHandlerTests + ContractDtoCompatibilityTests + EfCoreAgentRunRepositoryTests hr-json reconstitute. Verification: dotnet test Agentor.sln — 449 passed; verify-harness ExpectedPhase 28 PR119; verify-repo-clean.",
@@ -51,6 +52,27 @@
                   "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model — PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle→PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
               ],
     "acceptanceItems":  [
+                            {
+                                "id":  "PR122-001",
+                                "pr":  122,
+                                "description":  "Human review resume split into HumanReviewDecisionApplicator + ReviewedToolContinuationService + PlanResumeOrchestrator + ReviewPolicyReevaluationService + ReviewTraceWriter (scoped DI)",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/HumanReview/*.cs; src/Agentor.Application/DependencyInjection.cs AddScoped registrations"
+                            },
+                            {
+                                "id":  "PR122-002",
+                                "pr":  122,
+                                "description":  "ApplyHumanReviewDecisionHandler remains entry point with unchanged command shape; behavior covered by existing application tests",
+                                "passes":  true,
+                                "evidence":  "src/Agentor.Application/Commands/ApplyHumanReviewDecisionHandler.cs; tests/Agentor.Application.Tests/ApplyHumanReviewDecisionHandlerTests.cs; MultiStepReviewResumeTests.cs; Phase18FixtureTests.cs"
+                            },
+                            {
+                                "id":  "PR122-003",
+                                "pr":  122,
+                                "description":  "Focused tests for applicator validation and policy reevaluation request context (resume vs plan step)",
+                                "passes":  true,
+                                "evidence":  "tests/Agentor.Application.Tests/HumanReviewDecisionApplicatorTests.cs; tests/Agentor.Application.Tests/ReviewPolicyReevaluationServiceTests.cs"
+                            },
                             {
                                 "id":  "PR121-001",
                                 "pr":  121,
