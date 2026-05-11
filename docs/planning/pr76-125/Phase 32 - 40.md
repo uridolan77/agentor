@@ -476,49 +476,116 @@ passes:false = 0 or explicitly accepted release deferrals
 
 ---
 
-# Phase 37 — Observability and operator readiness
+# Refined Phase 37 — Observability and operator readiness
 
-**PR149–PR153**
+The current plan is good, but I would make it more concrete and safer. Observability must not become a secret-leak channel.
 
-Purpose: make the system diagnosable.
+## PR149 — Observability primitives and structured logs
 
-## PR149 — Structured logs
+Instead of only “structured logs,” make this the foundation PR.
 
-Add safe structured log events for:
-
-```text
-run started/completed/failed
-policy allow/deny/review
-tool started/completed/failed
-queue claim/complete/fail
-outbox dispatch
-integration errors
-```
-
-No payload bodies.
-
-## PR150 — Metrics surface
-
-Add counters/gauges:
+Add:
 
 ```text
-run count
-failed count
-requires-review count
-queue depth
-outbox pending
-policy denies
-integration failures
+AgentorEventIds
+AgentorLogFields
+SafeLogContext
+ObservabilityRedaction helper if needed
 ```
 
-## PR151 — Trace correlation
+Structured log events:
+
+```text
+run.started
+run.completed
+run.failed
+run.requires_review
+
+policy.allowed
+policy.denied
+policy.requires_review
+
+tool.started
+tool.completed
+tool.failed
+
+queue.claimed
+queue.completed
+queue.failed
+
+outbox.dispatch.started
+outbox.dispatch.completed
+outbox.dispatch.failed
+
+integration.error
+```
+
+Rules:
+
+```text
+- No ToolPayload.Body
+- No raw prompts
+- No raw external response bodies
+- No authorization headers
+- No tokens
+- IDs, status, counts, durations, tool keys, policy effect are allowed
+```
 
 Acceptance:
 
 ```text
-- Every API response has trace id.
-- Run trace id correlates with logs.
-- Integration errors carry trace id where possible.
+- Unit tests or log-capture tests prove no payload body is logged.
+- Logs include runId where available.
+- Integration errors use redacted/truncated text.
+```
+
+## PR150 — Metrics surface
+
+Use `.NET Meter` / `System.Diagnostics.Metrics` first, not a custom database model.
+
+Counters/gauges:
+
+```text
+agentor.runs.started
+agentor.runs.completed
+agentor.runs.failed
+agentor.runs.requires_review
+agentor.policy.allowed
+agentor.policy.denied
+agentor.policy.requires_review
+agentor.tools.started
+agentor.tools.completed
+agentor.tools.failed
+agentor.queue.depth
+agentor.outbox.pending
+agentor.integrations.errors
+```
+
+Acceptance:
+
+```text
+- Metrics are emitted with safe dimensions only.
+- Dimensions: toolKey, policyEffect, integrationName, status.
+- No user payloads or raw objectives as tags.
+```
+
+## PR151 — Trace correlation
+
+Add a correlation policy:
+
+```text
+- Every API response gets X-Agentor-Trace-Id.
+- Every request has a correlation id in logs.
+- Existing run TraceId is linked to request trace id where possible.
+- Integration HTTP errors include correlation id where available.
+```
+
+Acceptance:
+
+```text
+- API tests prove X-Agentor-Trace-Id exists.
+- Run-created response can be correlated with logs/trace id.
+- Integration error handling preserves correlation metadata without leaking secrets.
 ```
 
 ## PR152 — Operator diagnostics bundle
@@ -530,6 +597,43 @@ diagnostics-report.json
 diagnostics-report.md
 ```
 
+Include safe summaries:
+
+```text
+runtime version
+environment
+auth mode summary
+OpenAPI exposure status
+integration readiness
+queue depth
+outbox pending
+recent failed runs count
+review backlog count
+policy profile/bundle status
+evaluation artifact presence
+migration/provider info
+```
+
+Do not include:
+
+```text
+ToolPayload.Body
+raw audit packet contents
+raw exception stack traces
+tokens
+connection strings
+headers
+full upstream error bodies
+```
+
+Acceptance:
+
+```text
+- Diagnostics report is redacted.
+- JSON and Markdown outputs are deterministic enough for tests.
+- Operator doc explains proof boundaries.
+```
+
 ## PR153 — Observability docs
 
 Add:
@@ -538,13 +642,23 @@ Add:
 docs/operator/observability.md
 ```
 
+Cover:
+
+```text
+logs
+metrics
+trace correlation
+diagnostics bundle
+safe fields
+forbidden fields
+how to use diagnostics during incidents
+```
+
 ---
 
-# Phase 38 — Security hardening final pass
+# Refined Phase 38 — Security hardening final pass
 
-**PR154–PR158**
-
-Purpose: one dedicated adversarial review pass.
+This phase should depend on Phase 37 because it must audit logs and diagnostics too.
 
 ## PR154 — Secret leak audit
 
@@ -554,23 +668,41 @@ Scan and test:
 audit export
 timeline
 operator dashboard
-logs
+diagnostics report
+structured logs
 evaluation reports
 integration smoke reports
+release smoke reports if added
 queue/outbox errors
+integration error messages
 ```
-
-## PR155 — Permission matrix tests
 
 Acceptance:
 
 ```text
-Every protected route has explicit tests for:
-- unauthenticated
-- Service
-- HumanOperator
-- HumanGovernanceApprover
-- System
+- Redaction tests include nested JSON, summaries, diagnostics, logs.
+- Known secret keys are consistently redacted.
+```
+
+## PR155 — Permission matrix tests
+
+This is important but can get large. Do not test every route manually in one giant file. Add a table-driven route matrix.
+
+Roles:
+
+```text
+unauthenticated
+Service
+HumanOperator
+HumanGovernanceApprover
+System
+```
+
+Acceptance:
+
+```text
+- Every protected route in AUTHORIZATION_MATRIX.md has a matching test row.
+- Docs and tests cannot drift silently.
 ```
 
 ## PR156 — Threat-model update
@@ -580,6 +712,20 @@ Update:
 ```text
 docs/security/deployment-threat-notes.md
 docs/security/auth-boundary.md
+docs/security/SECURITY_RELEASE_CHECKLIST.md
+```
+
+Include:
+
+```text
+trusted ingress assumptions
+Header auth risks
+Jwt unvalidated-token escape hatch
+Fake auth production block
+OpenAPI exposure
+integration smoke write gate
+diagnostics/logging leak risks
+queue/outbox operational risks
 ```
 
 ## PR157 — Safe defaults audit
@@ -592,7 +738,9 @@ OpenAPI disabled
 unvalidated JWT blocked
 NoOp outbox sink blocked
 workers disabled unless configured
-write smoke disabled
+Athanor write smoke disabled
+integration smoke disabled
+diagnostics contains no secrets
 ```
 
 ## PR158 — Security review report
@@ -603,26 +751,27 @@ Add:
 docs/security/v1-security-review.md
 ```
 
+This should be honest: evidence, boundaries, remaining risks, and production assumptions.
+
 ---
 
-# Phase 39 — Performance and stress baseline
+# Refined Phase 39 — Performance and stress baseline
 
-**PR159–PR163**
-
-Purpose: know the runtime limits before release.
+Good as written, but keep it non-marketing and local-first.
 
 ## PR159 — Benchmark suite update
 
-Bench:
+Benchmark:
 
 ```text
 single-tool run
 plan run
 policy evaluation
 audit export
-timeline
+timeline generation
 queue claim
 EF save
+diagnostics report generation
 ```
 
 ## PR160 — Load smoke
@@ -630,38 +779,63 @@ EF save
 Local script:
 
 ```text
-N runs
-M queue items
-review-required workload
-mixed tool workload
+scripts/load-smoke.ps1
+```
+
+Config:
+
+```text
+-runCount
+-queueCount
+-concurrency
+-workload fake|review|required|mixed
+-outputDirectory
 ```
 
 ## PR161 — Persistence stress
 
-Test:
+Tests:
 
 ```text
 many traces
 many tool calls
 many policy decisions
-resume cursor persistence
+large resume cursor
+large audit export
+queue/outbox volume
 ```
 
 ## PR162 — Evaluation performance report
 
-Tie benchmark deltas into Phase 32 reports.
+Connect performance outputs to Phase 32 reporting:
+
+```text
+performance-report.json
+performance-report.md
+performance-summary.csv
+```
 
 ## PR163 — Performance docs
 
-State realistic limits, not marketing claims.
+Add:
+
+```text
+docs/developer/performance-baseline.md
+```
+
+Tone:
+
+```text
+measured on local/dev hardware
+not production SLOs
+not scalability claims
+```
 
 ---
 
-# Phase 40 — v1 release closure
+# Refined Phase 40 — v1 release closure
 
-**PR164–PR170**
-
-Purpose: final release discipline.
+This is the correct final discipline phase.
 
 ## PR164 — Final deferred-item audit
 
@@ -669,7 +843,18 @@ Acceptance:
 
 ```text
 passes:false = 0
-or release deferrals explicitly accepted
+or explicit accepted release deferrals
+```
+
+Also scan:
+
+```text
+TODO
+FIXME
+NotImplementedException
+NotSupportedException
+unsupported
+future work
 ```
 
 ## PR165 — Versioning and changelog
@@ -678,8 +863,8 @@ Add:
 
 ```text
 CHANGELOG.md
+docs/RELEASE/v1.0-RC-TAGGING.md
 version endpoint final value
-release tag docs
 ```
 
 ## PR166 — Deployment guide
@@ -692,21 +877,48 @@ docs/deployment/staging.md
 docs/deployment/production.md
 ```
 
+Must include:
+
+```text
+PostgreSQL configuration
+auth mode selection
+OpenAPI gating
+workers/outbox enablement
+integration endpoint configuration
+secret management
+```
+
 ## PR167 — Backup / restore / migration guide
 
-Especially for EF database.
+Extend the current migration doc into an operator guide:
+
+```text
+backup before migration
+restore procedure
+rollback application image
+queue/outbox considerations
+migration verification
+```
 
 ## PR168 — Operator runbook
 
 Add:
 
 ```text
-incident triage
+docs/operator/runbook.md
+```
+
+Cases:
+
+```text
 queue stuck
 outbox stuck
 integration down
 review backlog
 policy misconfiguration
+auth failures
+OpenAPI accidentally exposed
+diagnostics capture
 ```
 
 ## PR169 — Final RC verification
@@ -714,19 +926,21 @@ policy misconfiguration
 Full commands:
 
 ```text
-restore
-build
-test
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
 verify-harness
 verify-repo-clean
-migration list
+dotnet ef migrations list
 docker build
 release smoke
 evaluation report
 security checklist
+diagnostics report
+benchmark compile
 ```
 
-## PR170 — v1.0 release candidate
+## PR170 — v1.0 release candidate declaration
 
 Acceptance:
 
@@ -736,76 +950,103 @@ harnessPass: PR170
 release candidate declared
 ```
 
+Add final doc:
+
+```text
+docs/RELEASE/v1.0-RC-FINAL.md
+```
+
 ---
 
-# Priority order
+# Important change to the planning file
 
-The highest-value sequence is:
-
-```text
-1. PR122.5 — close Phase 31 properly
-2. Phase 32 — evaluation science v2
-3. Phase 33 — structured queue payload
-4. Phase 34 — skill resume support
-5. Phase 35 — production integration smoke
-6. Phase 36 — release candidate consolidation
-```
-
-The most dangerous gaps are:
+The current `Phase 32 - 40.md` should now be split or updated because Phases 32–36 are done. Keep history, but add a new active section:
 
 ```text
-- Skill resume unsupported
-- Queue payload not fully ToolPayload-native
-- Real integrations not smoke-proven
-- Evaluation still not comparative enough
-- Release docs likely to drift unless consolidated
+# Active remaining roadmap after Phase 36
+
+- PR148.5 — RC closeout polish
+- Phase 37 — Observability and operator readiness
+- Phase 38 — Security hardening final pass
+- Phase 39 — Performance and stress baseline
+- Phase 40 — v1 release closure
 ```
 
-# Immediate next prompt after PR122.5
+Do not leave the stale “highest-value sequence” that starts with PR122.5 / Phase 32. That was correct earlier, but now it is misleading.
 
-```text id="ei9e73"
-We are starting Phase 32 — Evaluation science v2.
+---
+
+# Immediate next prompt
+
+Use this after PR148.5, or include the planning-doc cleanup inside PR148.5.
+
+```text
+We are implementing PR148.5 — RC closeout polish and active roadmap cleanup.
+
+This is a small second-pass correction after Phase 36. Do not start Phase 37.
 
 Current known state:
-- PR122.5 is complete and harness-accepted.
-- Phase 31 is closed.
-- passes:false is 0.
-- Existing evaluation supports deterministic fixtures, quality gates, coordination metrics, and reports, but not full comparative evaluation.
-- Phase 32 planning exists but has stale internal numbering that must be corrected.
-- Phase 33 structured queue payload work must not start.
+- Phase 36 PR143–PR148 is harness-accepted.
+- Current harness is phase 36 / PR148 with 530 tests passing.
+- Active deferred harness rows = 0.
+- Phase 37 observability has not started.
+- Phase 32–36 are already complete, but docs/planning/pr76-125/Phase 32 - 40.md still contains stale “next priority” wording that starts from PR122.5 / Phase 32.
 
-Implement Phase 32 only:
-1. PR123 — Evaluation dataset registry.
-2. PR124 — Baseline and delta model.
-3. PR125 — Aggregate reports.
-4. PR126 — Regression thresholds.
-5. PR127 — CI/artifact publishing.
+Implement only:
+1. Harden Agentor.IntegrationSmoke CLI parsing:
+   - --target / -t with no value fails with exit code 2.
+   - --output / -o with no value fails with exit code 2.
+   - unknown flags fail with exit code 2.
+   - add tests if practical.
+
+2. Clean stale migration doc note:
+   - remove or move the old PR75.6 note from docs/developer/MIGRATION_AND_UPGRADE.md.
+   - preserve migration inventory and provider support boundaries.
+
+3. Update active roadmap section:
+   - In docs/planning/pr76-125/Phase 32 - 40.md, keep historical Phase 32–36 content but mark it completed, or add a clear “Active remaining roadmap after Phase 36” section.
+   - Remove or supersede stale priority text that says the next steps are PR122.5 / Phase 32.
+   - Active next sequence should be:
+     - Phase 37 Observability
+     - Phase 38 Security hardening
+     - Phase 39 Performance/stress
+     - Phase 40 v1 release closure
+
+4. Optional release smoke report:
+   - If low-risk, add -OutputDirectory and write release-smoke-report.json / .md.
+   - If not, document as Phase 37 operator artifact work.
+
+5. Update harness:
+   - current-pr.md: Phase 36 PR143–PR148 + PR148.5 complete.
+   - feature-list.json: phase 36, harnessPass PR148.5.
+   - progress.md, verification-log.md, session-handoff.md.
+   - passes:false remains 0.
 
 Do not add:
-- structured queue payload changes
-- skill resume support
-- production integration smoke
-- new auth behavior
-- new execution semantics
+- structured logging
+- metrics
+- trace propagation
+- diagnostics bundle
+- new runtime behavior
+- new auth modes
+- new integrations
 
 Run:
 - dotnet restore Agentor.sln
 - dotnet build Agentor.sln --no-restore
 - dotnet test Agentor.sln --no-build
-- pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 32 -ExpectedHarnessPass PR127
+- pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 36 -ExpectedHarnessPass PR148.5
 - pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
 
 Final report:
 1. Files changed.
-2. Dataset registry behavior.
-3. Baseline/delta behavior.
-4. Aggregate report behavior.
-5. Threshold behavior.
-6. CI/artifact behavior.
-7. Planning-doc numbering fix.
-8. Tests added/updated and final count.
-9. verify-harness result.
-10. verify-repo-clean result.
-11. Remaining passes:false items.
-12. Confirmation Phase 33 was not started.
+2. Integration smoke CLI validation behavior.
+3. Migration doc cleanup.
+4. Active roadmap cleanup.
+5. Release smoke report decision.
+6. Final test count.
+7. verify-harness result.
+8. verify-repo-clean result.
+9. Remaining passes:false items.
+10. Confirmation Phase 37 was not started.
 ```
