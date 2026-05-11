@@ -1,5 +1,26 @@
 # Agentor harness progress
 
+## Phase 36 PR148.5 RC closeout polish (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- `src/Agentor.Infrastructure/Smoke/IntegrationSmokeCommandLine.cs` — public testable parser; rejects unknown flags and missing `--target` / `--output` values.
+- `tools/Agentor.IntegrationSmoke/Program.cs` — uses the new parser; passes empty args to host builder.
+- `tests/Agentor.Infrastructure.Tests/IntegrationSmokeTests.cs` — `IntegrationSmokeCommandLineTests` (9 cases).
+- `scripts/release-smoke.ps1` — optional `-OutputDirectory` writes `release-smoke-report.json` / `.md`; `docs/operator/release-smoke.md` documents the switch.
+- `docs/developer/MIGRATION_AND_UPGRADE.md` — drops stale PR75.6 note.
+- Harness: `feature-list.json` phase **36** / harnessPass **PR148.5** + four acceptance rows; `.github/workflows/ci.yml` verify-harness **36**/**PR148.5**.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **539 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 36 -ExpectedHarnessPass PR148.5`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 37 not started.
+
 ## Phase 36 PR148 release candidate consolidation (2026-05-11)
 
 **Status**: Complete.

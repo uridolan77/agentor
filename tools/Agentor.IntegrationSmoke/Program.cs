@@ -14,10 +14,10 @@ public static class Program
 {
     public static async Task<int> Main(string[] args)
     {
-        ParsedArgs parsed;
+        IntegrationSmokeParsedArgs parsed;
         try
         {
-            parsed = ParseArgs(args);
+            parsed = IntegrationSmokeCommandLine.Parse(args);
         }
         catch (InvalidOperationException ex)
         {
@@ -28,7 +28,7 @@ public static class Program
         var builder = Host.CreateApplicationBuilder(
             new HostApplicationBuilderSettings
             {
-                Args = args,
+                Args = Array.Empty<string>(),
                 ContentRootPath = AppContext.BaseDirectory,
             });
 
@@ -95,36 +95,4 @@ public static class Program
         fake.SeedSearchResults(pid, smoke.AthanorEvidenceSearchQuery, [new EvidenceSearchResultDto(Guid.NewGuid(), "smoke-title", "smoke-snippet")]);
     }
 
-    private static ParsedArgs ParseArgs(string[] args)
-    {
-        string? output = null;
-        var targets = new List<string>();
-        for (var i = 0; i < args.Length; i++)
-        {
-            if (args[i] is "--output" or "-o" && i + 1 < args.Length)
-            {
-                output = args[++i];
-                continue;
-            }
-
-            if (args[i] is "--target" or "-t" && i + 1 < args.Length)
-            {
-                targets.Add(args[++i]);
-            }
-        }
-
-        IntegrationSmokeTargetValidation.Validate(targets);
-
-        var dir = string.IsNullOrWhiteSpace(output)
-            ? Path.Combine(Environment.CurrentDirectory, "artifacts", "integration-smoke")
-            : output.Trim();
-
-        IReadOnlySet<string>? only = targets.Count == 0
-            ? null
-            : new HashSet<string>(targets, StringComparer.OrdinalIgnoreCase);
-
-        return new ParsedArgs(dir, only);
-    }
-
-    private sealed record ParsedArgs(string OutputDirectory, IReadOnlySet<string>? OnlyTargets);
 }

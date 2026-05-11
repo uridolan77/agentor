@@ -34,6 +34,76 @@ public sealed class IntegrationSmokeTargetValidationTests
     }
 }
 
+public sealed class IntegrationSmokeCommandLineTests
+{
+    [Fact]
+    public void Parse_no_args_uses_default_output_and_no_target_filter()
+    {
+        var parsed = IntegrationSmokeCommandLine.Parse([], currentDirectory: "C:/work");
+        Assert.Null(parsed.OnlyTargets);
+        Assert.Equal(Path.Combine("C:/work", "artifacts", "integration-smoke"), parsed.OutputDirectory);
+    }
+
+    [Fact]
+    public void Parse_accepts_target_and_output_flags()
+    {
+        var parsed = IntegrationSmokeCommandLine.Parse(
+            ["--target", "Athanor", "-o", "C:/out", "-t", "Conexus"],
+            currentDirectory: "ignored");
+
+        Assert.Equal("C:/out", parsed.OutputDirectory);
+        Assert.NotNull(parsed.OnlyTargets);
+        Assert.Contains("Athanor", parsed.OnlyTargets!);
+        Assert.Contains("Conexus", parsed.OnlyTargets!);
+    }
+
+    [Theory]
+    [InlineData("--target")]
+    [InlineData("-t")]
+    public void Parse_target_without_value_throws(string flag)
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            IntegrationSmokeCommandLine.Parse([flag], currentDirectory: "C:/work"));
+        Assert.Contains(flag, ex.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("--output")]
+    [InlineData("-o")]
+    public void Parse_output_without_value_throws(string flag)
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            IntegrationSmokeCommandLine.Parse([flag], currentDirectory: "C:/work"));
+        Assert.Contains(flag, ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_target_followed_by_flag_throws()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            IntegrationSmokeCommandLine.Parse(["--target", "--output", "C:/out"], currentDirectory: "C:/work"));
+        Assert.Contains("--target", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_unknown_flag_throws()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            IntegrationSmokeCommandLine.Parse(["--mystery"], currentDirectory: "C:/work"));
+        Assert.Contains("--mystery", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("Unknown CLI argument", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_unknown_target_value_throws()
+    {
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            IntegrationSmokeCommandLine.Parse(["--target", "NotARealTarget"], currentDirectory: "C:/work"));
+        Assert.Contains("NotARealTarget", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("Unknown smoke target", ex.Message, StringComparison.Ordinal);
+    }
+}
+
 public sealed class IntegrationSmokeConfigurationMergerTests
 {
     [Fact]

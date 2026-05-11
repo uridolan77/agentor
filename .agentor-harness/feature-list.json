@@ -1,10 +1,11 @@
 {
     "phase": 36,
-    "title": "Phase 36 \u2014 Release candidate consolidation (PR143\u2013PR148)",
-    "harnessPass": "PR148",
+    "title": "Phase 36 \u2014 Release candidate consolidation (PR143\u2013PR148.5)",
+    "harnessPass": "PR148.5",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR148.5 (2026-05-11): Phase 36 RC closeout polish \u2014 IntegrationSmokeCommandLine (rejects unknown flags + missing --target/--output values with InvalidOperationException; CLI exit code 2); tools/Agentor.IntegrationSmoke/Program.cs delegates to IntegrationSmokeCommandLine.Parse; IntegrationSmokeCommandLineTests in tests/Agentor.Infrastructure.Tests (9 new tests covering missing values, unknown flags, target validation); scripts/release-smoke.ps1 optional -OutputDirectory writes release-smoke-report.json/.md; docs/operator/release-smoke.md report section; docs/developer/MIGRATION_AND_UPGRADE.md drops stale PR75.6 note; harness phase 36 / harnessPass PR148.5; CI verify-harness ExpectedPhase 36 PR148.5. Verification: dotnet test Agentor.sln \u2014 539 passed; verify-harness ExpectedPhase 36 PR148.5; verify-repo-clean.",
         "PR148 (2026-05-11): Phase 36 release candidate consolidation \u2014 README + REPO_TRUTH + docs/RELEASE/v1.0-RC.md + docs/security/SECURITY_RELEASE_CHECKLIST.md + docs/operator/release-smoke.md; docs/developer/MIGRATION_AND_UPGRADE.md migration inventory + provider boundaries; docs/api/API_CONTRACT_SNAPSHOT.md + docs/api/openapi-v1.snapshot.json + OpenApiContractSnapshotTests/OpenApiJsonCanonicalizer; scripts/release-smoke.ps1; auth-boundary cross-link; CI verify-harness ExpectedPhase 36 PR148. Verification: dotnet test Agentor.sln \u2014 530 passed; verify-harness ExpectedPhase 36 PR148; verify-repo-clean.",
         "PR142.5 (2026-05-11): Phase 35 smoke closeout \u2014 IntegrationSmokeTargetValidation (unknown --target exit 2); IntegrationSmokeReportWriter.SanitizeForPersist redacts step details on export; IntegrationSmokeRunner explicitTargetNoWork when explicit targets yield zero steps; docs/operator/integration-smoke.md proof boundaries + write gate; session-handoff active deferred harness rows = 0. Verification: dotnet test Agentor.sln \u2014 529 passed; verify-harness ExpectedPhase 35 PR142.5; verify-repo-clean.",
         "PR137.5 (2026-05-11): Phase 34 closeout hardening (applied atop Phase 35 tree) \u2014 JsonFingerprintCanonicalizer + StartAgentRunFingerprint canonical ToolInputPayload for idempotency; StartAgentRunFingerprintTests; ReviewResumeState.HasSkillProcedureContinuation + FromCursor uses HasContinuationWork; PlanResumeCursorTests; ReviewedToolContinuationService PlanExecutionCompleted after tail-less skill resume; MultiStepReviewResumeTests (skill-only plan trace order; inner pipeline fail + ContinueOnFailure/FailFast on skill plan step; chained inner RequiresReview). Verification: dotnet test Agentor.sln \u2014 524 passed; verify-harness ExpectedPhase 35 PR142; verify-repo-clean.",
@@ -61,6 +62,34 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR148.5-004",
+                                "pr": 148,
+                                "description": "PR148.5: docs/developer/MIGRATION_AND_UPGRADE.md drops stale PR75.6 note while preserving migration inventory + provider boundaries",
+                                "passes": true,
+                                "evidence": "docs/developer/MIGRATION_AND_UPGRADE.md"
+                            },
+                            {
+                                "id": "PR148.5-003",
+                                "pr": 148,
+                                "description": "PR148.5: release-smoke.ps1 optional -OutputDirectory writes release-smoke-report.json/.md (machine-readable)",
+                                "passes": true,
+                                "evidence": "scripts/release-smoke.ps1; docs/operator/release-smoke.md"
+                            },
+                            {
+                                "id": "PR148.5-002",
+                                "pr": 148,
+                                "description": "PR148.5: Agentor.IntegrationSmoke CLI rejects unknown flags and missing --target/--output values; exit code 2",
+                                "passes": true,
+                                "evidence": "src/Agentor.Infrastructure/Smoke/IntegrationSmokeCommandLine.cs; tools/Agentor.IntegrationSmoke/Program.cs; tests/Agentor.Infrastructure.Tests/IntegrationSmokeTests.cs (IntegrationSmokeCommandLineTests)"
+                            },
+                            {
+                                "id": "PR148.5-001",
+                                "pr": 148,
+                                "description": "PR148.5: harness reconciliation \u2014 phase 36 harnessPass PR148.5; CI verify-harness aligned; passes:false = 0",
+                                "passes": true,
+                                "evidence": ".agentor-harness/feature-list.json; .agentor-harness/current-pr.md; .github/workflows/ci.yml; .agentor-harness/verification-log.md"
+                            },
                             {
                                 "id": "PR148-001",
                                 "pr": 148,
