@@ -34,3 +34,7 @@ Phase 8 (PR36–PR40) lands the MCP adapter boundary (fake registry + tool bindi
 ## v1.0 release candidate (Phase 15)
 
 Phase 15 (PR71–PR75) delivers platform hardening: structured JSON redaction, performance baseline harness, CI release checks, migration/versioning docs, and RC notes. Closeout state: `.agentor-harness/feature-list.json` phase **15** / harnessPass **PR75.5**.
+
+## v1.0 release candidate closure (Phase 40 / PR170)
+
+Phase 40 (PR164–PR170) is the **discipline closure** pass: deferred-item audit, **`CHANGELOG.md`**, tagging notes, deployment triple (`docs/deployment/*`), migration operator guide extensions, operator runbook, consolidated verification checklist, and **`docs/RELEASE/v1.0-RC-FINAL.md`**. Runtime default version string is **`1.0.0-rc.1`**. Current harness: see `.agentor-harness/feature-list.json` (**phase 40**, **harnessPass PR170**).

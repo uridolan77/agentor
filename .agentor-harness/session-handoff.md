@@ -1,34 +1,34 @@
-# Session handoff — Phase 39 PR159–PR163 + PR163.5 (performance baseline + closeout polish)
+# Session handoff — Phase 40 PR164–PR170 (v1 release closure)
 
 ## Completed
 
-- **PR159** — BenchmarkDotNet: `Phase39RuntimeBenchmarks` (single-tool driver, two-step plan, policy evaluation, audit export, timeline, EF save, queue claim paths, operator diagnostics build); `BenchmarkEntry` + `StartupObject`; benchmarks project references `Agentor.Api` and `Microsoft.EntityFrameworkCore.Sqlite`.
-- **PR160** — `scripts/load-smoke.ps1`: parallel `POST /api/v1/agent-runs`, optional `POST /api/v1/agent-runs/queued`, workloads `fake|review|required|mixed`, `-StartHost` optional API spawn (PowerShell 7+).
-- **PR161** — `EfPersistenceStressTests`: many traces, many tool calls + policy decisions, large `PlanResumeCursor`, audit export on heavy run, in-memory durable queue list volume.
-- **PR162** — `PerformanceReportGenerator` + `PerformanceCiArtifactsTests`; `generate-evaluation-ci-artifacts.ps1` sets `AGENTOR_PERF_CI_OUT` and runs the performance artifact test after evaluation artifacts.
-- **PR163** — `docs/developer/performance-baseline.md`; `docs/REPO_TRUTH.md` performance triple; `benchmarks/Agentor.Benchmarks/README.md`; CI `verify-harness` Phase 39.
-- **PR163.5** — Closeout polish: `session-handoff` / `performance-baseline.md` **SCOPE-001 closed** + explicit **CI performance placeholder** truth (not measured baselines; Phase 40 must not treat as SLO evidence); **`load-smoke-report.json`** errors **truncated + best-effort redacted** before persist; harness **`harnessPass` PR163.5** + **`PR163.5-001`** acceptance.
+- **PR164** — `docs/RELEASE/phase40-deferred-source-audit.md`; harness **`passes:false` = 0**; `v1.0-RC-DEFERRED-ITEMS.md` Count **0**; source scan notes (TODO in `SequentialAgentPlanExecutor`, intentional `NotSupportedException` in `EmptySkillPackageCatalog`).
+- **PR165** — `CHANGELOG.md`; `docs/RELEASE/v1.0-RC-TAGGING.md`; **`AgentorRuntime:Version`** default **`1.0.0-rc.1`** (`AgentorRuntimeOptions`, `appsettings.json`, `AgentorRuntimeOptionsTests`).
+- **PR166** — `docs/deployment/local.md`, `staging.md`, `production.md`.
+- **PR167** — `docs/developer/MIGRATION_AND_UPGRADE.md` — operator backup, restore, image rollback, queue/outbox cautions, migration verification.
+- **PR168** — `docs/operator/runbook.md`.
+- **PR169** — `docs/RELEASE/v1.0-RC-VERIFICATION.md`.
+- **PR170** — `docs/RELEASE/v1.0-RC-FINAL.md`; harness **`phase` 40**, **`harnessPass` PR170**; CI verify-harness **40** / **PR170**; `docs/REPO_TRUTH.md`, `docs/ROADMAP.md`, `docs/RELEASE/v1.0-RC.md`, `docs/planning/pr76-125/Phase 32 - 40.md` Phase 40 completion note; feature-list acceptance **PR164-001** through **PR170-001**; historical **PR40-001** / **PR40-002** rows updated for **1.0.0-rc.1** and Phase 40 ROADMAP text.
 
 ## Verification
 
 - `dotnet restore Agentor.sln` succeeded
 - `dotnet build Agentor.sln --no-restore` succeeded
 - `dotnet test Agentor.sln --no-build` succeeded (**595 passed, 0 failed**)
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 39 -ExpectedHarnessPass PR163.5` succeeded
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 40 -ExpectedHarnessPass PR170` succeeded
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
 Per-assembly test totals (latest run): Domain **87**, Application **181**, Contracts **14**, Infrastructure **138**, Api **175**.
 
 ## What is next
 
-- **Phase 40** — v1 release closure — **not started**.
+- **Post–v1.0 RC product phases** — only when explicitly scheduled; **no** harness Phase 41 marker was added in this closeout.
 
 ## What was explicitly not started
 
-- **Phase 40+** (final deferred-item audit, CHANGELOG, deployment guides, runbook, final RC verification per planning doc).
+- Any Phase **41+** runtime features, new integrations, or harness phase beyond **40** / **PR170**.
 
-## Deferred harness rows / product risks
+## Deferred harness rows / remaining risks
 
-- **Active deferred harness rows (`passes: false` in `feature-list.json`)**: **0**.
-- **SCOPE-001** is **closed** (Phase 26 / PR117); see `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` (Count: 0).
-- **Residual product risks**: performance baselines and CI performance artifacts are **local/dev or deterministic-placeholder** evidence unless replaced by human-maintained benchmark outputs; **`load-smoke.ps1`** is best-effort local tooling; **real production SLOs** require environment-specific measurement and are out of scope for Phase 39 artifacts.
+- **Active deferred harness rows (`passes: false`)**: **0**.
+- **Residual risks** (documented, not harness deferrals): environment-specific **SLO measurement** and treating CI performance artifacts as placeholders (`docs/developer/performance-baseline.md`); production **ingress/auth probe** alignment for **`/ready`**; ongoing **`SequentialAgentPlanExecutor`** refactor note (`TODO(PR20.5)`).

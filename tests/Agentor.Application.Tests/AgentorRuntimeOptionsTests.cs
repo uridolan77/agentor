@@ -24,9 +24,9 @@ public sealed class AgentorRuntimeOptionsTests
     }
 
     [Fact]
-    public void AgentorRuntimeOptions_DefaultVersion_Is_0_1_0_rc_1()
+    public void AgentorRuntimeOptions_DefaultVersion_Is_1_0_0_rc_1()
     {
-        Assert.Equal("0.1.0-rc.1", new AgentorRuntimeOptions().Version);
+        Assert.Equal("1.0.0-rc.1", new AgentorRuntimeOptions().Version);
     }
 
     [Fact]

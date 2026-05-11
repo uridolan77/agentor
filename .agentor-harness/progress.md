@@ -1,5 +1,27 @@
 # Agentor harness progress
 
+## Phase 40 PR164–PR170 v1 release closure (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **PR164** — Deferred harness audit + source scan: `docs/RELEASE/phase40-deferred-source-audit.md`; `passes:false` = **0**; `v1.0-RC-DEFERRED-ITEMS.md` Count **0**.
+- **PR165** — `CHANGELOG.md`; `docs/RELEASE/v1.0-RC-TAGGING.md`; runtime version **`1.0.0-rc.1`** (`AgentorRuntimeOptions`, `appsettings.json`, tests).
+- **PR166** — `docs/deployment/local.md`, `staging.md`, `production.md` (Postgres, auth, OpenAPI, workers/outbox, integrations, secrets).
+- **PR167** — `docs/developer/MIGRATION_AND_UPGRADE.md` operator backup/restore/migration verification section.
+- **PR168** — `docs/operator/runbook.md` (queue, outbox, integrations, review backlog, policy, auth, OpenAPI, diagnostics).
+- **PR169** — `docs/RELEASE/v1.0-RC-VERIFICATION.md` consolidated checklist.
+- **PR170** — `docs/RELEASE/v1.0-RC-FINAL.md`; harness **`phase` 40** / **`harnessPass` PR170**; `.github/workflows/ci.yml` verify-harness; `docs/REPO_TRUTH.md`, `docs/ROADMAP.md`, `docs/RELEASE/v1.0-RC.md`, planning doc completion note; acceptance **PR164-001** … **PR170-001**.
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **595 passed, 0 failed**.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 40 -ExpectedHarnessPass PR170`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: No Phase 41 / post-RC product harness started.
+
 ## Phase 39 PR163.5 closeout polish (2026-05-11)
 
 **Status**: Complete.

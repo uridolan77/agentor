@@ -10,5 +10,5 @@ public sealed class AgentorRuntimeOptions
     public string ServiceName { get; set; } = "Agentor.Api";
 
     [Required, MinLength(1), MaxLength(50)]
-    public string Version { get; set; } = "0.1.0-rc.1";
+    public string Version { get; set; } = "1.0.0-rc.1";
 }

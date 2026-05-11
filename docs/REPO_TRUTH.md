@@ -47,5 +47,6 @@ This document states **what the code and HTTP surface actually do today**, so op
 - `docs/planning/pr76-125/Phase 23 - 31.md` — Phases 23–31 planning pack.  
 - `docs/planning/pr76-125/Phase 32 - 40.md` — Phases 32–40 planning pack (evaluation v2, queue payload, skill resume, integration smoke, release candidate consolidation).  
 - **Phase 36 (RC consolidation)**: **`docs/api/API_CONTRACT_SNAPSHOT.md`** (OpenAPI snapshot + drift test, matrix, DTO tests); **`docs/security/SECURITY_RELEASE_CHECKLIST.md`**; **`docs/operator/release-smoke.md`** + **`scripts/release-smoke.ps1`**; migration inventory in **`docs/developer/MIGRATION_AND_UPGRADE.md`**.  
+- **Phase 40 (v1 RC closure / PR170)**: **`CHANGELOG.md`**; **`docs/RELEASE/v1.0-RC-TAGGING.md`**, **`v1.0-RC-VERIFICATION.md`**, **`v1.0-RC-FINAL.md`**, **`phase40-deferred-source-audit.md`**; **`docs/deployment/local.md`**, **`staging.md`**, **`production.md`**; **`docs/operator/runbook.md`**; migration operator sections in **`docs/developer/MIGRATION_AND_UPGRADE.md`**; runtime version **`1.0.0-rc.1`** (`AgentorRuntimeOptions`, `appsettings.json`).  
 - `docs/security/auth-boundary.md` — permission and auth-mode details.  
 - `docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md` — deferred gaps and historical closure notes.

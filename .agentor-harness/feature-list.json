@@ -1,10 +1,11 @@
 {
-    "phase": 39,
-    "title": "Phase 39 \u2014 Performance and stress baseline (PR159\u2013PR163)",
-    "harnessPass": "PR163.5",
+    "phase": 40,
+    "title": "Phase 40 \u2014 v1 release closure (PR164\u2013PR170)",
+    "harnessPass": "PR170",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR170 (2026-05-11): Phase 40 v1 release closure \u2014 PR164 phase40-deferred-source-audit.md; PR165 CHANGELOG.md + v1.0-RC-TAGGING.md + runtime version 1.0.0-rc.1; PR166 docs/deployment/local|staging|production.md; PR167 MIGRATION_AND_UPGRADE backup/restore/verification; PR168 docs/operator/runbook.md; PR169 v1.0-RC-VERIFICATION.md; PR170 v1.0-RC-FINAL.md + harness phase 40 + CI verify-harness PR170; REPO_TRUTH + ROADMAP + v1.0-RC.md + planning Phase 32-40 completion note. Verification: dotnet test Agentor.sln \u2014 595 passed; verify-harness ExpectedPhase 40 PR170; verify-repo-clean.",
         "PR163.5 (2026-05-11): Phase 39 closeout polish \u2014 session-handoff + performance-baseline: SCOPE-001 closed, active passes:false=0, CI performance placeholders not SLO evidence, Phase 40 must not treat placeholders as measured baselines; load-smoke-report.json errors truncated/redacted; harnessPass PR163.5; acceptance PR163.5-001. Verification: dotnet test Agentor.sln \u2014 595 passed; verify-harness ExpectedPhase 39 PR163.5; verify-repo-clean.",
         "PR158.5 (2026-05-11): Phase 38 security doc correction (applied after Phase 39 harness) \u2014 SCOPE-001 closed wording in session-handoff + v1-security-review + auth-boundary scope note; AUTHORIZATION_MATRIX + v1-security-review clarify Service table-driven vs sampled roles and /ready Header unauthenticated sampling exclusion; feature-list acceptance PR158.5-001. Verification: same test count as PR163 closeout; verify-harness ExpectedPhase 39 PR163; verify-repo-clean.",
         "PR163 (2026-05-11): Phase 39 performance/stress baseline \u2014 PR159 Phase39RuntimeBenchmarks + Agentor.Api benchmark reference + BenchmarkEntry startup; PR160 scripts/load-smoke.ps1; PR161 EfPersistenceStressTests; PR162 PerformanceReportGenerator + PerformanceCiArtifactsTests + generate-evaluation-ci-artifacts sets AGENTOR_PERF_CI_OUT; PR163 docs/developer/performance-baseline.md + REPO_TRUTH + benchmarks README. Harness later advanced to **PR163.5** (closeout polish). Verification (PR163 era): dotnet test Agentor.sln \u2014 595 passed; verify-harness ExpectedPhase 39 PR163; verify-repo-clean.",
@@ -56,7 +57,7 @@
         "Phase 8 PR37: McpToolKeys + McpToolExecutor; ToolRegistry.CreateDefault registers discovered MCP tools; ToolRegistryMcpBindingTests.",
         "Phase 8 PR38: ActivitySource + request counter; JSON console logging in Development; docs/OBSERVABILITY.md; ObservabilityTests.",
         "Phase 8 PR39: Dockerfile (publish Agentor.Api), docker-compose.yml, .github/workflows/ci.yml, scripts/smoke.ps1, .dockerignore.",
-        "Phase 8 PR40: appsettings + AgentorRuntimeOptions default version 0.1.0-rc.1; docs/ROADMAP.md v0.1 RC note.",
+        "Phase 8 PR40 (historical): appsettings + AgentorRuntimeOptions shipped 0.1.0-rc.1; superseded by Phase 40 PR170 default 1.0.0-rc.1; docs/ROADMAP.md v0.1 RC note.",
         "Phase 9 PR41-PR45: IExternalAgentProtocolClient + deterministic fakes (generic + A2A-styled); external-agent.discover / external-agent.invoke via ToolRegistry + policy + pipeline; RunManifest v1.2 external-agent telemetry; trace kinds + SequentialAgentPlanExecutor deny/review paths; RunEvaluationHarness snapshot external counts + RunQualityGateEvaluator EXTERNAL_AGENT_OUTPUT_UNREVIEWED; fixtures eval/external-agent-one-call.json; no real network transports.",
         "Phase 10 PR46-PR50: Agentor:Integrations modes Fake|Http|Disabled; HTTP adapters (Athanor knowledge state, Conexus model gateway, MCP registry, ExternalAgents protocol); named HttpClients; /health liveness-only; /ready and GET /api/v1/integrations/status via IntegrationSurfaceService.",
         "PR50.5: HTTP readiness probes fail on non-2xx; Disabled adapters report detail=disabled while Ready=true; API + Infrastructure tests; harness bumped to phase 10.",
@@ -67,6 +68,55 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR170-001",
+                                "pr": 170,
+                                "description": "PR170 v1.0 RC declared: phase 40 harnessPass PR170 + docs/RELEASE/v1.0-RC-FINAL.md",
+                                "passes": true,
+                                "evidence": ".agentor-harness/feature-list.json; docs/RELEASE/v1.0-RC-FINAL.md; .github/workflows/ci.yml"
+                            },
+                            {
+                                "id": "PR169-001",
+                                "pr": 169,
+                                "description": "PR169 final RC verification checklist: docs/RELEASE/v1.0-RC-VERIFICATION.md",
+                                "passes": true,
+                                "evidence": "docs/RELEASE/v1.0-RC-VERIFICATION.md"
+                            },
+                            {
+                                "id": "PR168-001",
+                                "pr": 168,
+                                "description": "PR168 operator runbook: docs/operator/runbook.md",
+                                "passes": true,
+                                "evidence": "docs/operator/runbook.md"
+                            },
+                            {
+                                "id": "PR167-001",
+                                "pr": 167,
+                                "description": "PR167 backup/restore/migration verification: docs/developer/MIGRATION_AND_UPGRADE.md operator section",
+                                "passes": true,
+                                "evidence": "docs/developer/MIGRATION_AND_UPGRADE.md"
+                            },
+                            {
+                                "id": "PR166-001",
+                                "pr": 166,
+                                "description": "PR166 deployment guides: docs/deployment/local.md, staging.md, production.md",
+                                "passes": true,
+                                "evidence": "docs/deployment/local.md; docs/deployment/staging.md; docs/deployment/production.md"
+                            },
+                            {
+                                "id": "PR165-001",
+                                "pr": 165,
+                                "description": "PR165 versioning and changelog: CHANGELOG.md + v1.0-RC-TAGGING.md + runtime 1.0.0-rc.1",
+                                "passes": true,
+                                "evidence": "CHANGELOG.md; docs/RELEASE/v1.0-RC-TAGGING.md; src/Agentor.Application/Options/AgentorRuntimeOptions.cs; src/Agentor.Api/appsettings.json"
+                            },
+                            {
+                                "id": "PR164-001",
+                                "pr": 164,
+                                "description": "PR164 deferred/source audit: passes:false=0 + docs/RELEASE/phase40-deferred-source-audit.md",
+                                "passes": true,
+                                "evidence": ".agentor-harness/feature-list.json; docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md; docs/RELEASE/phase40-deferred-source-audit.md"
+                            },
                             {
                                 "id": "PR163.5-001",
                                 "pr": 163,
@@ -1308,14 +1358,14 @@
         },
         {
             "passes": true,
-            "description": "Runtime version defaults to 0.1.0-rc.1",
+            "description": "Runtime version defaults to 1.0.0-rc.1 (Phase 40 / PR170)",
             "pr": 40,
             "id": "PR40-001",
-            "evidence": "src/Agentor.Api/appsettings.json; AgentorRuntimeOptions.cs; AgentorRuntimeOptionsTests.cs"
+            "evidence": "src/Agentor.Api/appsettings.json; src/Agentor.Application/Options/AgentorRuntimeOptions.cs; tests/Agentor.Application.Tests/AgentorRuntimeOptionsTests.cs"
         },
         {
             "passes": true,
-            "description": "ROADMAP documents Phase 8 / v0.1 RC hardening",
+            "description": "ROADMAP documents Phase 8 / v0.1 RC hardening and Phase 40 / PR170 v1.0 RC closure",
             "pr": 40,
             "id": "PR40-002",
             "evidence": "docs/ROADMAP.md"

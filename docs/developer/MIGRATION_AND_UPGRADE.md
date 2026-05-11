@@ -39,6 +39,34 @@ CI runs `dotnet ef migrations list` (see `.github/workflows/ci.yml`) so a missin
 - Deploy previous application image/tag that matches the restored schema.
 - Outbox/durable execution: confirm no half-applied migrations; treat ledger/outbox tables per retention policy after rollback.
 
+## Operator backup, restore, and migration verification (Phase 40 / PR167)
+
+### Backup before migration
+
+- Take a **logical or volume-level backup** of PostgreSQL immediately before applying a new migration to production.
+- Capture the **application image digest or tag** and the **git commit SHA** you intend to deploy alongside that backup.
+
+### Restore procedure
+
+1. Stop Agentor worker processes (queue drainers / outbox dispatchers) to prevent new side effects during restore.
+2. Restore the database from the backup taken **before** the failed migration (or to a known-good snapshot).
+3. Redeploy the **previous** application image that matches the restored schema (see rollback section above).
+
+### Rollback application image only
+
+- If the database was **not** migrated but the new image is unhealthy, roll back the deployment to the prior image.
+- If the database **was** migrated forward, a **code-only** rollback may leave schema newer than the binary expects — treat as incompatible unless the older build explicitly supports forward schema.
+
+### Queue and outbox considerations
+
+- After restore, inspect **`run_queue_items`** and outbox tables for rows created after the backup timestamp; they may be missing or inconsistent with external side effects.
+- Prefer **draining** workers before maintenance and documenting whether at-least-once dispatch already produced external calls.
+
+### Migration verification
+
+- `dotnet ef migrations list` on the deployed assemblies must match expectations (CI enforces this pattern).
+- Run **`scripts/release-smoke.ps1`** (or equivalent) and a minimal **`POST /api/v1/agent-runs`** happy path after migration.
+
 ## Configuration
 
 - Compare `appsettings` sections (`Agentor:*`, integration endpoints). Never deploy new code with stale secrets references.

@@ -956,6 +956,10 @@ Add final doc:
 docs/RELEASE/v1.0-RC-FINAL.md
 ```
 
+## Phase 40 implementation status (repository)
+
+**Completed in-tree (2026-05-11):** PR164–PR170 as summarized in **`docs/RELEASE/v1.0-RC-FINAL.md`**, **`CHANGELOG.md`**, **`docs/RELEASE/v1.0-RC-VERIFICATION.md`**, **`docs/deployment/`**, **`docs/operator/runbook.md`**, and harness **`phase` 40** / **`harnessPass` PR170**.
+
 ---
 
 # Important change to the planning file
