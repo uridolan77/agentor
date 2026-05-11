@@ -1,5 +1,36 @@
 # Verification log
 
+## Phase 35 PR142 (2026-05-11)
+
+```powershell
+dotnet restore Agentor.sln
+dotnet build Agentor.sln --no-restore
+dotnet test Agentor.sln --no-build
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 35 -ExpectedHarnessPass PR142
+powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1
+```
+
+Results:
+
+- Restore: succeeded
+- Build: succeeded
+- Tests: **516 passed, 0 failed**
+- verify-harness: passed (`ExpectedPhase=35`, `ExpectedHarnessPass=PR142`)
+- verify-repo-clean: passed
+
+Counts:
+
+- Agentor.Domain.Tests: Passed 86 / Total 86
+- Agentor.Application.Tests: Passed 173 / Total 173
+- Agentor.Contracts.Tests: Passed 14 / Total 14
+- Agentor.Infrastructure.Tests: Passed 118 / Total 118
+- Agentor.Api.Tests: Passed 125 / Total 125
+
+Scope:
+
+- completed: Phase 35 PR138–PR142 production integration smoke pack (options + runner + reports + operator script + tests)
+- not started: Phase 36+
+
 ## Phase 34 PR137 (2026-05-11)
 
 ```powershell
@@ -29,7 +60,7 @@ Counts:
 Scope:
 
 - completed: Phase 34 PR133–PR137 skill resume (domain + executor + human-review resume + EF round-trip + fixtures/docs)
-- not started: Phase 35+
+- not started: Phase 35+ (superseded by Phase 35 PR142 entry above)
 
 ## Phase 33 PR132 (2026-05-11)
 

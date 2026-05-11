@@ -1,10 +1,11 @@
 {
-    "phase": 34,
-    "title": "Phase 34 \u2014 Skill resume support (PR133\u2013PR137)",
-    "harnessPass": "PR137",
+    "phase": 35,
+    "title": "Phase 35 \u2014 Production integration smoke pack (PR138\u2013PR142)",
+    "harnessPass": "PR142",
     "encoding": "utf-8",
     "lastVerified": "2026-05-11",
     "notes": [
+        "PR142 (2026-05-11): Phase 35 integration smoke \u2014 IntegrationSmokeOptions + SmokeMode + SmokeTarget; IntegrationSmokeConfigurationMerger; IntegrationSmokeRunner + IntegrationSmokeReportWriter + IntegrationFailureRedaction; tools/Agentor.IntegrationSmoke + scripts/run-integration-smoke.ps1; docs/operator/integration-smoke.md; tests IntegrationSmokeTests + REPO_TRUTH. Verification: dotnet test Agentor.sln \u2014 516 passed; verify-harness ExpectedPhase 35 PR142; verify-repo-clean.",
         "PR137 (2026-05-11): Phase 34 skill resume \u2014 Domain SkillResumeCursor + SkillInnerToolCheckpoint + SkillProcedureResumeState + PlanResumeCursor.SkillContinuation/HasContinuationWork; PendingPlanStep invoked skill fields; SequentialAgentPlanExecutor skill continuation + ExecuteResumedSkillPlanStepAsync; PlanResumeOrchestrator + ReviewedToolContinuationService skill path (no double step.Complete); ReviewTraceWriter removed unsupported stub; tests MultiStepReviewResumeTests.Approve_SkillInnerReview_ThenResumesTailPlanStep + Approve_SkillInnerReview_TailDeniedWithContinueOnFailure_ThenCompletesRun + PlanResumeCursorTests; EfCoreAgentRunRepositoryTests.SaveAsync_RoundTripsResumeCursorWithSkillContinuationJson; docs/design/skill-resume.md; fixture tests/Agentor.Application.Tests/fixtures/eval/skill-resume-audit-export.json + registry; Phase18FixtureTests.SkillResumeAuditExport_Fixture_ExistsAndIsValidJson; docs/REPO_TRUTH skill resume bullet. Verification: dotnet test Agentor.sln \u2014 509 passed; verify-harness ExpectedPhase 34 PR137; verify-repo-clean.",
         "PR132 (2026-05-11): Phase 33 structured queue payload \u2014 RunQueuePayloadVersion + RunQueuePayloadSerialization; StartAgentRunCommand/RunOrchestrationRequest ToolInputPayload; StartAgentRunRequestDto.toolInputPayload + StartAgentRunRequestMapping + StartAgentRunFingerprint; GovernedSingleToolRunDriver ToolPayload merge for policy + ToolCall + pipeline; EF run_queue_items.tool_payload_json (migration 20260512100000_Phase33QueueStructuredToolPayload) + EfRunQueueStore v2 + legacy tool_input_json; tests EfRunQueueStoreTests + RunQueueHostedServiceEfSqliteScopeTests structured + GovernedSingleToolRunDriverStructuredPayloadTests + AgentRunOrchestrationApiTests queued structured + ContractDtoCompatibilityTests toolInputPayload; docs/operator/queue-payloads.md; fixture tests/Agentor.Application.Tests/fixtures/eval/queued-structured-toolpayload.json; docs/REPO_TRUTH queue columns; CI verify-harness Phase 33 PR132. Verification: dotnet test Agentor.sln \u2014 504 passed; verify-harness ExpectedPhase 33 PR132; verify-repo-clean.",
         "PR127 (2026-05-11): Phase 32 evaluation science v2 \u2014 EvaluationDataset + EvaluationCase + EvaluationCaseTag + EvaluationDatasetRegistry (fixtures/eval/evaluation-datasets.json); EvaluationMetricSnapshot + EvaluationBaseline + EvaluationDeltaKind/DeltaCalculator (stable JSON); EvaluationAggregateReport + EvaluationAggregateReportGenerator; EvaluationThresholdSet + EvaluationThresholdEvaluator (fixtures/eval/evaluation-thresholds.json, EVAL_THRESHOLD_* codes); CoordinationProfileRunRecord policy decision counts; EvaluationReportGenerator optional aggregate + thresholdEvaluation in md/json/csv; scripts/generate-evaluation-ci-artifacts.ps1; CI uploads artifacts/evaluation; docs/REPO_TRUTH evaluation section. Verification: dotnet test Agentor.sln \u2014 498 passed; verify-harness ExpectedPhase 32 PR127; verify-repo-clean.",
@@ -57,6 +58,41 @@
         "Phase 17 PR81-PR85 (2026-05-10): Enterprise policy model \u2014 PolicyBundle (versioned, immutable after publish, duplicate rule IDs rejected); PolicyRule (ToolAccess/ModelBudget/McpToolAccess/ExternalAgentAccess + Allow/Deny/RequiresReview effects + factory helpers); PolicyProfile + ActivePolicyProfile domain types; IPolicyBundleRepository + IPolicyProfileRepository abstractions; PolicyBundleRulesAdapter (bundle\u2192PolicyProfileRules); InMemoryPolicyBundleRepository + InMemoryPolicyProfileRepository; RuntimePolicyEvaluator 2-constructor pattern (3-param test, 5-param DI) with bundle-aware 7-step evaluation; PolicyProfileRules.RequiresReviewToolKeys added; RequiresReview distinct from Deny; PolicyBundleDtos + 4 API endpoints; DtoMappings + DI wiring; 38 new tests (25 domain + 13 evaluation); 3 fixture JSONs; audit export policyIdentity; docs/developer/policy-bundles.md. Grand total: 298 tests passing."
     ],
     "acceptanceItems": [
+                            {
+                                "id": "PR142-001",
+                                "pr": 142,
+                                "description": "Operator smoke reports integration-smoke-report.json + .md with redacted details; local script run-integration-smoke.ps1",
+                                "passes": true,
+                                "evidence": "src/Agentor.Infrastructure/Smoke/IntegrationSmokeReportWriter.cs; scripts/run-integration-smoke.ps1; tests/Agentor.Infrastructure.Tests/IntegrationSmokeTests.cs (IntegrationSmokeReportWriterTests)"
+                            },
+                            {
+                                "id": "PR141-001",
+                                "pr": 141,
+                                "description": "MCP list servers/tools/invoke + external-agent discover/invoke smoke steps (Fake + Http adapter wiring)",
+                                "passes": true,
+                                "evidence": "src/Agentor.Infrastructure/Smoke/IntegrationSmokeRunner.cs; tests/Agentor.Infrastructure.Tests/IntegrationSmokeTests.cs (IntegrationSmokeFakeRunnerTests)"
+                            },
+                            {
+                                "id": "PR140-001",
+                                "pr": 140,
+                                "description": "Conexus smoke: model completion + declared budget fields + telemetry scalars in result",
+                                "passes": true,
+                                "evidence": "src/Agentor.Infrastructure/Smoke/IntegrationSmokeRunner.cs; tests/Agentor.Infrastructure.Tests/IntegrationSmokeTests.cs (IntegrationSmokeFakeRunnerTests)"
+                            },
+                            {
+                                "id": "PR139-001",
+                                "pr": 139,
+                                "description": "Athanor read smoke (snapshot, canonical, evidence); candidate submit skipped unless AllowAthanorWriteSmoke",
+                                "passes": true,
+                                "evidence": "src/Agentor.Infrastructure/Smoke/IntegrationSmokeRunner.cs; tools/Agentor.IntegrationSmoke/Program.cs (SeedFakeAthanor); tests/Agentor.Infrastructure.Tests/IntegrationSmokeTests.cs (IntegrationSmokeFakeRunnerTests)"
+                            },
+                            {
+                                "id": "PR138-001",
+                                "pr": 138,
+                                "description": "IntegrationSmokeOptions + SmokeMode + SmokeTarget; Disabled defaults; env-driven; IntegrationSmokeConfigurationMerger maps to Agentor:Integrations modes",
+                                "passes": true,
+                                "evidence": "src/Agentor.Infrastructure/Options/IntegrationSmokeOptions.cs; src/Agentor.Infrastructure/Options/SmokeMode.cs; src/Agentor.Infrastructure/Options/SmokeTarget.cs; src/Agentor.Infrastructure/Smoke/IntegrationSmokeConfigurationMerger.cs; tests/Agentor.Infrastructure.Tests/IntegrationSmokeTests.cs (IntegrationSmokeConfigurationMergerTests)"
+                            },
                             {
                                 "id": "PR137-001",
                                 "pr": 137,

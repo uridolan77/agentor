@@ -1,30 +1,31 @@
-# Session handoff — Phase 34 PR137
+# Session handoff — Phase 35 PR142
 
 ## Completed
 
-- **PR133**: **`docs/design/skill-resume.md`** + domain types in **`ReviewResumeCursor.cs`** ( **`SkillResumeCursor`**, checkpoints, **`HasContinuationWork`** ).
-- **PR134–PR135**: **`SequentialAgentPlanExecutor`** / **`IAgentPlanExecutor`** skill continuation and **`PlanResumeOrchestrator`** resumed skill execution; **`ReviewedToolContinuationService`** clears **`SkillContinuation`** and resumes tail without calling **`step.Complete`** twice after skill wrapper completion.
-- **PR136**: Tail plan segment after skill honors **`FailureHandlingPolicy`** on **`PendingPlanStep`** ( **`Approve_SkillInnerReview_TailDeniedWithContinueOnFailure_ThenCompletesRun`** ); inner-procedure failure paths remain shared with existing skill/plan executor behavior (see **`MultiStepReviewResumeTests`** / **`PlanResumeOrchestrator`** ).
-- **PR137**: Fixture **`tests/Agentor.Application.Tests/fixtures/eval/skill-resume-audit-export.json`**, **`registry.json`**, **`Phase18FixtureTests.SkillResumeAuditExport_Fixture_ExistsAndIsValidJson`**; **`EvaluationFixtureRegistryTests`** entry count **5**; **`docs/REPO_TRUTH.md`**; CI **`verify-harness`** **Phase 34 / PR137**.
+- **PR138**: **`SmokeMode`**, **`SmokeTarget`**, **`IntegrationSmokeOptions`** ( **`Agentor:IntegrationSmoke`** ); **`IntegrationSmokeConfigurationMerger`** maps smoke modes onto **`Agentor:Integrations:*:*:Mode`** for the smoke host.
+- **PR139**: Athanor smoke steps — latest snapshot, canonical lookup, evidence search; **candidate submit** only when **`AllowAthanorWriteSmoke=true`**; **`Program.SeedFakeAthanor`** for Fake mode.
+- **PR140**: Conexus **`CompleteAsync`** with **declared** cost/latency fields plus telemetry scalar checks on **`ModelCallResultDto`** payload.
+- **PR141**: MCP list servers / list tools / invoke; external-agent list capabilities / invoke (A2A-styled defaults).
+- **PR142**: **`IntegrationSmokeReportWriter`** (**`integration-smoke-report.json`** + **`.md`**), **`IntegrationFailureRedaction`** for operator-safe text, **`scripts/run-integration-smoke.ps1`**, **`docs/operator/integration-smoke.md`**, **`Agentor.sln`** includes **`tools/Agentor.IntegrationSmoke`**.
 
 ## Verification
 
 - `dotnet restore Agentor.sln` succeeded
 - `dotnet build Agentor.sln --no-restore` succeeded
-- `dotnet test Agentor.sln --no-build` succeeded (**509 passed, 0 failed**)
-- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 34 -ExpectedHarnessPass PR137` succeeded
+- `dotnet test Agentor.sln --no-build` succeeded (**516 passed, 0 failed**)
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 35 -ExpectedHarnessPass PR142` succeeded
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1` succeeded
 
-Per-assembly test totals (latest run): Domain **86**, Application **173**, Contracts **14**, Infrastructure **111**, Api **125**.
+Per-assembly test totals (latest run): Domain **86**, Application **173**, Contracts **14**, Infrastructure **118**, Api **125**.
 
 ## What is next
 
-- **Phase 35** — production integration smoke pack — **not started**.
+- **Phase 36** — release candidate consolidation — **not started**.
 
 ## What was explicitly not started
 
-- **Phase 35+** (integration smoke configuration, real HTTP smoke scripts, etc.).
+- **Phase 36+** (repo truth sweep, migration audit, API contract snapshot, release smoke, etc.).
 
 ## Remaining risks / false acceptance
 
-- **PR136 inner skill procedure** failure-policy matrix (every combination inside **`ExecuteSkillInnerToolAsync`** after a prior inner approval) is not exhaustively enumerated in new tests; tail-segment policy behavior is covered by **`PlanResumeOrchestrator`** plus the new tail **ContinueOnFailure** test after skill. Deferred product items unchanged where not touched (**SCOPE-001** remains per repo deferred list).
+- **Real HTTP** integration smoke against live Athanor/Conexus/MCP/external-agent gateways is **operator-driven** (configure **`Agentor:Integrations:*:Http:BaseUrl`** + headers via env); CI continues to rely on **Fake** smoke (**`IntegrationSmokeFakeRunnerTests`**) plus existing HTTP adapter contract tests. **SCOPE-001** and other deferred items unchanged unless listed in **`docs/RELEASE/v1.0-RC-DEFERRED-ITEMS.md`**.

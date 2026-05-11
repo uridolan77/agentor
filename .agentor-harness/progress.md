@@ -1,5 +1,24 @@
 # Agentor harness progress
 
+## Phase 35 PR142 (2026-05-11)
+
+**Status**: Complete.
+
+**Work**:
+
+- **Options**: **`SmokeMode`**, **`SmokeTarget`**, **`IntegrationSmokeOptions`** / **`IntegrationSmokeFamilyOptions`** under **`Agentor:IntegrationSmoke`** (defaults **Disabled**; env-var driven).
+- **Smoke**: **`IntegrationSmokeConfigurationMerger`**, **`IntegrationSmokeRunner`**, **`IntegrationSmokeReport`** / **`SmokeStepRecord`**, **`IntegrationSmokeReportWriter`**, public **`IntegrationFailureRedaction`**.
+- **Tooling**: **`tools/Agentor.IntegrationSmoke`** (solution project), **`scripts/run-integration-smoke.ps1`**, **`docs/operator/integration-smoke.md`**, **`docs/REPO_TRUTH.md`** bullet.
+- **Tests**: **`IntegrationSmokeTests`** (merger, fake runner end-to-end, Bearer redaction, report writer files).
+
+**Verification**:
+
+- `dotnet restore` / `dotnet build --no-restore` / `dotnet test --no-build` on `Agentor.sln` — **516 passed, 0 failed**
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 35 -ExpectedHarnessPass PR142`
+- `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
+
+**Scope guard**: Phase 36 not started.
+
 ## Phase 34 PR137 (2026-05-11)
 
 **Status**: Complete.
@@ -17,7 +36,7 @@
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-harness.ps1 -ExpectedPhase 34 -ExpectedHarnessPass PR137`
 - `powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/verify-repo-clean.ps1`
 
-**Scope guard**: Phase 35 not started.
+**Scope guard**: Phase 36 not started (Phase 35 completed in the Phase 35 section above).
 
 ## Phase 33 PR132 (2026-05-11)
 
