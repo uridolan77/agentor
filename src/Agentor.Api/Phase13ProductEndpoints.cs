@@ -7,6 +7,8 @@ using Agentor.Application.Management;
 using Agentor.Application.Queries;
 using Agentor.Contracts;
 using Agentor.Domain;
+using Microsoft.AspNetCore.Http;
+using Ontogony.Contracts.Events;
 
 namespace Agentor.Api;
 
@@ -87,7 +89,7 @@ internal static class Phase13ProductEndpoints
                     return authResult;
                 }
 
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 var id = Guid.NewGuid();
                 if (!ManagementArtifactMapper.TryMap(body, id, out var recipe, out var validation) || recipe is null)
                 {
@@ -175,7 +177,7 @@ internal static class Phase13ProductEndpoints
                     return authResult;
                 }
 
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 var recipe = recipes.Get(body.RecipeId);
                 if (recipe is null)
                 {
@@ -279,7 +281,7 @@ internal static class Phase13ProductEndpoints
                     return authResult;
                 }
 
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 var version = AgentRecipeVersion.Parse(body.Version);
                 if (catalog.TryGet(body.SkillKey, version, out var existing) && existing is not null)
                 {
@@ -374,7 +376,7 @@ internal static class Phase13ProductEndpoints
                     return authResult;
                 }
 
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 if (string.IsNullOrWhiteSpace(body.Name))
                 {
                     return Results.BadRequest(new ApiErrorDto("ValidationError", "Name is required.", traceId, ["Name is required."]));
@@ -411,7 +413,7 @@ internal static class Phase13ProductEndpoints
                 var dto = await handler.HandleAsync(runId, cancellationToken);
                 if (dto is null)
                 {
-                    var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                    var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                     return Results.NotFound(new ApiErrorDto("RunNotFound", $"Run '{runId}' was not found.", traceId));
                 }
 
@@ -442,7 +444,7 @@ internal static class Phase13ProductEndpoints
                 var dto = await handler.HandleAsync(runId, cancellationToken);
                 if (dto is null)
                 {
-                    var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                    var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                     return Results.NotFound(new ApiErrorDto("RunNotFound", $"Run '{runId}' was not found.", traceId));
                 }
 
@@ -470,7 +472,7 @@ internal static class Phase13ProductEndpoints
                     return authResult;
                 }
 
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 if (!AuditExportFormatParser.TryParse(format, out var exportFormat, out var formatError))
                 {
                     return Results.BadRequest(new ApiErrorDto(
@@ -566,7 +568,7 @@ internal static class Phase13ProductEndpoints
                     return authResult;
                 }
 
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 try
                 {
                     var run = await handler.HandleAsync(

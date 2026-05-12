@@ -25,13 +25,13 @@ Runtime counters and gauges use the **`Agentor.Runtime`** meter (`Agentor.Infras
 
 **Allowed dimensions** are limited to `toolKey`, `policyEffect`, `integrationName`, and coarse `status`/`outcome` style tags — never objectives, prompts, or payload bodies.
 
-HTTP request volume remains on the **`Agentor.Api`** meter (`agentor.http.server.request.count`) via `RequestTracingMiddleware`.
+HTTP request volume for the HTTP host is recorded on the **`Ontogony.Platform`** meter as **`ontogony.http.server.request.count`** (tag `service` = `Agentor.Api`) via `UseOntogonyRequestTracing` (see `docs/engineering/PR19-ontogony-observability-http.md`). Other **`Agentor.Runtime`** meters listed above are unchanged.
 
 ## Trace correlation
 
-- Every HTTP response includes **`X-Agentor-Trace-Id`** (request correlation id), set by `RequestTracingMiddleware`.
+- Every HTTP response includes **`X-Ontogony-Trace-Id`** (canonical request correlation id). Legacy **`X-Agentor-Trace-Id`** is not echoed on responses unless **`EchoLegacyHeaders`** is enabled in `AddOntogonyObservability`.
 - Successful **`POST /api/v1/agent-runs`** responses also include **`X-Agentor-Run-Trace-Id`** (the run’s persisted trace id / correlation to domain traces).
-- The same request id is pushed to `AgentorCorrelationContext` for the lifetime of the request and is forwarded on integration HTTP calls as **`X-Agentor-Trace-Id`** (`CorrelationHeadersDelegatingHandler`).
+- The same request id is available from `AgentorCorrelationContext` (backed by `OntogonyCorrelationContext`) for the lifetime of the request. Outbound integration HTTP calls receive **`X-Ontogony-Trace-Id`** (and related correlation headers) from `Ontogony.Http.CorrelationHeadersDelegatingHandler`, plus **`X-Agentor-Trace-Id`** when absent (`AgentorLegacyTraceHeaderHandler`).
 - Integration HTTP failures from `IntegrationHttpError.ThrowIfUnsuccessfulAsync` append a **`CorrelationId=`** suffix when a correlation id is present (still redacted/truncated for bodies).
 
 ## Diagnostics bundle
@@ -55,7 +55,7 @@ Counts and integration rows are **point-in-time** snapshots from the same reposi
 
 ## How to use this during incidents
 
-1. Capture **`X-Agentor-Trace-Id`** from the user or client response and correlate with structured logs for that request.
+1. Capture **`X-Ontogony-Trace-Id`** from the user or client response and correlate with structured logs for that request.
 2. Pull **`GET /api/v1/ops/diagnostics-report?format=markdown`** for a shareable, redacted snapshot (paste into tickets without secrets).
 3. Cross-check integration rows with **`GET /api/v1/integrations/status`** and queue/outbox ops endpoints.
 4. If a run id is known, use **`GET /api/v1/agent-runs/{id}`** and **`/trace`** for domain-level detail (subject to existing export/redaction rules).

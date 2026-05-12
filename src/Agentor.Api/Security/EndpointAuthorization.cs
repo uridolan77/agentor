@@ -1,5 +1,7 @@
 using Agentor.Application.Abstractions;
 using Agentor.Contracts;
+using Microsoft.AspNetCore.Http;
+using Ontogony.Contracts.Events;
 
 namespace Agentor.Api.Security;
 
@@ -11,7 +13,7 @@ public static class EndpointAuthorization
         IAuthorizationDecisionService authorization,
         AgentorPermission permission)
     {
-        var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+        var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
 
         ActorContext actor;
         try

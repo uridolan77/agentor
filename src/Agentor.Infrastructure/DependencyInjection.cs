@@ -4,15 +4,15 @@ using Agentor.Application.Coordination;
 using Agentor.Application.Orchestration;
 using Agentor.Infrastructure.Athanor;
 using Agentor.Infrastructure.Conexus;
-using Agentor.Infrastructure.ExternalAgents;
-using Agentor.Infrastructure.Http;
-using Agentor.Infrastructure.IntegrationStatus;
-using Agentor.Infrastructure.Observability;
 using Agentor.Application.Options;
 using Agentor.Application.Reliability;
+using Agentor.Infrastructure.ExternalAgents;
+using Agentor.Infrastructure.Http;
 using Agentor.Infrastructure.HttpResilience;
+using Agentor.Infrastructure.IntegrationStatus;
 using Agentor.Infrastructure.Management;
 using Agentor.Infrastructure.Mcp;
+using Agentor.Infrastructure.Observability;
 using Agentor.Infrastructure.Options;
 using Agentor.Infrastructure.Persistence;
 using Agentor.Infrastructure.Policy;
@@ -53,6 +53,7 @@ public static class DependencyInjection
             .Bind(configuration.GetSection(OutboxDispatchOptions.SectionName));
 
         services.AddSingleton<TransportResilienceRegistry>();
+        services.AddTransient<Ontogony.Http.CorrelationHeadersDelegatingHandler>();
         RegisterIntegrationHttpClients(services);
 
         services.AddSingleton<IClock, SystemClock>();
@@ -178,7 +179,7 @@ public static class DependencyInjection
     private static void AddResilientIntegrationClient(
         IServiceCollection services,
         string clientName,
-        Func<AgentorIntegrationsOptions, HttpIntegrationOptions?> selectHttp)
+        Func<AgentorIntegrationsOptions, Agentor.Infrastructure.Options.HttpIntegrationOptions?> selectHttp)
     {
         services.AddHttpClient(clientName)
             .ConfigureHttpClient((sp, client) =>
@@ -186,16 +187,19 @@ public static class DependencyInjection
                 var opts = sp.GetRequiredService<IOptionsMonitor<AgentorIntegrationsOptions>>();
                 ApplyHttpOptions(client, selectHttp(opts.CurrentValue));
             })
+            // Outbound order (factory applies handlers in reverse registration order): Ontogony correlation
+            // (outermost) then legacy X-Agentor-Trace-Id, then resilience — see PR19 engineering note.
             .AddHttpMessageHandler(sp =>
             {
                 var registry = sp.GetRequiredService<TransportResilienceRegistry>();
                 var tro = sp.GetRequiredService<IOptionsMonitor<TransportResilienceOptions>>();
                 return new ResilientIntegrationDelegatingHandler(clientName, registry, tro);
             })
-            .AddHttpMessageHandler(_ => new CorrelationHeadersDelegatingHandler());
+            .AddHttpMessageHandler(_ => new AgentorLegacyTraceHeaderHandler())
+            .AddHttpMessageHandler(sp => sp.GetRequiredService<Ontogony.Http.CorrelationHeadersDelegatingHandler>());
     }
 
-    private static void ApplyHttpOptions(HttpClient client, HttpIntegrationOptions? http)
+    private static void ApplyHttpOptions(HttpClient client, Agentor.Infrastructure.Options.HttpIntegrationOptions? http)
     {
         if (http is null || string.IsNullOrWhiteSpace(http.BaseUrl))
         {

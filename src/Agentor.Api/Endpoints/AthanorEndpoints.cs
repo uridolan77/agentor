@@ -5,6 +5,7 @@ using Agentor.Application.Abstractions;
 using Agentor.Application.Queries;
 using Agentor.Contracts;
 using Microsoft.AspNetCore.Http;
+using Ontogony.Contracts.Events;
 
 namespace Agentor.Api.Endpoints;
 
@@ -33,7 +34,7 @@ public static class AthanorEndpoints
             var outcome = await handler.HandleAsync(runId, cancellationToken);
             if (!outcome.RunExists)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
@@ -69,19 +70,19 @@ public static class AthanorEndpoints
             }
             catch (ArgumentException ex)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.BadRequest(new ApiErrorDto("ValidationError", ex.Message, traceId, [ex.Message]));
             }
 
             if (!outcome.RunExists)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
             if (outcome.Entry is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("CanonicalEntryNotFound", "No canonical entry matched the key for this project.", traceId));
             }
 
@@ -112,20 +113,20 @@ public static class AthanorEndpoints
 
             if (string.IsNullOrWhiteSpace(request.Query))
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.BadRequest(new ApiErrorDto("ValidationError", "Query is required.", traceId, ["Query is required."]));
             }
 
             var outcome = await handler.HandleAsync(runId, request.Query, cancellationToken);
             if (outcome is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
             if (outcome == false)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.Conflict(new ApiErrorDto("RunNotRunning", "Evidence provenance can only be attached while the run is Running.", traceId));
             }
 
@@ -156,20 +157,20 @@ public static class AthanorEndpoints
 
             if (string.IsNullOrWhiteSpace(request.Summary))
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.BadRequest(new ApiErrorDto("ValidationError", "Summary is required.", traceId, ["Summary is required."]));
             }
 
             var outcome = await handler.HandleAsync(runId, request.Summary, request.PayloadJson ?? "{}", cancellationToken);
             if (outcome.Ok is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
             if (outcome.Ok == false)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.Conflict(new ApiErrorDto("RunNotRunning", "Candidates can only be submitted while the run is Running.", traceId));
             }
 
@@ -200,7 +201,7 @@ public static class AthanorEndpoints
 
             if (request.CandidateId == Guid.Empty)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.BadRequest(new ApiErrorDto("ValidationError", "CandidateId is required.", traceId, null));
             }
 
@@ -210,20 +211,20 @@ public static class AthanorEndpoints
 
             if (actorId == Guid.Empty)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.BadRequest(new ApiErrorDto("ValidationError", "ActorId is required (body or X-Agentor-Actor-Id).", traceId, null));
             }
 
             var outcome = await handler.HandleAsync(runId, request.CandidateId, actorId, cancellationToken);
             if (outcome is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
             if (outcome == false)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.Conflict(new ApiErrorDto("RunNotRunning", "Review queue operations require a Running run.", traceId));
             }
 

@@ -1,17 +1,20 @@
+using System.Net;
 using System.Text.Json.Serialization;
 using Agentor.Api;
 using Agentor.Api.Endpoints;
-using Agentor.Api.Middleware;
 using Agentor.Api.Configuration;
 using Agentor.Api.Diagnostics;
 using Agentor.Api.Security;
 using Agentor.Application;
 using Agentor.Application.Abstractions;
 using Agentor.Application.Options;
+using Agentor.Application.Orchestration;
 using Agentor.Infrastructure;
 using Agentor.Infrastructure.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Ontogony.Errors;
+using Ontogony.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,6 +82,43 @@ builder.Services.Configure<ToolExecutionOptions>(
 
 builder.Services.AddScoped<OperatorDiagnosticsService>();
 
+builder.Services.AddOntogonyObservability(options =>
+{
+    options.ServiceName = "Agentor.Api";
+    options.ServiceVersion = typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+});
+
+builder.Services.AddOntogonyErrors(options =>
+{
+    options.ErrorCodeJsonKey = "error";
+    options.DetailsJsonKey = "errors";
+    options.IncludeInstanceInJson = false;
+    options.UnhandledErrorCode = "AgentorUnhandledError";
+
+    options.Map<AgentRunPersistenceConcurrencyException>(
+        HttpStatusCode.Conflict,
+        "AgentRunPersistenceConcurrency",
+        includeExceptionMessage: true);
+
+    options.Map<AgentRunTraceImmutabilityException>(
+        HttpStatusCode.BadRequest,
+        "AgentRunTraceImmutability",
+        includeExceptionMessage: true);
+
+    options.Map<RunOrchestrationValidationException>(
+        HttpStatusCode.BadRequest,
+        "RunOrchestrationValidationError",
+        publicMessage: "Run start routing is invalid.",
+        detailsFactory: ex => ((RunOrchestrationValidationException)ex).Errors.ToList());
+
+    options.Map<RunOrchestrationNotFoundException>(
+        HttpStatusCode.NotFound,
+        "RunOrchestrationNotFound",
+        includeExceptionMessage: true,
+        resolveErrorCode: ex => ((RunOrchestrationNotFoundException)ex).ReasonCode,
+        resolvePublicMessage: ex => ((RunOrchestrationNotFoundException)ex).Message);
+});
+
 var app = builder.Build();
 
 var openApiDocumentEnabled = app.Environment.IsDevelopment()
@@ -86,8 +126,9 @@ var openApiDocumentEnabled = app.Environment.IsDevelopment()
     || app.Environment.IsEnvironment("Testing")
     || (app.Configuration.GetSection(AgentorOpenApiOptions.SectionName).Get<AgentorOpenApiOptions>()?.Enabled ?? false);
 
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseMiddleware<RequestTracingMiddleware>();
+// Tracing must run first so response headers and OntogonyCorrelationContext exist before exception handling.
+app.UseOntogonyRequestTracing();
+app.UseOntogonyExceptionHandling();
 
 app.UseAuthentication();
 app.UseAuthorization();

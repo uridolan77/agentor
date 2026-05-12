@@ -6,6 +6,7 @@ using Agentor.Application.HumanReview;
 using Agentor.Application.Queries;
 using Agentor.Contracts;
 using Microsoft.AspNetCore.Http;
+using Ontogony.Contracts.Events;
 
 namespace Agentor.Api.Endpoints;
 
@@ -32,7 +33,7 @@ public static class GovernanceEndpoints
                 return authResult;
             }
 
-            var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+            var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
             try
             {
                 var run = await handler.HandleAsync(
@@ -80,7 +81,7 @@ public static class GovernanceEndpoints
                 return authResult;
             }
 
-            var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+            var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
             if (!AuditExportFormatParser.TryParse(format, out var exportFormat, out var formatError))
             {
                 return Results.BadRequest(new ApiErrorDto(

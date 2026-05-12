@@ -9,7 +9,7 @@ namespace Agentor.Api.Tests;
 
 public sealed class TracingHardeningTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    private const string TraceIdHeader = "X-Agentor-Trace-Id";
+    private const string TraceIdHeader = "X-Ontogony-Trace-Id";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -35,7 +35,7 @@ public sealed class TracingHardeningTests : IClassFixture<WebApplicationFactory<
             null));
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.True(response.Headers.Contains(TraceIdHeader), "Success response must include X-Agentor-Trace-Id header.");
+        Assert.True(response.Headers.Contains(TraceIdHeader), "Success response must include X-Ontogony-Trace-Id header.");
         Assert.False(string.IsNullOrWhiteSpace(response.Headers.GetValues(TraceIdHeader).FirstOrDefault()));
     }
 
@@ -50,7 +50,7 @@ public sealed class TracingHardeningTests : IClassFixture<WebApplicationFactory<
             null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.True(response.Headers.Contains(TraceIdHeader), "Error response must include X-Agentor-Trace-Id header.");
+        Assert.True(response.Headers.Contains(TraceIdHeader), "Error response must include X-Ontogony-Trace-Id header.");
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class TracingHardeningTests : IClassFixture<WebApplicationFactory<
         var response = await client.GetAsync($"/api/v1/agent-runs/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.True(response.Headers.Contains(TraceIdHeader), "Not-found response must include X-Agentor-Trace-Id header.");
+        Assert.True(response.Headers.Contains(TraceIdHeader), "Not-found response must include X-Ontogony-Trace-Id header.");
     }
 
     [Fact]

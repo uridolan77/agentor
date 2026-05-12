@@ -8,6 +8,7 @@ using Agentor.Application.Validation;
 using Agentor.Contracts;
 using Agentor.Domain;
 using Microsoft.AspNetCore.Http;
+using Ontogony.Contracts.Events;
 
 namespace Agentor.Api.Endpoints;
 
@@ -63,7 +64,7 @@ public static class AgentRunEndpoints
                 return authResult;
             }
 
-            var requestTraceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+            var requestTraceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
 
             var commandTraceId = string.IsNullOrWhiteSpace(request.TraceId)
                 ? requestTraceId
@@ -152,7 +153,7 @@ public static class AgentRunEndpoints
             var run = await handler.HandleAsync(runId, cancellationToken);
             if (run is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
@@ -184,7 +185,7 @@ public static class AgentRunEndpoints
             var trace = await handler.HandleAsync(runId, cancellationToken);
             if (trace is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
@@ -216,7 +217,7 @@ public static class AgentRunEndpoints
             var steps = await handler.HandleAsync(runId, cancellationToken);
             if (steps is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
@@ -248,7 +249,7 @@ public static class AgentRunEndpoints
             var toolCalls = await handler.HandleAsync(runId, cancellationToken);
             if (toolCalls is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 
@@ -280,7 +281,7 @@ public static class AgentRunEndpoints
             var manifest = await handler.HandleAsync(runId, cancellationToken);
             if (manifest is null)
             {
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto("RunNotFound", $"Agent run '{runId}' was not found.", traceId));
             }
 

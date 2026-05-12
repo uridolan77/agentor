@@ -3,6 +3,8 @@ using Agentor.Api.Security;
 using Agentor.Application.Abstractions;
 using Agentor.Contracts;
 using Agentor.Domain.Policy;
+using Microsoft.AspNetCore.Http;
+using Ontogony.Contracts.Events;
 
 namespace Agentor.Api.Endpoints;
 
@@ -61,7 +63,7 @@ public static class PolicyBundleEndpoints
                     return authResult;
                 }
 
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
 
                 if (string.IsNullOrWhiteSpace(body.Name))
                 {
@@ -139,7 +141,7 @@ public static class PolicyBundleEndpoints
                 var bundle = await repo.GetAsync(id, cancellationToken);
                 if (bundle is null)
                 {
-                    var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                    var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                     return Results.NotFound(new ApiErrorDto(
                         "BundleNotFound", $"Policy bundle '{id}' was not found.", traceId));
                 }
@@ -175,7 +177,7 @@ public static class PolicyBundleEndpoints
                     return authResult;
                 }
 
-                var traceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var traceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
 
                 // Look up the management profile by ID (existing flat store, backward-compatible).
                 var managedProfile = profileStore.Get(id);

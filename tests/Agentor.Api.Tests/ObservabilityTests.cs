@@ -30,7 +30,7 @@ public sealed class ObservabilityTests : IClassFixture<WebApplicationFactory<Pro
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, l) =>
         {
-            if (instrument.Meter.Name == "Agentor.Api" && instrument.Name == "agentor.http.server.request.count")
+            if (instrument.Meter.Name == "Ontogony.Platform" && instrument.Name == "ontogony.http.server.request.count")
             {
                 l.EnableMeasurementEvents(instrument);
             }
@@ -38,7 +38,7 @@ public sealed class ObservabilityTests : IClassFixture<WebApplicationFactory<Pro
 
         listener.SetMeasurementEventCallback<long>((instrument, measurement, tags, state) =>
         {
-            if (instrument.Name == "agentor.http.server.request.count")
+            if (instrument.Name == "ontogony.http.server.request.count")
             {
                 Interlocked.Add(ref total, measurement);
             }
@@ -51,7 +51,7 @@ public sealed class ObservabilityTests : IClassFixture<WebApplicationFactory<Pro
         response.EnsureSuccessStatusCode();
 
         listener.RecordObservableInstruments();
-        Assert.True(total >= 1, "Expected at least one HTTP request counter increment for /health.");
+        Assert.True(total >= 1, "Expected at least one Ontogony HTTP request counter increment for /health.");
     }
 
     [Fact]
@@ -67,9 +67,9 @@ public sealed class ObservabilityTests : IClassFixture<WebApplicationFactory<Pro
         var res = await client.PostAsJsonAsync("/api/v1/agent-runs", body, JsonOptions);
         res.EnsureSuccessStatusCode();
 
-        Assert.True(res.Headers.TryGetValues("X-Agentor-Trace-Id", out var requestTrace));
-        Assert.NotNull(requestTrace);
-        Assert.NotEmpty(requestTrace.First());
+        Assert.True(res.Headers.TryGetValues("X-Ontogony-Trace-Id", out var ontTrace));
+        Assert.NotNull(ontTrace);
+        Assert.NotEmpty(ontTrace!.First());
 
         Assert.True(res.Headers.TryGetValues("X-Agentor-Run-Trace-Id", out var runTrace));
         Assert.Equal("run-trace-obs-test", runTrace!.First());

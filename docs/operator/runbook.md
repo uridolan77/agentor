@@ -89,7 +89,7 @@ Quick reference for **symptoms → checks → mitigations**. Deep dives live in 
 ## Diagnostics capture (for incidents)
 
 - **`GET /api/v1/ops/diagnostics-report`** (`format=json` or `markdown`) with **OpsRead**.
-- Correlate with **`X-Agentor-Trace-Id`** / run trace headers per **`docs/operator/observability.md`**.
+- Correlate with **`X-Ontogony-Trace-Id`** / run trace headers per **`docs/operator/observability.md`**.
 - Do **not** paste raw diagnostics into public tickets without reviewing for secrets (redaction helps but is not a substitute for judgment).
 
 ## Related scripts

@@ -6,6 +6,7 @@ using Agentor.Application.RunQueue;
 using Agentor.Application.Validation;
 using Agentor.Contracts;
 using Microsoft.AspNetCore.Http;
+using Ontogony.Contracts.Events;
 
 namespace Agentor.Api.Endpoints;
 
@@ -31,7 +32,7 @@ public static class RunQueueEndpoints
                 return authResult;
             }
 
-            var requestTraceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+            var requestTraceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
 
             var commandTraceId = string.IsNullOrWhiteSpace(request.TraceId)
                 ? requestTraceId
@@ -83,7 +84,7 @@ public static class RunQueueEndpoints
             var snap = await runQueue.GetSnapshotAsync(workItemId, cancellationToken);
             if (snap is null)
             {
-                var requestTraceId = httpContext.Response.Headers["X-Agentor-Trace-Id"].ToString();
+                var requestTraceId = httpContext.Response.Headers[OntogonyEventHeaders.TraceId].ToString();
                 return Results.NotFound(new ApiErrorDto(
                     "QueuedWorkNotFound",
                     $"Queued work item '{workItemId}' was not found.",
